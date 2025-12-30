@@ -22,8 +22,6 @@ Deno.serve(async (req) => {
   const title = body?.title ?? "Talking Music League";
   const message = body?.message ?? "";
   const recipients = body?.recipients ?? [];
-  const overrideTopic = body?.ntfyTopic ?? null;
-  const overrideTopics = Array.isArray(body?.ntfyTopics) ? body.ntfyTopics : null;
 
   if (!message) {
     return new Response(
@@ -34,13 +32,7 @@ Deno.serve(async (req) => {
 
   const results: Record<string, string> = {};
 
-  if (NTFY_SERVER_URL && (NTFY_TOPIC || overrideTopic || overrideTopics?.length)) {
-    const topics = overrideTopics?.length
-      ? overrideTopics
-      : overrideTopic
-      ? [overrideTopic]
-      : [NTFY_TOPIC as string];
-
+  if (NTFY_SERVER_URL && NTFY_TOPIC) {
     const headers: Record<string, string> = { Title: title };
     if (NTFY_AUTH_TOKEN) headers.Authorization = `Bearer ${NTFY_AUTH_TOKEN}`;
     if (NTFY_USERNAME && NTFY_PASSWORD) {
@@ -48,18 +40,14 @@ Deno.serve(async (req) => {
       headers.Authorization = `Basic ${token}`;
     }
 
-    const statuses: string[] = [];
-    for (const topic of topics) {
-      const url = `${NTFY_SERVER_URL.replace(/\/$/, "")}/${topic}`;
-      const ntfyResp = await fetch(url, {
-        method: "POST",
-        headers,
-        body: message,
-      });
-      statuses.push(ntfyResp.ok ? "sent" : `failed:${ntfyResp.status}`);
-    }
+    const url = `${NTFY_SERVER_URL.replace(/\/$/, "")}/${NTFY_TOPIC}`;
+    const ntfyResp = await fetch(url, {
+      method: "POST",
+      headers,
+      body: message,
+    });
 
-    results.ntfy = statuses.join(",");
+    results.ntfy = ntfyResp.ok ? "sent" : `failed:${ntfyResp.status}`;
   } else {
     results.ntfy = "skipped";
   }

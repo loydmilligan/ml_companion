@@ -18,12 +18,9 @@ export default function TopBar() {
         </div>
       </div>
       <nav className="top-bar-actions">
-        <Link className="top-link" to="/app/profile">
+        <Link className="top-link" to="/app/settings">
           <Avatar src={profile?.avatar_url} name={displayName} size="sm" />
           {displayName}
-        </Link>
-        <Link className="top-link" to="/app/settings">
-          Settings
         </Link>
         <button
           className="top-link top-link-ghost"

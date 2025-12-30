@@ -36,11 +36,18 @@ type VoteRow = {
   "Round ID": string;
 };
 
+type TrackMetaRow = {
+  "Spotify URI": string;
+  "Release Year": string;
+  Genres: string;
+};
+
 type DataState = {
   competitors: CompetitorRow[];
   rounds: RoundRow[];
   submissions: SubmissionRow[];
   votes: VoteRow[];
+  trackMeta: TrackMetaRow[];
 };
 
 const emptyData: DataState = {
@@ -48,10 +55,19 @@ const emptyData: DataState = {
   rounds: [],
   submissions: [],
   votes: [],
+  trackMeta: [],
 };
 
 async function fetchCsv<T>(path: string) {
   const response = await fetch(path);
+  const text = await response.text();
+  const parsed = Papa.parse<T>(text, { header: true, skipEmptyLines: true });
+  return parsed.data;
+}
+
+async function fetchCsvMaybe<T>(path: string) {
+  const response = await fetch(path);
+  if (!response.ok) return [];
   const text = await response.text();
   const parsed = Papa.parse<T>(text, { header: true, skipEmptyLines: true });
   return parsed.data;
@@ -69,17 +85,26 @@ function decadeFromYear(year: number | null) {
   return `${decade}s`;
 }
 
+function parseGenres(raw: string | null | undefined) {
+  if (!raw) return [];
+  return raw
+    .split(/[;,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 export default function SeasonRecap() {
   const [data, setData] = useState<DataState>(emptyData);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
-      const [competitors, rounds, submissions, votes] = await Promise.all([
+      const [competitors, rounds, submissions, votes, trackMeta] = await Promise.all([
         fetchCsv<CompetitorRow>("/data/competitors.csv"),
         fetchCsv<RoundRow>("/data/rounds.csv"),
         fetchCsv<SubmissionRow>("/data/submissions.csv"),
         fetchCsv<VoteRow>("/data/votes.csv"),
+        fetchCsvMaybe<TrackMetaRow>("/data/track_metadata.csv"),
       ]);
 
       setData({
@@ -87,6 +112,7 @@ export default function SeasonRecap() {
         rounds,
         submissions,
         votes,
+        trackMeta,
       });
       setLoading(false);
     };
@@ -100,6 +126,15 @@ export default function SeasonRecap() {
   const recap = useMemo(() => {
     const competitorMap = new Map(data.competitors.map((c) => [c.ID, c.Name]));
     const roundMap = new Map(data.rounds.map((r) => [r.ID, r]));
+    const metaMap = new Map(
+      data.trackMeta.map((row) => [
+        row["Spotify URI"],
+        {
+          year: Number(row["Release Year"]) || null,
+          genres: parseGenres(row.Genres),
+        },
+      ])
+    );
 
     const submissionKey = (row: SubmissionRow) => `${row["Round ID"]}::${row["Spotify URI"]}`;
     const submissionsByKey = new Map<string, SubmissionRow>();
@@ -127,6 +162,7 @@ export default function SeasonRecap() {
       if (!submission) return;
       const voterId = row["Voter ID"];
       const submitterId = submission["Submitter ID"];
+      if (voterId === submitterId) return;
       const points = Number(row["Points Assigned"]) || 0;
       const perVoter = voterTally.get(voterId) ?? new Map<string, number>();
       perVoter.set(submitterId, (perVoter.get(submitterId) ?? 0) + points);
@@ -147,7 +183,8 @@ export default function SeasonRecap() {
 
     const decadeBySubmitter = new Map<string, Map<string, number>>();
     data.submissions.forEach((row) => {
-      const year = extractYear(row);
+      const meta = metaMap.get(row["Spotify URI"]);
+      const year = meta?.year ?? extractYear(row);
       const decade = decadeFromYear(year);
       const submitter = row["Submitter ID"];
       const map = decadeBySubmitter.get(submitter) ?? new Map<string, number>();
@@ -165,6 +202,55 @@ export default function SeasonRecap() {
         count: top ? top[1] : 0,
       };
     });
+
+    const decadeVoteTotals = new Map<string, number>();
+    data.votes.forEach((row) => {
+      const key = `${row["Round ID"]}::${row["Spotify URI"]}`;
+      const submission = submissionsByKey.get(key);
+      if (!submission) return;
+      const meta = metaMap.get(submission["Spotify URI"]);
+      const year = meta?.year ?? extractYear(submission);
+      const decade = decadeFromYear(year);
+      if (decade === "Unknown") return;
+      const points = Number(row["Points Assigned"]) || 0;
+      decadeVoteTotals.set(decade, (decadeVoteTotals.get(decade) ?? 0) + points);
+    });
+    const topDecadeByVotes = Array.from(decadeVoteTotals.entries()).sort((a, b) => b[1] - a[1])[0];
+
+    const genreBySubmitter = new Map<string, Map<string, number>>();
+    data.submissions.forEach((row) => {
+      const meta = metaMap.get(row["Spotify URI"]);
+      const genres = meta?.genres ?? [];
+      const primaryGenre = genres[0] ?? "Unknown";
+      const submitter = row["Submitter ID"];
+      const map = genreBySubmitter.get(submitter) ?? new Map<string, number>();
+      map.set(primaryGenre, (map.get(primaryGenre) ?? 0) + 1);
+      genreBySubmitter.set(submitter, map);
+    });
+
+    const genreTrends = Array.from(genreBySubmitter.entries()).map(([submitterId, counts]) => {
+      const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+      const top = sorted[0];
+      return {
+        submitterId,
+        submitterName: competitorMap.get(submitterId) ?? submitterId,
+        genre: top ? top[0] : "Unknown",
+        count: top ? top[1] : 0,
+      };
+    });
+
+    const genreVoteTotals = new Map<string, number>();
+    data.votes.forEach((row) => {
+      const key = `${row["Round ID"]}::${row["Spotify URI"]}`;
+      const submission = submissionsByKey.get(key);
+      if (!submission) return;
+      const meta = metaMap.get(submission["Spotify URI"]);
+      const primaryGenre = meta?.genres?.[0] ?? "Unknown";
+      if (primaryGenre === "Unknown") return;
+      const points = Number(row["Points Assigned"]) || 0;
+      genreVoteTotals.set(primaryGenre, (genreVoteTotals.get(primaryGenre) ?? 0) + points);
+    });
+    const topGenreByVotes = Array.from(genreVoteTotals.entries()).sort((a, b) => b[1] - a[1])[0];
 
     const topSubmitters = Array.from(submissionCounts.entries())
       .map(([id, count]) => ({
@@ -219,6 +305,12 @@ export default function SeasonRecap() {
       roundHighlights,
       voteTendencies,
       decadeTrends,
+      genreTrends,
+      topDecadeByVotes: topDecadeByVotes
+        ? { decade: topDecadeByVotes[0], points: topDecadeByVotes[1] }
+        : null,
+      topGenreByVotes: topGenreByVotes ? { genre: topGenreByVotes[0], points: topGenreByVotes[1] } : null,
+      hasMetadata: data.trackMeta.length > 0,
       totalRounds: data.rounds.length,
       totalSubmissions: data.submissions.length,
       totalVotes: data.votes.length,
@@ -322,7 +414,47 @@ export default function SeasonRecap() {
               </li>
             ))}
           </ul>
-          <p className="muted">Decades are inferred from available metadata in the CSV.</p>
+          <p className="muted">
+            {recap.hasMetadata
+              ? "Decades are pulled from track metadata."
+              : "Add /data/track_metadata.csv to improve decade accuracy."}
+          </p>
+        </Card>
+
+        <Card className="season-card">
+          <h3>Decade Votes</h3>
+          <p className="muted">Which decade attracted the most points.</p>
+          <div className="stat-highlight">
+            <strong>{recap.topDecadeByVotes?.decade ?? "Unknown"}</strong>
+            <span className="pill">{recap.topDecadeByVotes?.points ?? 0} pts</span>
+          </div>
+        </Card>
+
+        <Card className="season-card">
+          <h3>Genre Trends</h3>
+          <ul className="highlight-list">
+            {recap.genreTrends.map((item) => (
+              <li key={item.submitterId}>
+                <div>
+                  <strong>{item.submitterName}</strong>
+                  <span className="muted">Most common: {item.genre}</span>
+                </div>
+                <span className="pill mint">{item.count}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="muted">
+            {recap.hasMetadata ? "Genres use the first tag in metadata." : "Add track metadata to enable genres."}
+          </p>
+        </Card>
+
+        <Card className="season-card">
+          <h3>Top Voted Genre</h3>
+          <p className="muted">Genre that collected the most points.</p>
+          <div className="stat-highlight">
+            <strong>{recap.topGenreByVotes?.genre ?? "Unknown"}</strong>
+            <span className="pill">{recap.topGenreByVotes?.points ?? 0} pts</span>
+          </div>
         </Card>
 
         <Card className="season-card season-rounds">

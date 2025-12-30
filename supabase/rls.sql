@@ -11,6 +11,8 @@ alter table invites enable row level security;
 alter table group_messages enable row level security;
 alter table season_competitors enable row level security;
 alter table season_round_comments enable row level security;
+alter table round_chats enable row level security;
+alter table round_imports enable row level security;
 
 create or replace function public.is_group_member(p_group_id uuid)
 returns boolean
@@ -98,6 +100,18 @@ drop policy if exists "Profiles update own" on profiles;
 create policy "Profiles update own" on profiles
   for update
   using (id = auth.uid());
+
+drop policy if exists "Profiles update by owner" on profiles;
+create policy "Profiles update by owner" on profiles
+  for update
+  using (
+    exists (
+      select 1
+      from group_members gm
+      join family_groups fg on fg.id = gm.group_id
+      where gm.member_id = profiles.id and fg.owner_id = auth.uid()
+    )
+  );
 
 drop policy if exists "Family groups viewable by members" on family_groups;
 create policy "Family groups viewable by members" on family_groups
@@ -479,3 +493,59 @@ drop policy if exists "Season round comments delete by author" on season_round_c
 create policy "Season round comments delete by author" on season_round_comments
   for delete
   using (author_id = auth.uid());
+
+drop policy if exists "Round chats viewable by members" on round_chats;
+create policy "Round chats viewable by members" on round_chats
+  for select
+  using (
+    exists (
+      select 1
+      from rounds r
+      join leagues l on l.id = r.league_id
+      join group_members gm on gm.group_id = l.group_id
+      where r.id = round_chats.round_id and gm.member_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Round chats insert by members" on round_chats;
+create policy "Round chats insert by members" on round_chats
+  for insert
+  with check (
+    exists (
+      select 1
+      from rounds r
+      join leagues l on l.id = r.league_id
+      join group_members gm on gm.group_id = l.group_id
+      where r.id = round_chats.round_id and gm.member_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Round chats update by author" on round_chats;
+create policy "Round chats update by author" on round_chats
+  for update
+  using (author_id = auth.uid());
+
+drop policy if exists "Round chats delete by author" on round_chats;
+create policy "Round chats delete by author" on round_chats
+  for delete
+  using (author_id = auth.uid());
+
+drop policy if exists "Round imports viewable by owner" on round_imports;
+create policy "Round imports viewable by owner" on round_imports
+  for select
+  using (public.is_group_owner(round_imports.group_id));
+
+drop policy if exists "Round imports insert by owner" on round_imports;
+create policy "Round imports insert by owner" on round_imports
+  for insert
+  with check (public.is_group_owner(round_imports.group_id));
+
+drop policy if exists "Round imports update by owner" on round_imports;
+create policy "Round imports update by owner" on round_imports
+  for update
+  using (public.is_group_owner(round_imports.group_id));
+
+drop policy if exists "Round imports delete by owner" on round_imports;
+create policy "Round imports delete by owner" on round_imports
+  for delete
+  using (public.is_group_owner(round_imports.group_id));

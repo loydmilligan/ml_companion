@@ -19,3 +19,10 @@ build/
 
 # Archives
 *.zip
+
+# Node
+node_modules/
+
+# App data artifacts
+web/public/data/archive/
+web/public/data/track_metadata.csv

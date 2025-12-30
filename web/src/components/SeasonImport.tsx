@@ -7,6 +7,7 @@ import { supabase } from "../lib/supabase";
 type Props = {
   leagueId: string | null;
   groupId: string | null;
+  onImportComplete?: () => void;
 };
 
 type RoundRow = {
@@ -43,10 +44,30 @@ type CompetitorRow = {
   Name: string;
 };
 
+type TrackMetaRow = {
+  "Spotify URI": string;
+  "Release Year": string;
+  Genres: string;
+};
+
 async function parseCsv<T>(file: File) {
   const text = await file.text();
   const parsed = Papa.parse<T>(text, { header: true, skipEmptyLines: true });
   return parsed.data;
+}
+
+async function loadTrackMetadata() {
+  const response = await fetch("/data/track_metadata.csv");
+  if (!response.ok) return new Map<string, TrackMetaRow>();
+  const text = await response.text();
+  const parsed = Papa.parse<TrackMetaRow>(text, { header: true, skipEmptyLines: true });
+  const map = new Map<string, TrackMetaRow>();
+  (parsed.data ?? []).forEach((row) => {
+    if (row["Spotify URI"]) {
+      map.set(row["Spotify URI"], row);
+    }
+  });
+  return map;
 }
 
 function toSpotifyLink(uri: string) {
@@ -64,7 +85,16 @@ async function insertInChunks(table: string, rows: Record<string, unknown>[]) {
   }
 }
 
-export default function SeasonImport({ leagueId, groupId }: Props) {
+async function upsertInChunks(table: string, rows: Record<string, unknown>[], onConflict: string) {
+  const chunkSize = 200;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    const { error } = await supabase.from(table).upsert(chunk, { onConflict });
+    if (error) throw error;
+  }
+}
+
+export default function SeasonImport({ leagueId, groupId, onImportComplete }: Props) {
   const [roundsFile, setRoundsFile] = useState<File | null>(null);
   const [submissionsFile, setSubmissionsFile] = useState<File | null>(null);
   const [votesFile, setVotesFile] = useState<File | null>(null);
@@ -85,82 +115,102 @@ export default function SeasonImport({ leagueId, groupId }: Props) {
     setStatus("Parsing CSVs...");
 
     try {
-      const [rounds, submissions, votes, competitors] = await Promise.all([
+      const [rounds, submissions, votes, competitors, trackMeta] = await Promise.all([
         parseCsv<RoundRow>(roundsFile),
         parseCsv<SubmissionRow>(submissionsFile),
         parseCsv<VoteRow>(votesFile),
         parseCsv<CompetitorRow>(competitorsFile),
+        loadTrackMetadata(),
       ]);
 
       const competitorMap = new Map(competitors.map((c) => [c.ID, c.Name]));
 
       setStatus("Importing competitors...");
-      const competitorRows = competitors.map((c) => ({
+      const competitorRows = competitors
+        .filter((c) => c.ID && c.Name)
+        .map((c) => ({
+          group_id: groupId,
+          external_id: c.ID,
+          name: c.Name,
+        }));
+
+      await upsertInChunks("season_competitors", competitorRows, "group_id,external_id");
+
+      setStatus("Staging rounds...");
+      const roundImportRows = rounds.map((round) => ({
         group_id: groupId,
-        external_id: c.ID,
-        name: c.Name,
-      }));
-
-      await insertInChunks("season_competitors", competitorRows);
-
-      setStatus("Importing rounds...");
-      const roundRows = rounds.map((round) => ({
         league_id: leagueId,
-        theme: round.Name,
-        status: "archived",
-        submission_deadline: null,
-        voting_deadline: null,
+        external_round_id: round.ID,
+        name: round.Name,
+        description: round.Description || null,
+        playlist_url: round["Playlist URL"] || null,
+        external_created_at: round.Created || null,
       }));
 
-      const { data: insertedRounds, error: roundError } = await supabase
-        .from("rounds")
-        .insert(roundRows)
-        .select("id,theme");
+      await upsertInChunks("round_imports", roundImportRows, "league_id,external_round_id");
 
-      if (roundError) throw roundError;
+      const { data: roundImportData } = await supabase
+        .from("round_imports")
+        .select("external_round_id,round_id")
+        .eq("league_id", leagueId);
 
       const roundIdMap = new Map<string, string>();
-      rounds.forEach((round, idx) => {
-        const inserted = insertedRounds?.[idx];
-        if (inserted?.id) roundIdMap.set(round.ID, inserted.id);
+      (roundImportData ?? []).forEach((row) => {
+        if (row.round_id) roundIdMap.set(row.external_round_id, row.round_id);
       });
 
       setStatus("Importing submissions...");
-      const submissionRows = submissions.map((submission) => ({
-        round_id: roundIdMap.get(submission["Round ID"]) ?? null,
-        title: submission.Title,
-        artist: submission["Artist(s)"],
-        link: toSpotifyLink(submission["Spotify URI"]),
-        submitter_name: competitorMap.get(submission["Submitter ID"]) ?? null,
-        source_uri: submission["Spotify URI"],
-      })).filter((row) => row.round_id);
+      const submissionRows = submissions
+        .map((submission) => ({
+          round_id: roundIdMap.get(submission["Round ID"]) ?? null,
+          title: submission.Title,
+          album: submission.Album || null,
+          artist: submission["Artist(s)"],
+          link: toSpotifyLink(submission["Spotify URI"]),
+          submitter_name: competitorMap.get(submission["Submitter ID"]) ?? null,
+          source_uri: submission["Spotify URI"],
+          external_round_id: submission["Round ID"],
+          external_submitter_id: submission["Submitter ID"],
+          external_created_at: submission.Created || null,
+          external_comment: submission.Comment || null,
+          external_visible_to_voters: submission["Visible To Voters"]?.toLowerCase() === "yes",
+          release_year: trackMeta.get(submission["Spotify URI"])?.["Release Year"]
+            ? Number(trackMeta.get(submission["Spotify URI"])?.["Release Year"])
+            : null,
+          genres: trackMeta.get(submission["Spotify URI"])?.Genres || null,
+        }))
+        .filter((row) => row.round_id);
 
-      await insertInChunks("submissions", submissionRows as Record<string, unknown>[]);
+      await upsertInChunks("submissions", submissionRows as Record<string, unknown>[], "round_id,source_uri");
 
       setStatus("Importing votes...");
       const { data: dbSubmissions } = await supabase
         .from("submissions")
         .select("id,round_id,source_uri")
-        .in(
-          "round_id",
-          Array.from(roundIdMap.values())
-        );
+        .in("round_id", Array.from(roundIdMap.values()));
 
       const submissionMap = new Map<string, string>();
       (dbSubmissions ?? []).forEach((row) => {
         submissionMap.set(`${row.round_id}::${row.source_uri}`, row.id);
       });
 
-      const voteRows = votes.map((vote) => ({
-        submission_id: submissionMap.get(`${roundIdMap.get(vote["Round ID"]) ?? ""}::${vote["Spotify URI"]}`),
-        voter_name: competitorMap.get(vote["Voter ID"]) ?? null,
-        points: Number(vote["Points Assigned"]) || 0,
-        comment: vote.Comment,
-      })).filter((row) => row.submission_id);
+      const voteRows = votes
+        .map((vote) => ({
+          submission_id: submissionMap.get(`${roundIdMap.get(vote["Round ID"]) ?? ""}::${vote["Spotify URI"]}`),
+          voter_name: competitorMap.get(vote["Voter ID"]) ?? null,
+          voter_external_id: vote["Voter ID"],
+          points: Number(vote["Points Assigned"]) || 0,
+          comment: vote.Comment,
+          external_round_id: vote["Round ID"],
+          external_spotify_uri: vote["Spotify URI"],
+          external_created_at: vote.Created || null,
+        }))
+        .filter((row) => row.submission_id);
 
-      await insertInChunks("votes", voteRows as Record<string, unknown>[]);
+      await upsertInChunks("votes", voteRows as Record<string, unknown>[], "submission_id,voter_external_id");
 
       setStatus("Import complete.");
+      onImportComplete?.();
     } catch (err) {
       const message = typeof err === "object" && err !== null && "message" in err
         ? String((err as { message: string }).message)

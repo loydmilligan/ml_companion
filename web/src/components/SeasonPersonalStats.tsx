@@ -29,8 +29,22 @@ type VoteRow = {
   "Round ID": string;
 };
 
+type TrackMetaRow = {
+  "Spotify URI": string;
+  "Release Year": string;
+  Genres: string;
+};
+
 async function fetchCsv<T>(path: string) {
   const response = await fetch(path);
+  const text = await response.text();
+  const parsed = Papa.parse<T>(text, { header: true, skipEmptyLines: true });
+  return parsed.data;
+}
+
+async function fetchCsvMaybe<T>(path: string) {
+  const response = await fetch(path);
+  if (!response.ok) return [];
   const text = await response.text();
   const parsed = Papa.parse<T>(text, { header: true, skipEmptyLines: true });
   return parsed.data;
@@ -41,21 +55,38 @@ export default function SeasonPersonalStats() {
   const [competitors, setCompetitors] = useState<CompetitorRow[]>([]);
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
   const [votes, setVotes] = useState<VoteRow[]>([]);
+  const [trackMeta, setTrackMeta] = useState<TrackMetaRow[]>([]);
 
   useEffect(() => {
     const load = async () => {
-      const [competitorsData, submissionsData, votesData] = await Promise.all([
+      const [competitorsData, submissionsData, votesData, trackMetaData] = await Promise.all([
         fetchCsv<CompetitorRow>("/data/competitors.csv"),
         fetchCsv<SubmissionRow>("/data/submissions.csv"),
         fetchCsv<VoteRow>("/data/votes.csv"),
+        fetchCsvMaybe<TrackMetaRow>("/data/track_metadata.csv"),
       ]);
       setCompetitors(competitorsData);
       setSubmissions(submissionsData);
       setVotes(votesData);
+      setTrackMeta(trackMetaData);
     };
 
     load().catch(() => undefined);
   }, []);
+
+  const metaMap = useMemo(
+    () =>
+      new Map(
+        trackMeta.map((row) => [
+          row["Spotify URI"],
+          {
+            year: Number(row["Release Year"]) || null,
+            genres: row.Genres ? row.Genres.split(/[;,]/).map((item) => item.trim()).filter(Boolean) : [],
+          },
+        ])
+      ),
+    [trackMeta]
+  );
 
   const stats = useMemo(() => {
     if (!profile?.season1_competitor_id) return null;
@@ -86,6 +117,7 @@ export default function SeasonPersonalStats() {
       const submission = submissionsByKey.get(key);
       if (!submission) return;
       const submitterId = submission["Submitter ID"];
+      if (submitterId === myId) return;
       const points = Number(vote["Points Assigned"]) || 0;
       votesGiven.set(submitterId, (votesGiven.get(submitterId) ?? 0) + points);
     });
@@ -93,6 +125,19 @@ export default function SeasonPersonalStats() {
     const topReceiver = Array.from(votesToMySongs.entries()).sort((a, b) => b[1] - a[1])[0];
     const topGiven = Array.from(votesGiven.entries()).sort((a, b) => b[1] - a[1])[0];
     const leastGiven = Array.from(votesGiven.entries()).sort((a, b) => a[1] - b[1])[0];
+
+    const decadeCounts = new Map<string, number>();
+    const genreCounts = new Map<string, number>();
+    mySubmissions.forEach((row) => {
+      const meta = metaMap.get(row["Spotify URI"]);
+      const year = meta?.year ?? null;
+      const decade = year ? `${Math.floor(year / 10) * 10}s` : "Unknown";
+      decadeCounts.set(decade, (decadeCounts.get(decade) ?? 0) + 1);
+      const genre = meta?.genres?.[0] ?? "Unknown";
+      genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1);
+    });
+    const topDecade = Array.from(decadeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+    const topGenre = Array.from(genreCounts.entries()).sort((a, b) => b[1] - a[1])[0];
 
     return {
       myName: competitorMap.get(myId) ?? "You",
@@ -106,8 +151,10 @@ export default function SeasonPersonalStats() {
       leastGiven: leastGiven
         ? { name: competitorMap.get(leastGiven[0]) ?? leastGiven[0], points: leastGiven[1] }
         : null,
+      topDecade: topDecade ? { decade: topDecade[0], count: topDecade[1] } : null,
+      topGenre: topGenre ? { genre: topGenre[0], count: topGenre[1] } : null,
     };
-  }, [profile, competitors, submissions, votes]);
+  }, [profile, competitors, submissions, votes, metaMap]);
 
   if (!stats) return null;
 
@@ -146,7 +193,16 @@ export default function SeasonPersonalStats() {
           <span className="stat-label">You gave least to</span>
           <strong>{stats.leastGiven?.name ?? "—"}</strong>
         </div>
+        <div>
+          <span className="stat-label">Your decade</span>
+          <strong>{stats.topDecade?.decade ?? "Unknown"}</strong>
+        </div>
+        <div>
+          <span className="stat-label">Your genre</span>
+          <strong>{stats.topGenre?.genre ?? "Unknown"}</strong>
+        </div>
       </div>
+      <p className="muted">Add /data/track_metadata.csv to improve decade and genre accuracy.</p>
     </Card>
   );
 }

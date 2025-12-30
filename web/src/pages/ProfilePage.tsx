@@ -8,14 +8,12 @@ export default function ProfilePage() {
   const { profile, refresh } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [musicLeagueUsername, setMusicLeagueUsername] = useState(profile?.music_league_username ?? "");
-  const [ntfyTopic, setNtfyTopic] = useState(profile?.ntfy_topic ?? "");
   const [chatNotifyEnabled, setChatNotifyEnabled] = useState(profile?.chat_notify_enabled ?? true);
+  const [emailNotifyEnabled, setEmailNotifyEnabled] = useState(profile?.email_notify_enabled ?? true);
 
   useEffect(() => {
-    setMusicLeagueUsername(profile?.music_league_username ?? "");
-    setNtfyTopic(profile?.ntfy_topic ?? "");
     setChatNotifyEnabled(profile?.chat_notify_enabled ?? true);
+    setEmailNotifyEnabled(profile?.email_notify_enabled ?? true);
   }, [profile]);
 
   const handleAvatarUpload = async (file: File) => {
@@ -51,17 +49,11 @@ export default function ProfilePage() {
 
   const handleNotifySave = async () => {
     if (!profile) return;
-    const fallbackTopic = musicLeagueUsername
-      ? `musicleague_${musicLeagueUsername.toLowerCase().replace(/\\s+/g, "_")}`
-      : null;
-    const topic = ntfyTopic.trim() || fallbackTopic;
-
     const { error: updateError } = await supabase
       .from("profiles")
       .update({
-        music_league_username: musicLeagueUsername.trim() || null,
-        ntfy_topic: topic,
         chat_notify_enabled: chatNotifyEnabled,
+        email_notify_enabled: emailNotifyEnabled,
       })
       .eq("id", profile.id);
 
@@ -101,35 +93,29 @@ export default function ProfilePage() {
           {error ? <div className="auth-error">{error}</div> : null}
         </div>
         <div className="profile-notify">
-          <label className="field">
-            <span className="field-label">Music League username</span>
-            <input
-              className="field-input"
-              value={musicLeagueUsername}
-              onChange={(event) => setMusicLeagueUsername(event.target.value)}
-              placeholder="your_music_league_name"
-            />
-          </label>
-          <label className="field">
-            <span className="field-label">ntfy topic (optional)</span>
-            <input
-              className="field-input"
-              value={ntfyTopic}
-              onChange={(event) => setNtfyTopic(event.target.value)}
-              placeholder="musicleague_yourname"
-            />
-            <span className="field-helper">
-              Defaults to musicleague_&lt;your username&gt; if blank.
-            </span>
-          </label>
           <label className="checkbox-row">
             <input
               type="checkbox"
               checked={chatNotifyEnabled}
               onChange={(event) => setChatNotifyEnabled(event.target.checked)}
+              disabled={profile?.can_toggle_chat_notify === false}
             />
             <span>Enable chat notifications</span>
           </label>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={emailNotifyEnabled}
+              onChange={(event) => setEmailNotifyEnabled(event.target.checked)}
+              disabled={profile?.can_toggle_email_notify === false}
+            />
+            <span>Enable email notifications</span>
+          </label>
+          {(profile?.can_toggle_chat_notify === false || profile?.can_toggle_email_notify === false) ? (
+            <span className="field-helper">
+              An admin must enable notification controls for your account.
+            </span>
+          ) : null}
           <button className="button button-secondary" type="button" onClick={handleNotifySave}>
             Save notification settings
           </button>

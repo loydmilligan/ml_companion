@@ -72,9 +72,12 @@ export default function AuthPage() {
 
   const handleOAuth = async (provider: "google" | "apple") => {
     setError(null);
+    const params = new URLSearchParams(window.location.search);
+    const invite = params.get("invite");
+    const redirectTo = invite ? `${window.location.origin}/invite?code=${invite}` : window.location.origin;
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo },
     });
     if (authError) {
       setError(authError.message);
@@ -86,18 +89,15 @@ export default function AuthPage() {
       <div className="auth-hero">
         <div className="auth-hero-badge">Talking Music League</div>
         <h1>Bring your family league to life.</h1>
-        <p>
-          Follow the round, track the moments, and keep the conversation in one place. Create
-          your family hub in minutes.
-        </p>
+        <p>Follow the round, track the moments, and keep the conversation in one place.</p>
         <div className="auth-hero-panels">
           <Card tone="glass">
-            <h3>One clear flow</h3>
-            <p>Log in, land on your live round, and keep momentum with guided next steps.</p>
+            <h3>Discuss the current round</h3>
+            <p>Track submissions, voting moments, and keep the live conversation going.</p>
           </Card>
           <Card tone="glass">
-            <h3>Layered insight</h3>
-            <p>Color-coded status cards show what needs attention and what is already done.</p>
+            <h3>Revisit past seasons</h3>
+            <p>Explore old themes, playlists, and surprising trends worth a second listen.</p>
           </Card>
         </div>
       </div>
@@ -162,15 +162,15 @@ export default function AuthPage() {
         </form>
 
         <div className="auth-divider">
-          <span>Or continue with</span>
+          <span>{mode === "signup" ? "Register with" : "Or continue with"}</span>
         </div>
 
         <div className="auth-social">
           <Button type="button" variant="secondary" onClick={() => handleOAuth("google")}>
-            Continue with Google
+            {mode === "signup" ? "Register with Google" : "Continue with Google"}
           </Button>
           <Button type="button" variant="ghost" onClick={() => handleOAuth("apple")}>
-            Continue with Apple ID
+            {mode === "signup" ? "Register with Apple ID" : "Continue with Apple ID"}
           </Button>
         </div>
       </Card>

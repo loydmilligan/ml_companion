@@ -33,6 +33,7 @@ export default function RoundDetailPage() {
   const { group } = useAuth();
   const isLead = group?.role === "lead";
   const [round, setRound] = useState<RoundInfo | null>(null);
+  const canRevealSubmitter = isLead || round?.status === "revealed" || round?.status === "archived";
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
@@ -153,7 +154,11 @@ export default function RoundDetailPage() {
                     <strong>{submission.title}</strong>
                     <span className="muted">{submission.artist}</span>
                     {submission.submitter_name ? (
-                      <span className="muted">Submitted by {submission.submitter_name}</span>
+                      <span className="muted">
+                        {canRevealSubmitter
+                          ? `Submitted by ${submission.submitter_name}`
+                          : "Submitted by Hidden until reveal"}
+                      </span>
                     ) : null}
                   </div>
                 </div>

@@ -29,18 +29,34 @@ You will need:
 - **Key ID**
 - **Team ID**
 - **Services ID** (Client ID)
-- **Private Key** (the `.p8` file contents)
+- **Private Key** (the `.p8` file)
 
-### 4) Configure Supabase
+### 4) Generate the Client Secret (JWT)
+Supabase expects a **Client Secret** (JWT), not the raw `.p8` key.
+
+Install the signing dependency:
+```bash
+npm i jsonwebtoken
+```
+
+Export your values and run the script:
+```bash
+export APPLE_TEAM_ID="YOUR_TEAM_ID"
+export APPLE_SERVICE_ID="YOUR_SERVICE_ID"
+export APPLE_KEY_ID="YOUR_KEY_ID"
+export APPLE_KEY_PATH="/path/to/AuthKey_XXXXXXXXXX.p8"
+
+node scripts/generate_apple_secret.js
+```
+
+### 5) Configure Supabase
 Supabase → **Authentication → Providers → Apple**
-- **Services ID** (Client ID)
-- **Team ID**
-- **Key ID**
-- **Private Key** (paste contents of `.p8`)
+- **Client ID** = your Service ID
+- **Client Secret** = output from `scripts/generate_apple_secret.js`
 
 Save the provider settings.
 
-### 5) Test Login
+### 6) Test Login
 - Open the app login screen
 - Click **Continue with Apple ID**
 - Complete Apple’s login flow
@@ -56,8 +72,8 @@ Save the provider settings.
 - Ensure your Service ID has the correct domain set (no protocol, just domain).
 
 ### “Invalid grant”
-- The Team ID / Key ID / Private Key do not match.
-- Recreate the key and update Supabase with the new values.
+- The Team ID / Key ID / Service ID do not match.
+- Regenerate the Client Secret and update Supabase.
 
 ### Apple login button shows but fails silently
 - Check Supabase **Auth logs** for details.
@@ -70,3 +86,4 @@ Save the provider settings.
 ## Notes
 - Apple enforces strict matching for domains and callback URLs.
 - If you change your domain later, update both Apple and Supabase settings.
+- Client Secrets expire (max 180 days). Re-run the script to refresh.

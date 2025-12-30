@@ -35,9 +35,8 @@ type CommentRow = {
 
 type NotifyProfile = {
   email: string | null;
-  ntfy_topic: string | null;
   chat_notify_enabled: boolean | null;
-  music_league_username: string | null;
+  email_notify_enabled: boolean | null;
 };
 
 async function fetchCsv<T>(path: string) {
@@ -122,25 +121,13 @@ export default function SeasonRounds() {
 
       const { data: memberData } = await supabase
         .from("group_members")
-        .select("profiles(email,ntfy_topic,chat_notify_enabled,music_league_username)")
+        .select("profiles(email,chat_notify_enabled,email_notify_enabled)")
         .eq("group_id", group.id)
         .limit(50);
 
-      const topics = (memberData ?? [])
-        .map((row) => row.profiles as NotifyProfile)
-        .filter((member) => member?.chat_notify_enabled !== false)
-        .map((member) => {
-          if (member.ntfy_topic) return member.ntfy_topic;
-          if (member.music_league_username) {
-            return `musicleague_${member.music_league_username.toLowerCase().replace(/\\s+/g, "_")}`;
-          }
-          return null;
-        })
-        .filter(Boolean) as string[];
-
       const emails = (memberData ?? [])
         .map((row) => row.profiles as NotifyProfile)
-        .filter((member) => member?.chat_notify_enabled !== false)
+        .filter((member) => member?.chat_notify_enabled !== false && member?.email_notify_enabled !== false)
         .map((member) => member.email)
         .filter(Boolean) as string[];
 
@@ -150,7 +137,6 @@ export default function SeasonRounds() {
         body: {
           title: "Season round chat",
           message: `${roundName} — ${profile.display_name ?? "Someone"}: ${body.trim()}`,
-          ntfyTopics: topics,
           recipients: emails,
         },
       });

@@ -1,29 +1,26 @@
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function SideNav() {
+  const { group } = useAuth();
+  const isLead = group?.role === "lead";
   return (
     <aside className="side-nav">
       <div className="side-nav-section">
-        <NavLink className="side-nav-link" to="/app" end>
-          Dashboard
-        </NavLink>
         <NavLink className="side-nav-link" to="/app/chat">
-          Group Chat
+          Chat
         </NavLink>
-        <NavLink className="side-nav-link" to="/app/leaderboard">
-          Leaderboard
+        <NavLink className="side-nav-link" to="/app/history">
+          History
         </NavLink>
-      </div>
-      <div className="side-nav-footer">
-        <div className="side-nav-footer-title">Need to adjust your account?</div>
-        <div className="side-nav-footer-links">
-          <NavLink className="side-nav-link" to="/app/profile">
-            Profile
+        <NavLink className="side-nav-link" to="/app/settings">
+          Settings
+        </NavLink>
+        {isLead ? (
+          <NavLink className="side-nav-link" to="/app/admin">
+            Admin
           </NavLink>
-          <NavLink className="side-nav-link" to="/app/settings">
-            Settings
-          </NavLink>
-        </div>
+        ) : null}
       </div>
     </aside>
   );
