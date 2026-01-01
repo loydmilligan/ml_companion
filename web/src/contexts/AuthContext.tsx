@@ -14,6 +14,8 @@ type Profile = {
   email_notify_enabled: boolean | null;
   can_toggle_chat_notify: boolean | null;
   can_toggle_email_notify: boolean | null;
+  reaction_notify_enabled: boolean | null;
+  can_toggle_reaction_notify: boolean | null;
 };
 
 type Group = {
@@ -36,7 +38,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 async function ensureProfile(userId: string, email?: string | null) {
   const { data: existing, error } = await supabase
     .from("profiles")
-    .select("id,email,display_name,avatar_url,season1_competitor_id,music_league_username,ntfy_topic,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify")
+    .select("id,email,display_name,avatar_url,season1_competitor_id,music_league_username,ntfy_topic,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify,reaction_notify_enabled,can_toggle_reaction_notify")
     .eq("id", userId)
     .maybeSingle();
 
@@ -49,7 +51,7 @@ async function ensureProfile(userId: string, email?: string | null) {
     const { data, error: insertError } = await supabase
       .from("profiles")
       .insert({ id: userId, email: email ?? null, display_name: fallbackName })
-      .select("id,email,display_name,avatar_url,season1_competitor_id,music_league_username,ntfy_topic,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify")
+      .select("id,email,display_name,avatar_url,season1_competitor_id,music_league_username,ntfy_topic,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify,reaction_notify_enabled,can_toggle_reaction_notify")
       .single();
 
     if (insertError) {
@@ -125,8 +127,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const profileData = await ensureProfile(activeSession.user.id, activeSession.user.email);
-      const groupData = await fetchGroup(activeSession.user.id);
+      // Run profile and group fetch in parallel for faster loading
+      const [profileData, groupData] = await Promise.all([
+        ensureProfile(activeSession.user.id, activeSession.user.email),
+        fetchGroup(activeSession.user.id),
+      ]);
       setProfile(profileData);
       setGroup(groupData);
     } catch (error) {
@@ -150,12 +155,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       setLoading(true);
-      ensureProfile(sessionState.user.id, sessionState.user.email)
-        .then((profileData) => {
+      // Run profile and group fetch in parallel
+      Promise.all([
+        ensureProfile(sessionState.user.id, sessionState.user.email),
+        fetchGroup(sessionState.user.id),
+      ])
+        .then(([profileData, groupData]) => {
           setProfile(profileData);
-          return fetchGroup(sessionState.user.id);
-        })
-        .then((groupData) => {
           setGroup(groupData);
         })
         .catch((error) => {

@@ -31,6 +31,14 @@ export default function InvitePage() {
     }
   }, [code]);
 
+  // If user already has a group, clear invite and redirect to app
+  useEffect(() => {
+    if (session && group) {
+      localStorage.removeItem("pending_invite");
+      navigate("/app/chat", { replace: true });
+    }
+  }, [session, group, navigate]);
+
   const acceptInvite = async () => {
     if (!code) {
       setError("Missing invite code.");

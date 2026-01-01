@@ -1,0 +1,1337 @@
+/**
+ * CardStack Component Styles
+ *
+ * Mobile-first swipeable card stack for history view.
+ * Color palette: Lipstick Red, Malachite, Ocean Twilight, Black, Deep Saffron
+ */
+
+/* Color palette variables */
+:root {
+  --cs-red: #f21b3f;
+  --cs-green: #1ed760;
+  --cs-blue: #2d46b9;
+  --cs-black: #000000;
+  --cs-saffron: #ff9914;
+}
+
+/* ========================================
+   Container & Layout
+   ======================================== */
+
+.card-stack-container {
+  min-height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(145deg, #0a0a0a 0%, #111827 50%, #0f172a 100%);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Desktop wrapper for centered layout */
+@media (min-width: 768px) {
+  .card-stack-container {
+    padding: 24px;
+    min-height: calc(100vh - 180px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-stack-container {
+    padding: 32px 48px;
+    background: linear-gradient(145deg, #0d0d0d 0%, #1a1a2e 40%, #0f172a 100%);
+  }
+}
+
+.card-stack-header {
+  padding: 16px 20px 8px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .card-stack-header {
+    max-width: 500px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+
+.card-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 6px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-stack {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  max-width: 375px;
+  margin: 0 auto;
+  padding: 0 16px;
+  perspective: 1000px;
+  touch-action: pan-y pinch-zoom;
+  cursor: grab;
+}
+
+@media (min-width: 768px) {
+  .card-stack {
+    max-width: 440px;
+    padding: 0 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-stack {
+    max-width: 480px;
+  }
+}
+
+.card-stack:active {
+  cursor: grabbing;
+}
+
+.card-stack-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 16px;
+}
+
+/* ========================================
+   Card Base Styles
+   ======================================== */
+
+.round-card,
+.season-recap-card {
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: calc(100% - 20px);
+  border-radius: 24px;
+  background: white;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  will-change: transform, opacity;
+}
+
+@media (min-width: 768px) {
+  .round-card,
+  .season-recap-card {
+    left: 24px;
+    right: 24px;
+    border-radius: 28px;
+    box-shadow:
+      0 25px 80px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+}
+
+.round-card.dragging,
+.season-recap-card.dragging {
+  transition: none;
+  cursor: grabbing;
+}
+
+/* Position transforms */
+.card-position-0 { z-index: 4; }
+.card-position-1 { z-index: 3; }
+.card-position-2 { z-index: 2; }
+.card-position-3 { z-index: 1; }
+
+/* ========================================
+   Card Hero Section
+   ======================================== */
+
+.card-hero {
+  position: relative;
+  height: 42%;
+  min-height: 180px;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--cs-blue) 0%, #1a2d6b 100%);
+}
+
+.hero-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--cs-blue) 0%, #0f1a3d 100%);
+}
+
+.placeholder-icon {
+  font-size: 48px;
+  opacity: 0.3;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.9) 0%,
+    rgba(0, 0, 0, 0.5) 35%,
+    transparent 100%
+  );
+}
+
+.round-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.badge-new {
+  background: var(--cs-green);
+  color: var(--cs-black);
+}
+
+.badge-archived {
+  background: rgba(158, 158, 158, 0.95);
+  color: white;
+}
+
+.badge-default {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.hero-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px;
+}
+
+.theme-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: white;
+  line-height: 1.2;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  margin: 0 0 4px;
+}
+
+.theme-author {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+}
+
+/* ========================================
+   Card Content Section
+   ======================================== */
+
+.card-content {
+  height: 58%;
+  padding: 16px 20px 20px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+.card-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.card-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.card-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+}
+
+/* ========================================
+   Quick Stats - Using palette colors
+   ======================================== */
+
+.quick-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.stat-pill {
+  padding: 12px 8px;
+  border-radius: 16px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.stat-pill.blue {
+  background: linear-gradient(135deg, var(--cs-blue) 0%, #4361c2 100%);
+}
+
+.stat-pill.green {
+  background: linear-gradient(135deg, var(--cs-green) 0%, #15a34a 100%);
+  color: var(--cs-black);
+}
+
+.stat-pill.purple {
+  background: linear-gradient(135deg, var(--cs-saffron) 0%, #e68a00 100%);
+  color: var(--cs-black);
+}
+
+.stat-value {
+  display: block;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.9;
+}
+
+/* ========================================
+   Section Labels
+   ======================================== */
+
+.section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cs-black);
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.label-icon {
+  font-size: 14px;
+}
+
+/* ========================================
+   Track List
+   ======================================== */
+
+.track-list-section {
+  margin-bottom: 20px;
+}
+
+.track-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.track-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: #f5f5f7;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+
+.track-item:active {
+  background: #eaeaec;
+}
+
+.track-rank {
+  width: 20px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--cs-red);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.track-artwork-container {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.track-artwork {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.track-artwork-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--cs-blue) 0%, #4361c2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.track-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.track-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cs-black);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-artist {
+  font-size: 11px;
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-submitter {
+  font-size: 10px;
+  color: #888;
+}
+
+.track-points {
+  flex-shrink: 0;
+  text-align: center;
+  padding: 6px 10px;
+  background: linear-gradient(135deg, var(--cs-red) 0%, #d91636 100%);
+  border-radius: 10px;
+  color: white;
+}
+
+.track-points .points-value {
+  font-size: 14px;
+  font-weight: 800;
+  display: block;
+  line-height: 1;
+}
+
+.track-points .points-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+/* ========================================
+   Story Panel
+   ======================================== */
+
+.story-section {
+  margin-bottom: 20px;
+}
+
+.story-text {
+  background: linear-gradient(135deg, rgba(45, 70, 185, 0.12) 0%, rgba(30, 215, 96, 0.12) 100%);
+  padding: 14px 16px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(45, 70, 185, 0.15);
+}
+
+.story-text p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #333;
+  font-style: italic;
+  margin: 0;
+}
+
+.winners-art-container {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.winners-art {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ========================================
+   Awards Preview
+   ======================================== */
+
+.awards-section {
+  margin-bottom: 16px;
+}
+
+.awards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.award-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f5f5f7;
+  border-radius: 12px;
+}
+
+.award-trophy {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trophy-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.trophy-emoji {
+  font-size: 28px;
+}
+
+.award-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.award-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cs-black);
+}
+
+.award-description {
+  font-size: 11px;
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.award-winner {
+  font-size: 11px;
+  color: var(--cs-red);
+  font-weight: 600;
+}
+
+/* ========================================
+   Season Recap Card
+   ======================================== */
+
+.recap-hero {
+  position: relative;
+  height: 18%;
+  min-height: 80px;
+  background: linear-gradient(135deg, var(--cs-red) 0%, #b01430 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recap-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    transparent 0%,
+    rgba(0, 0, 0, 0.2) 100%
+  );
+}
+
+.recap-hero-content {
+  position: relative;
+  text-align: center;
+  color: white;
+}
+
+.recap-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.season-title {
+  font-size: 22px;
+  font-weight: 900;
+  margin: 0 0 2px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.league-name {
+  font-size: 12px;
+  margin: 0;
+  opacity: 0.9;
+}
+
+/* Season recap stats grid */
+.recap-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.recap-stat-box {
+  text-align: center;
+  padding: 16px 8px;
+  background: linear-gradient(135deg, rgba(242, 27, 63, 0.08) 0%, rgba(255, 153, 20, 0.08) 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(242, 27, 63, 0.15);
+}
+
+.recap-stat-value {
+  display: block;
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--cs-red);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.recap-stat-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Top tracks in recap */
+.recap-top-tracks {
+  margin-bottom: 20px;
+}
+
+.top-tracks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.top-track-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: #f5f5f7;
+  border-radius: 12px;
+}
+
+.top-track-rank {
+  width: 24px;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--cs-saffron);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.top-track-item:nth-child(1) .top-track-rank { color: var(--cs-saffron); }
+.top-track-item:nth-child(2) .top-track-rank { color: #a0a0a0; }
+.top-track-item:nth-child(3) .top-track-rank { color: #cd7f32; }
+
+.top-track-artwork {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--cs-blue) 0%, #4361c2 100%);
+}
+
+.top-track-artwork img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.top-track-artwork .artwork-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.top-track-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.top-track-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cs-black);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-track-artist {
+  font-size: 11px;
+  color: #555;
+}
+
+.top-track-submitter {
+  font-size: 10px;
+  color: #888;
+}
+
+.top-track-points {
+  flex-shrink: 0;
+  text-align: center;
+  padding: 6px 10px;
+  background: linear-gradient(135deg, var(--cs-red) 0%, #d91636 100%);
+  border-radius: 10px;
+  color: white;
+}
+
+/* Themes list in recap */
+.recap-themes {
+  margin-bottom: 16px;
+}
+
+.themes-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.theme-pill {
+  display: inline-block;
+  padding: 6px 12px;
+  background: rgba(45, 70, 185, 0.1);
+  color: var(--cs-blue);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 16px;
+  border: 1px solid rgba(45, 70, 185, 0.2);
+}
+
+/* ========================================
+   Swipe Indicator
+   ======================================== */
+
+.swipe-indicator {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 16px 20px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .swipe-indicator {
+    padding: 16px 16px 24px;
+  }
+}
+
+.swipe-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.swipe-dot.active {
+  width: 24px;
+  border-radius: 4px;
+  background: var(--cs-green);
+}
+
+.swipe-dot:focus {
+  outline: 2px solid var(--cs-green);
+  outline-offset: 2px;
+}
+
+.swipe-ellipsis {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+  line-height: 1;
+}
+
+/* ========================================
+   Navigation Buttons
+   ======================================== */
+
+.card-stack-nav {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px;
+  pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  .card-stack-nav {
+    padding: 0 0;
+    left: -60px;
+    right: -60px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-stack-nav {
+    left: -80px;
+    right: -80px;
+  }
+}
+
+.nav-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 768px) {
+  .nav-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: var(--cs-green);
+  border-color: var(--cs-green);
+  color: var(--cs-black);
+}
+
+.nav-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.nav-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.nav-btn:focus {
+  outline: 2px solid var(--cs-green);
+  outline-offset: 2px;
+}
+
+/* ========================================
+   Responsive Adjustments
+   ======================================== */
+
+@media (min-width: 640px) {
+  .card-stack {
+    max-width: 420px;
+  }
+
+  .theme-title {
+    font-size: 26px;
+  }
+
+  .stat-value {
+    font-size: 26px;
+  }
+
+  .card-hero {
+    height: 45%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-stack-nav {
+    padding: 0 20px;
+  }
+}
+
+/* ========================================
+   Reduced Motion
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .round-card,
+  .season-recap-card,
+  .swipe-dot,
+  .nav-btn,
+  .track-item {
+    transition: none;
+  }
+}
+
+/* ========================================
+   Dark Mode Support
+   ======================================== */
+
+[data-mode="dark"] .card-content {
+  background: #111111;
+}
+
+[data-mode="dark"] .round-card,
+[data-mode="dark"] .season-recap-card {
+  background: #111111;
+}
+
+[data-mode="dark"] .track-item,
+[data-mode="dark"] .award-item,
+[data-mode="dark"] .top-track-item {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-mode="dark"] .track-title,
+[data-mode="dark"] .award-name,
+[data-mode="dark"] .top-track-title,
+[data-mode="dark"] .section-label {
+  color: #f4f4f5;
+}
+
+[data-mode="dark"] .track-artist,
+[data-mode="dark"] .award-description,
+[data-mode="dark"] .top-track-artist,
+[data-mode="dark"] .track-submitter,
+[data-mode="dark"] .top-track-submitter {
+  color: #a1a1aa;
+}
+
+[data-mode="dark"] .story-text {
+  background: linear-gradient(135deg, rgba(45, 70, 185, 0.2) 0%, rgba(30, 215, 96, 0.15) 100%);
+  border-color: rgba(45, 70, 185, 0.25);
+}
+
+[data-mode="dark"] .story-text p {
+  color: #e4e4e7;
+}
+
+[data-mode="dark"] .recap-stat-box {
+  background: rgba(242, 27, 63, 0.12);
+  border-color: rgba(242, 27, 63, 0.2);
+}
+
+[data-mode="dark"] .recap-stat-label {
+  color: #a1a1aa;
+}
+
+[data-mode="dark"] .theme-pill {
+  background: rgba(45, 70, 185, 0.25);
+  border-color: rgba(45, 70, 185, 0.35);
+  color: #7b93e0;
+}
+
+/* ========================================
+   Season Recap - Leaderboard
+   ======================================== */
+
+.recap-leaderboard {
+  margin-bottom: 20px;
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.leaderboard-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #f5f5f7;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+
+.leaderboard-item.rank-1 {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 180, 0, 0.1) 100%);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.leaderboard-item.rank-2 {
+  background: linear-gradient(135deg, rgba(192, 192, 192, 0.15) 0%, rgba(160, 160, 160, 0.1) 100%);
+  border: 1px solid rgba(192, 192, 192, 0.3);
+}
+
+.leaderboard-item.rank-3 {
+  background: linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(180, 100, 30, 0.1) 100%);
+  border: 1px solid rgba(205, 127, 50, 0.3);
+}
+
+.leaderboard-rank {
+  width: 28px;
+  font-size: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.leaderboard-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cs-black);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leaderboard-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.leaderboard-points {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cs-red);
+}
+
+.leaderboard-wins {
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  background: var(--cs-green);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+/* ========================================
+   Season Recap - Awards
+   ======================================== */
+
+.recap-awards {
+  margin-bottom: 20px;
+}
+
+.season-award-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(255, 153, 20, 0.08) 0%, rgba(242, 27, 63, 0.08) 100%);
+  border: 1px solid rgba(255, 153, 20, 0.2);
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.season-award-item:last-child {
+  margin-bottom: 0;
+}
+
+/* ========================================
+   Season Recap - Voting Patterns
+   ======================================== */
+
+.recap-voting-patterns {
+  margin-bottom: 20px;
+}
+
+.voting-patterns-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.voting-pattern-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: #f5f5f7;
+  border-radius: 12px;
+}
+
+.voter-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cs-black);
+}
+
+.vote-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vote-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.vote-target.most {
+  background: linear-gradient(135deg, rgba(30, 215, 96, 0.15) 0%, rgba(20, 180, 70, 0.1) 100%);
+  color: #0f7a3d;
+  border: 1px solid rgba(30, 215, 96, 0.3);
+}
+
+.vote-target.least {
+  background: linear-gradient(135deg, rgba(158, 158, 158, 0.15) 0%, rgba(120, 120, 120, 0.1) 100%);
+  color: #666;
+  border: 1px solid rgba(158, 158, 158, 0.3);
+}
+
+.target-arrow {
+  font-size: 12px;
+}
+
+.target-name {
+  font-weight: 600;
+}
+
+.target-pts {
+  font-weight: 700;
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.1);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+/* ========================================
+   Season Recap - Genre/Decade Distribution
+   ======================================== */
+
+.recap-distribution {
+  margin-bottom: 20px;
+}
+
+.distribution-section {
+  margin-bottom: 16px;
+}
+
+.distribution-section:last-child {
+  margin-bottom: 0;
+}
+
+.distribution-subtitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px;
+}
+
+.distribution-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.distribution-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bar-label {
+  width: 48px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #555;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.bar-container {
+  flex: 1;
+  height: 16px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.5s ease;
+}
+
+.bar-fill.decade-bar {
+  background: linear-gradient(90deg, var(--cs-blue) 0%, #4361c2 100%);
+}
+
+.bar-count {
+  width: 24px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cs-blue);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.genre-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.genre-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, rgba(30, 215, 96, 0.1) 0%, rgba(20, 180, 70, 0.08) 100%);
+  color: #0f7a3d;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 16px;
+  border: 1px solid rgba(30, 215, 96, 0.25);
+}
+
+.genre-count {
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(30, 215, 96, 0.2);
+  padding: 2px 5px;
+  border-radius: 6px;
+}
+
+/* Dark mode support for new sections */
+[data-mode="dark"] .leaderboard-item {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-mode="dark"] .leaderboard-item.rank-1 {
+  background: rgba(255, 215, 0, 0.12);
+  border-color: rgba(255, 215, 0, 0.25);
+}
+
+[data-mode="dark"] .leaderboard-item.rank-2 {
+  background: rgba(192, 192, 192, 0.12);
+  border-color: rgba(192, 192, 192, 0.25);
+}
+
+[data-mode="dark"] .leaderboard-item.rank-3 {
+  background: rgba(205, 127, 50, 0.12);
+  border-color: rgba(205, 127, 50, 0.25);
+}
+
+[data-mode="dark"] .leaderboard-name {
+  color: #f4f4f5;
+}
+
+[data-mode="dark"] .voting-pattern-item {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-mode="dark"] .voter-name {
+  color: #f4f4f5;
+}
+
+[data-mode="dark"] .vote-target.most {
+  background: rgba(30, 215, 96, 0.2);
+  border-color: rgba(30, 215, 96, 0.35);
+  color: #4ade80;
+}
+
+[data-mode="dark"] .vote-target.least {
+  background: rgba(158, 158, 158, 0.2);
+  border-color: rgba(158, 158, 158, 0.35);
+  color: #a1a1aa;
+}
+
+[data-mode="dark"] .distribution-subtitle {
+  color: #a1a1aa;
+}
+
+[data-mode="dark"] .bar-label {
+  color: #a1a1aa;
+}
+
+[data-mode="dark"] .bar-container {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-mode="dark"] .bar-count {
+  color: #7b93e0;
+}
+
+[data-mode="dark"] .genre-pill {
+  background: rgba(30, 215, 96, 0.15);
+  border-color: rgba(30, 215, 96, 0.3);
+  color: #4ade80;
+}
+
+[data-mode="dark"] .genre-count {
+  background: rgba(30, 215, 96, 0.25);
+}
+
+[data-mode="dark"] .season-award-item {
+  background: rgba(255, 153, 20, 0.12);
+  border-color: rgba(255, 153, 20, 0.25);
+}

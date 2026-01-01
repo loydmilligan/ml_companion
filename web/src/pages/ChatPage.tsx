@@ -1,8 +1,13 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import Card from "../components/Card";
+import { Fragment, useCallback, useEffect, useRef, useState, type TouchEvent } from "react";
 import Button from "../components/Button";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import { useRound } from "../contexts/RoundContext";
+import { usePeekPanel, PeekButton } from "../components/pinned-peek";
+
+// Pull-to-refresh constants
+const PULL_THRESHOLD = 80;
+const MAX_PULL = 120;
 
 type ChatMessage = {
   id: string;
@@ -15,34 +20,23 @@ type ChatMessage = {
   } | null;
 };
 
+type MessageReaction = {
+  id: string;
+  message_id: string;
+  reactor_id: string;
+  emoji: string;
+};
+
+type ReactionCount = {
+  emoji: string;
+  count: number;
+  reactorIds: string[];
+};
+
 type NotifyProfile = {
   email: string | null;
   chat_notify_enabled: boolean | null;
   email_notify_enabled: boolean | null;
-};
-
-type RoundSummary = {
-  id: string;
-  theme: string;
-  theme_description: string | null;
-  theme_author: string | null;
-  status: "open" | "voting" | "revealed" | "archived";
-  season_number: number | null;
-  round_number: number | null;
-  submission_deadline: string | null;
-  voting_deadline: string | null;
-  playlist_url: string | null;
-  external_playlist_url: string | null;
-};
-
-type SubmissionRow = {
-  id: string;
-  title: string;
-  artist: string | null;
-  link: string | null;
-  artwork_url: string | null;
-  release_year: number | null;
-  genres: string | null;
 };
 
 function extractYouTubeId(text: string) {
@@ -86,30 +80,77 @@ function renderMessageBody(text: string) {
   );
 }
 
-function buildPlaylistEmbed(url: string) {
-  if (url.includes("open.spotify.com/playlist/")) {
-    const id = url.split("open.spotify.com/playlist/")[1]?.split(/[?&]/)[0];
-    return id ? `https://open.spotify.com/embed/playlist/${id}` : null;
-  }
-  if (url.includes("youtube.com/playlist") || url.includes("list=")) {
-    const match = url.match(/[?&]list=([^&]+)/);
-    const listId = match?.[1];
-    return listId ? `https://www.youtube.com/embed/videoseries?list=${listId}` : null;
-  }
-  return null;
-}
+const allEmojis = [
+  // Reactions
+  "👍", "❤️", "😂", "😮", "😢", "😡",
+  // Music
+  "🎧", "🎵", "🎶", "🎤", "🎸", "🥁", "🎹", "🎺", "🎷", "🎻",
+  // Expressions
+  "🔥", "👏", "😍", "🤔", "💜", "💙",
+  "💃", "🕺", "🙌", "✨", "💯", "🤘",
+  "👀", "🤩", "😭", "💀", "🫡", "🙏",
+];
 
 export default function ChatPage() {
   const { group, profile } = useAuth();
+  const { round } = useRound();
+  const { quotedSong, clearQuotedSong, openPanel } = usePeekPanel();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [reactions, setReactions] = useState<Map<string, ReactionCount[]>>(new Map());
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [round, setRound] = useState<RoundSummary | null>(null);
-  const [roundLoading, setRoundLoading] = useState(true);
-  const [roundSubmissions, setRoundSubmissions] = useState<SubmissionRow[]>([]);
-  const emojis = ["🎧", "🔥", "😂", "👏", "😍", "🤔"];
+  const [emojiDrawerOpen, setEmojiDrawerOpen] = useState(false);
+  const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null);
+  const [defaultEmoji, setDefaultEmoji] = useState(() => localStorage.getItem("tml_default_emoji") ?? "👍");
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const composeRef = useRef<HTMLDivElement>(null);
+  const threadRef = useRef<HTMLDivElement>(null);
 
+  // Pull-to-refresh state
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const touchStartY = useRef(0);
+  const isPulling = useRef(false);
+
+  // Listen for localStorage changes (when settings change)
+  useEffect(() => {
+    const handleStorage = () => {
+      setDefaultEmoji(localStorage.getItem("tml_default_emoji") ?? "👍");
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  // Helper to group reactions by message
+  const groupReactionsByMessage = useCallback((reactionData: MessageReaction[]): Map<string, ReactionCount[]> => {
+    const grouped = new Map<string, Map<string, { count: number; reactorIds: string[] }>>();
+
+    for (const r of reactionData) {
+      if (!grouped.has(r.message_id)) {
+        grouped.set(r.message_id, new Map());
+      }
+      const msgReactions = grouped.get(r.message_id)!;
+      if (!msgReactions.has(r.emoji)) {
+        msgReactions.set(r.emoji, { count: 0, reactorIds: [] });
+      }
+      const emojiData = msgReactions.get(r.emoji)!;
+      emojiData.count++;
+      emojiData.reactorIds.push(r.reactor_id);
+    }
+
+    const result = new Map<string, ReactionCount[]>();
+    for (const [msgId, emojiMap] of grouped) {
+      const counts: ReactionCount[] = [];
+      for (const [emoji, data] of emojiMap) {
+        counts.push({ emoji, count: data.count, reactorIds: data.reactorIds });
+      }
+      result.set(msgId, counts);
+    }
+    return result;
+  }, []);
+
+  // Initial load - shows loading state
   const loadMessages = useCallback(async () => {
     if (!group) return;
     setLoading(true);
@@ -119,68 +160,228 @@ export default function ChatPage() {
       .eq("group_id", group.id)
       .order("created_at", { ascending: true });
 
-    setMessages((data as ChatMessage[]) ?? []);
-    setLoading(false);
-  }, [group]);
+    const msgs = (data as ChatMessage[]) ?? [];
+    setMessages(msgs);
 
+    // Fetch reactions for all messages in one query
+    if (msgs.length > 0) {
+      const msgIds = msgs.map(m => m.id);
+      const { data: reactionData } = await supabase
+        .from("message_reactions")
+        .select("id,message_id,reactor_id,emoji")
+        .in("message_id", msgIds);
+
+      setReactions(groupReactionsByMessage((reactionData as MessageReaction[]) ?? []));
+    }
+
+    setLoading(false);
+  }, [group, groupReactionsByMessage]);
+
+  // Use refs to track current state for silent refresh (avoids dependency issues)
+  const messagesRef = useRef(messages);
+  const reactionsRef = useRef(reactions);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+  useEffect(() => { reactionsRef.current = reactions; }, [reactions]);
+
+  // Silent refresh - only updates if there are new messages or reactions
+  const silentRefresh = useCallback(async () => {
+    if (!group) return;
+
+    const currentMessages = messagesRef.current;
+    const currentReactions = reactionsRef.current;
+
+    // Check message count
+    const { count: msgCount } = await supabase
+      .from("group_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("group_id", group.id);
+
+    // Only check reactions if we have messages
+    let reactionCount = 0;
+    if (currentMessages.length > 0) {
+      const { count } = await supabase
+        .from("message_reactions")
+        .select("*", { count: "exact", head: true })
+        .in("message_id", currentMessages.map(m => m.id));
+      reactionCount = count ?? 0;
+    }
+
+    const currentReactionCount = Array.from(currentReactions.values()).reduce(
+      (sum, counts) => sum + counts.reduce((s, c) => s + c.count, 0), 0
+    );
+
+    // Refresh if message count or reaction count changed
+    if (msgCount !== currentMessages.length || reactionCount !== currentReactionCount) {
+      const { data } = await supabase
+        .from("group_messages")
+        .select("id,body,author_id,created_at, profiles(display_name,avatar_url)")
+        .eq("group_id", group.id)
+        .order("created_at", { ascending: true });
+
+      const msgs = (data as ChatMessage[]) ?? [];
+      setMessages(msgs);
+
+      if (msgs.length > 0) {
+        const msgIds = msgs.map(m => m.id);
+        const { data: reactionData } = await supabase
+          .from("message_reactions")
+          .select("id,message_id,reactor_id,emoji")
+          .in("message_id", msgIds);
+        setReactions(groupReactionsByMessage((reactionData as MessageReaction[]) ?? []));
+      }
+    }
+  }, [group, groupReactionsByMessage]);
+
+  // Initial load
   useEffect(() => {
     if (!group) return;
     loadMessages();
+  }, [group, loadMessages]);
 
-    const interval = window.setInterval(() => {
-      loadMessages();
-    }, 8000);
+  // Polling interval (separate from initial load to avoid re-triggering)
+  useEffect(() => {
+    if (!group) return;
+
+    const interval = window.setInterval(silentRefresh, 30000);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, [group, loadMessages]);
+  }, [group, silentRefresh]);
 
+  // Pull-to-refresh handlers
+  const handleTouchStart = useCallback((e: TouchEvent<HTMLDivElement>) => {
+    const thread = threadRef.current;
+    if (!thread || thread.scrollTop > 0 || isRefreshing) return;
+
+    touchStartY.current = e.touches[0].clientY;
+    isPulling.current = true;
+  }, [isRefreshing]);
+
+  const handleTouchMove = useCallback((e: TouchEvent<HTMLDivElement>) => {
+    if (!isPulling.current || isRefreshing) return;
+
+    const thread = threadRef.current;
+    if (!thread || thread.scrollTop > 0) {
+      isPulling.current = false;
+      setPullDistance(0);
+      return;
+    }
+
+    const deltaY = e.touches[0].clientY - touchStartY.current;
+    if (deltaY > 0) {
+      // Apply resistance to pull
+      const distance = Math.min(deltaY * 0.5, MAX_PULL);
+      setPullDistance(distance);
+    }
+  }, [isRefreshing]);
+
+  const handleTouchEnd = useCallback(async () => {
+    if (!isPulling.current) return;
+    isPulling.current = false;
+
+    if (pullDistance >= PULL_THRESHOLD && !isRefreshing) {
+      setIsRefreshing(true);
+      setPullDistance(PULL_THRESHOLD);
+      await loadMessages();
+      setIsRefreshing(false);
+    }
+    setPullDistance(0);
+  }, [pullDistance, isRefreshing, loadMessages]);
+
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (!group) return;
-    const loadRound = async () => {
-      setRoundLoading(true);
-      const { data: leagueData } = await supabase
-        .from("leagues")
-        .select("id")
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Handle quoted song from peek panel
+  useEffect(() => {
+    if (quotedSong) {
+      const label = quotedSong.artist
+        ? `${quotedSong.title} — ${quotedSong.artist}`
+        : quotedSong.title;
+      const mention = quotedSong.link ? `@[${label}](${quotedSong.link})` : `@${label}`;
+      setMessage((prev) => {
+        const needsSpace = prev && !prev.endsWith(" ");
+        return `${prev}${needsSpace ? " " : ""}${mention}`;
+      });
+      clearQuotedSong();
+    }
+  }, [quotedSong, clearQuotedSong]);
+
+  const sendQuickEmoji = async (emoji: string) => {
+    if (!group || !profile) return;
+    setSending(true);
+    const { error } = await supabase.from("group_messages").insert({
+      group_id: group.id,
+      author_id: profile.id,
+      body: emoji,
+    });
+    if (!error) {
+      const { data } = await supabase
+        .from("group_messages")
+        .select("id,body,author_id,created_at, profiles(display_name,avatar_url)")
         .eq("group_id", group.id)
-        .order("season_number", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order("created_at", { ascending: true });
+      setMessages((data as ChatMessage[]) ?? []);
+    }
+    setSending(false);
+  };
 
-      if (leagueData) {
-        const { data: roundData } = await supabase
-          .from("rounds")
-          .select(
-            "id,theme,theme_description,theme_author,status,season_number,round_number,submission_deadline,voting_deadline,playlist_url,external_playlist_url"
-          )
-          .eq("league_id", leagueData.id)
-          .in("status", ["open", "voting"])
-          .order("round_number", { ascending: false, nullsFirst: false })
-          .order("created_at", { ascending: false })
-          .limit(1)
+  // Toggle reaction on a message (add if not exists, remove if exists)
+  const toggleReaction = async (messageId: string, emoji: string) => {
+    if (!profile) return;
+
+    const msgReactions = reactions.get(messageId) ?? [];
+    const existingReaction = msgReactions.find(
+      r => r.emoji === emoji && r.reactorIds.includes(profile.id)
+    );
+
+    if (existingReaction) {
+      // Remove reaction
+      await supabase
+        .from("message_reactions")
+        .delete()
+        .eq("message_id", messageId)
+        .eq("reactor_id", profile.id)
+        .eq("emoji", emoji);
+    } else {
+      // Add reaction
+      await supabase
+        .from("message_reactions")
+        .insert({ message_id: messageId, reactor_id: profile.id, emoji });
+
+      // Send notification to message author (if enabled)
+      const msg = messages.find(m => m.id === messageId);
+      if (msg && msg.author_id && msg.author_id !== profile.id) {
+        const { data: authorProfile } = await supabase
+          .from("profiles")
+          .select("email,reaction_notify_enabled")
+          .eq("id", msg.author_id)
           .maybeSingle();
-        setRound((roundData as RoundSummary) ?? null);
 
-        if (roundData) {
-          const { data: submissionData } = await supabase
-            .from("submissions")
-            .select("id,title,artist,link,artwork_url,release_year,genres")
-            .eq("round_id", roundData.id)
-            .order("created_at", { ascending: true });
-          setRoundSubmissions((submissionData as SubmissionRow[]) ?? []);
-        } else {
-          setRoundSubmissions([]);
+        if (authorProfile?.reaction_notify_enabled && authorProfile?.email) {
+          await supabase.functions.invoke("notify", {
+            body: {
+              title: "New reaction",
+              message: `${profile.display_name ?? "Someone"} reacted ${emoji} to your message`,
+              recipients: [authorProfile.email],
+            },
+          });
         }
-      } else {
-        setRound(null);
-        setRoundSubmissions([]);
       }
-      setRoundLoading(false);
-    };
-    loadRound();
-  }, [group]);
+    }
+
+    // Refresh reactions
+    const msgIds = messages.map(m => m.id);
+    const { data: reactionData } = await supabase
+      .from("message_reactions")
+      .select("id,message_id,reactor_id,emoji")
+      .in("message_id", msgIds);
+    setReactions(groupReactionsByMessage((reactionData as MessageReaction[]) ?? []));
+
+    setReactionPickerFor(null);
+  };
 
   const sendMessage = async () => {
     if (!group || !profile || !message.trim()) return;
@@ -222,214 +423,169 @@ export default function ChatPage() {
     setSending(false);
   };
 
-  const now = Date.now();
-  const submissionMs = round?.submission_deadline ? new Date(round.submission_deadline).getTime() : null;
-  const votingMs = round?.voting_deadline ? new Date(round.voting_deadline).getTime() : null;
-
-  const computeUrgency = (deadlineMs: number | null) => {
-    if (!deadlineMs) return { pct: 0, level: "neutral" };
-    const remaining = deadlineMs - now;
-    if (remaining <= 0) return { pct: 100, level: "overdue" };
-    const totalWindow = 1000 * 60 * 60 * 72;
-    const pct = Math.min(100, Math.max(10, (1 - remaining / totalWindow) * 100));
-    if (remaining <= 1000 * 60 * 60 * 6) return { pct, level: "urgent" };
-    if (remaining <= 1000 * 60 * 60 * 24) return { pct, level: "warning" };
-    return { pct, level: "safe" };
-  };
-
-  const submissionUrgency = computeUrgency(submissionMs);
-  const votingUrgency = computeUrgency(votingMs);
-
-  const playlistEmbedUrl = useMemo(() => {
-    const url = round?.playlist_url ?? round?.external_playlist_url ?? null;
-    return url ? buildPlaylistEmbed(url) : null;
-  }, [round]);
-
-  const handleQuote = (submission: SubmissionRow) => {
-    const label = submission.artist ? `${submission.title} — ${submission.artist}` : submission.title;
-    const mention = submission.link ? `@[${label}](${submission.link})` : `@${label}`;
-    setMessage((prev) => {
-      const needsSpace = prev && !prev.endsWith(" ");
-      return `${prev}${needsSpace ? " " : ""}${mention}`;
-    });
-  };
-
   return (
-    <div className="page">
-      <div className="page-header">
-        <h1>Group Chat</h1>
-        <p>Keep the conversation going between rounds.</p>
-      </div>
-      <Card className="current-round-card">
-        <div className="current-round-header">
-          <div>
-            <p className="eyebrow">Current round</p>
-            <h2>{round?.theme ?? "No active round yet"}</h2>
-            {round?.theme_description ? <p className="muted">{round.theme_description}</p> : null}
-            {round?.theme_author ? <p className="muted">Theme by {round.theme_author}</p> : null}
+    <div className="chat-page">
+      {/* Peek button inside chat area */}
+      {round && <PeekButton onClick={openPanel} variant="chat" />}
+
+      <div
+        className="chat-thread"
+        ref={threadRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ transform: `translateY(${pullDistance}px)` }}
+      >
+        {/* Pull-to-refresh indicator */}
+        {(pullDistance > 0 || isRefreshing) && (
+          <div
+            className="pull-to-refresh-indicator"
+            style={{
+              opacity: Math.min(pullDistance / PULL_THRESHOLD, 1),
+              transform: `rotate(${pullDistance * 3}deg)`,
+            }}
+          >
+            {isRefreshing ? "Refreshing..." : pullDistance >= PULL_THRESHOLD ? "Release to refresh" : "Pull to refresh"}
           </div>
-          <div className="current-round-meta">
-            {round?.season_number || round?.round_number ? (
-              <span className="pill">
-                Season {round?.season_number ?? "—"} · Round {round?.round_number ?? "—"}
-              </span>
-            ) : null}
-            {round?.status ? <span className="pill mint">{round.status.toUpperCase()}</span> : null}
-          </div>
-        </div>
-        {roundLoading ? (
-          <p className="muted">Loading current round...</p>
-        ) : round ? (
-          <div className="current-round-body">
-            <div className="current-round-main">
-              <div className="deadline-grid">
-                <div className="deadline-card">
-                  <div className="deadline-header">
-                    <span>Submission deadline</span>
-                    <strong>
-                      {round.submission_deadline
-                        ? new Date(round.submission_deadline).toLocaleString()
-                        : "Set a deadline"}
-                    </strong>
-                  </div>
-                  <div className="deadline-bar">
-                    <span
-                      className={`deadline-fill ${submissionUrgency.level}`}
-                      style={{ width: `${submissionUrgency.pct}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="deadline-card">
-                  <div className="deadline-header">
-                    <span>Voting deadline</span>
-                    <strong>
-                      {round.voting_deadline ? new Date(round.voting_deadline).toLocaleString() : "Set a deadline"}
-                    </strong>
-                  </div>
-                  <div className="deadline-bar">
-                    <span
-                      className={`deadline-fill ${votingUrgency.level}`}
-                      style={{ width: `${votingUrgency.pct}%` }}
-                    />
-                  </div>
-                </div>
+        )}
+        {loading ? <p className="muted">Loading messages...</p> : null}
+        {!loading && !messages.length ? (
+          <p className="muted">No messages yet. Start the conversation.</p>
+        ) : null}
+        {messages.map((item, index) => {
+          // Calculate shadow intensity based on recency (newer = more shadow)
+          // Last message gets max shadow, older messages fade to minimal shadow
+          const totalMessages = messages.length;
+          const recency = totalMessages > 1 ? (index + 1) / totalMessages : 1;
+          const shadowIntensity = 0.05 + recency * 0.2; // Range: 0.05 to 0.25
+          const shadowBlur = 2 + recency * 10; // Range: 2px to 12px
+          const shadowY = 1 + recency * 3; // Range: 1px to 4px
+          const bubbleStyle = {
+            boxShadow: `0 ${shadowY}px ${shadowBlur}px rgba(0, 0, 0, ${shadowIntensity})`,
+          };
+
+          return (
+          <div
+            key={item.id}
+            className={item.author_id === profile?.id ? "chat-bubble own" : "chat-bubble"}
+            style={bubbleStyle}
+            onClick={() => setReactionPickerFor(reactionPickerFor === item.id ? null : item.id)}
+          >
+            <div className="chat-meta">
+              <div className="chat-avatar">
+                {item.profiles?.avatar_url ? (
+                  <img src={item.profiles.avatar_url} alt={item.profiles.display_name ?? "Avatar"} />
+                ) : (
+                  <span>{(item.profiles?.display_name ?? "TM")[0]}</span>
+                )}
               </div>
+              <span className="chat-author">{item.profiles?.display_name ?? "Family"}</span>
             </div>
-            <div className="current-round-side">
-              {playlistEmbedUrl ? (
-                <div className="playlist-embed">
+            <p>{renderMessageBody(item.body)}</p>
+            {(() => {
+              const videoId = extractYouTubeId(item.body);
+              if (!videoId) return null;
+              return (
+                <div className="chat-embed" onClick={(e) => e.stopPropagation()}>
                   <iframe
-                    src={playlistEmbedUrl}
-                    title="Round playlist"
-                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                    loading="lazy"
+                    src={`https://www.youtube.com/embed/${videoId}`}
+                    title="YouTube playback"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
                   />
                 </div>
-              ) : (
-                <div className="playlist-placeholder">
-                  <p className="muted">Add a playlist URL to embed listening here.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <p className="muted">No active round yet. Ask an admin to add one.</p>
-        )}
-        {round && roundSubmissions.length ? (
-          <div className="current-round-tracks">
-            <h3>Current round songs</h3>
-            <div className="round-track-grid">
-              {roundSubmissions.map((song) => (
-                <div key={song.id} className="round-track-card">
-                  {song.artwork_url ? (
-                    <img src={song.artwork_url} alt={song.title} />
-                  ) : (
-                    <div className="art-placeholder" />
-                  )}
-                  <div>
-                    <strong>{song.title}</strong>
-                    <span className="muted">{song.artist ?? "Unknown artist"}</span>
-                    <span className="muted">
-                      {song.release_year ?? "Year n/a"} · {song.genres?.split(",")[0]?.trim() ?? "Genre n/a"}
-                    </span>
-                    <div className="track-actions">
-                      {song.link ? (
-                        <a className="text-link" href={song.link} target="_blank" rel="noreferrer">
-                          Listen
-                        </a>
-                      ) : null}
-                      <button type="button" className="pill-button" onClick={() => handleQuote(song)}>
-                        Quote in chat
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-      </Card>
-      <Card className="chat-card">
-        <div className="chat-thread">
-          {loading ? <p className="muted">Loading messages...</p> : null}
-          {!loading && !messages.length ? (
-            <p className="muted">No messages yet. Start the conversation.</p>
-          ) : null}
-          {messages.map((item) => (
-            <div key={item.id} className={item.author_id === profile?.id ? "chat-bubble own" : "chat-bubble"}>
-              <div className="chat-meta">
-                <div className="chat-avatar">
-                  {item.profiles?.avatar_url ? (
-                    <img src={item.profiles.avatar_url} alt={item.profiles.display_name ?? "Avatar"} />
-                  ) : (
-                    <span>{(item.profiles?.display_name ?? "TM")[0]}</span>
-                  )}
-                </div>
-                <span className="chat-author">{item.profiles?.display_name ?? "Family"}</span>
+              );
+            })()}
+            <span className="chat-time">{new Date(item.created_at).toLocaleString()}</span>
+            {/* Display existing reactions */}
+            {reactions.get(item.id)?.length ? (
+              <div className="chat-reactions-display" onClick={(e) => e.stopPropagation()}>
+                {reactions.get(item.id)!.map((r) => (
+                  <button
+                    key={r.emoji}
+                    type="button"
+                    className={`chat-reaction-badge ${r.reactorIds.includes(profile?.id ?? "") ? "own" : ""}`}
+                    onClick={() => toggleReaction(item.id, r.emoji)}
+                    title={`${r.count} reaction${r.count > 1 ? "s" : ""}`}
+                  >
+                    {r.emoji} {r.count > 1 && <span className="reaction-count">{r.count}</span>}
+                  </button>
+                ))}
               </div>
-              <p>{renderMessageBody(item.body)}</p>
-              {(() => {
-                const videoId = extractYouTubeId(item.body);
-                if (!videoId) return null;
-                return (
-                  <div className="chat-embed">
-                    <iframe
-                      src={`https://www.youtube.com/embed/${videoId}`}
-                      title="YouTube playback"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                );
-              })()}
-              <span className="chat-time">{new Date(item.created_at).toLocaleString()}</span>
-            </div>
-          ))}
-        </div>
-        <div className="chat-compose">
-          <input
-            className="field-input"
-            placeholder="Send a quick update or ask a question..."
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-          />
-          <Button type="button" onClick={sendMessage} disabled={sending || !message.trim()}>
-            {sending ? "Sending..." : "Send"}
-          </Button>
-        </div>
-        <div className="chat-emoji">
-          {emojis.map((emoji) => (
+            ) : null}
+            {/* Reaction picker for this message */}
+            {reactionPickerFor === item.id && (
+              <div className="chat-bubble-reactions" onClick={(e) => e.stopPropagation()}>
+                {["👍", "❤️", "😂", "🔥", "😮", "😢"].map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    className={`chat-bubble-reaction ${reactions.get(item.id)?.some(r => r.emoji === emoji && r.reactorIds.includes(profile?.id ?? "")) ? "active" : ""}`}
+                    onClick={() => toggleReaction(item.id, emoji)}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          );
+        })}
+        <div ref={chatEndRef} />
+      </div>
+      <div className="chat-compose" ref={composeRef}>
+        {/* Emoji drawer */}
+        <div className={`chat-emoji-drawer ${emojiDrawerOpen ? "open" : ""}`}>
+          {allEmojis.map((emoji) => (
             <button
               key={emoji}
               type="button"
               className="emoji-button"
-              onClick={() => setMessage((prev) => `${prev}${emoji}`)}
+              onClick={() => {
+                setMessage((prev) => `${prev}${emoji}`);
+                setEmojiDrawerOpen(false);
+              }}
             >
               {emoji}
             </button>
           ))}
         </div>
-      </Card>
+        {/* Quick emoji button + arrow */}
+        <div className="chat-emoji-group">
+          <button
+            type="button"
+            className="chat-emoji-quick-btn"
+            onClick={() => sendQuickEmoji(defaultEmoji)}
+            disabled={sending}
+            aria-label={`Send ${defaultEmoji}`}
+          >
+            {defaultEmoji}
+          </button>
+          <button
+            type="button"
+            className="chat-emoji-arrow"
+            onClick={() => setEmojiDrawerOpen((prev) => !prev)}
+            aria-label={emojiDrawerOpen ? "Close emoji picker" : "Open emoji picker"}
+          >
+            {emojiDrawerOpen ? "▼" : "▲"}
+          </button>
+        </div>
+        <input
+          className="field-input"
+          placeholder="Type a message..."
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              sendMessage();
+            }
+          }}
+        />
+        <Button type="button" onClick={sendMessage} disabled={sending || !message.trim()}>
+          {sending ? "..." : "Send"}
+        </Button>
+      </div>
     </div>
   );
 }

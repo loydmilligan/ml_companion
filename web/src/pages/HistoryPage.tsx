@@ -1,8 +1,30 @@
+/**
+ * HistoryPage - Card stack view for round history
+ *
+ * Displays completed rounds as swipeable cards with theme banners,
+ * stats, track lists, stories, and awards. Past seasons show as
+ * recap cards with summary statistics.
+ */
+
 import { useEffect, useMemo, useState } from "react";
-import Card from "../components/Card";
-import RoundChat from "../components/RoundChat";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import CardStack from "../components/CardStack/CardStack";
+import type {
+  CardData,
+  RoundCardData,
+  SeasonRecapCardData,
+  SubmissionWithVotes,
+  LeaderboardEntry,
+  VotingPattern,
+  DistributionItem,
+  SeasonAward,
+} from "../types/cardstack.types";
+import type { RoundAward, TopTrack } from "../types/history.types";
+
+/* ========================================
+   Type Definitions (local to this page)
+   ======================================== */
 
 type LeagueRow = {
   id: string;
@@ -15,12 +37,17 @@ type RoundRow = {
   theme: string;
   theme_description: string | null;
   theme_author: string | null;
+  external_round_id: string | null;
+  theme_image_url: string | null;
+  winners_image_url: string | null;
+  winners_image_visible: boolean | null;
   season_number: number | null;
   round_number: number | null;
   status: string;
   created_at: string;
   submission_deadline: string | null;
   voting_deadline: string | null;
+  narrative: string | null;
 };
 
 type SubmissionRow = {
@@ -32,6 +59,8 @@ type SubmissionRow = {
   artwork_url: string | null;
   release_year: number | null;
   genres: string | null;
+  source_uri: string | null;
+  created_at: string;
 };
 
 type VoteRow = {
@@ -41,469 +70,572 @@ type VoteRow = {
   comment: string | null;
 };
 
+type RoundAwardRow = {
+  id: string;
+  round_id: string;
+  award_id: number | null;
+  award_name: string;
+  award_description: string | null;
+  trophy_url: string | null;
+  winner_name: string | null;
+  visible: boolean | null;
+};
+
+type SeasonStatsRow = {
+  leagueId: string;
+  leagueName: string;
+  seasonNumber: number;
+  totalRounds: number;
+  totalSubmissions: number;
+  totalVotes: number;
+  topTracks: TopTrack[];
+  roundThemes: string[];
+  leaderboard: LeaderboardEntry[];
+  seasonAwards: SeasonAward[];
+  votingPatterns: VotingPattern[];
+  genreDistribution: DistributionItem[];
+  decadeDistribution: DistributionItem[];
+};
+
+/* ========================================
+   Main Component
+   ======================================== */
+
 export default function HistoryPage() {
   const { group } = useAuth();
-  const [leagues, setLeagues] = useState<LeagueRow[]>([]);
-  const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
-  const [completedRounds, setCompletedRounds] = useState<RoundRow[]>([]);
-  const [selectedRoundId, setSelectedRoundId] = useState<string | null>(null);
-  const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
-  const [votes, setVotes] = useState<VoteRow[]>([]);
-  const [seasonStats, setSeasonStats] = useState<{
-    totalRounds: number;
-    totalSubmissions: number;
-    totalVotes: number;
-    topTracks: { title: string; artist: string | null; points: number }[];
-  } | null>(null);
-  const [narrative, setNarrative] = useState<string | null>(null);
-  const [imagePrompt, setImagePrompt] = useState<string | null>(null);
-  const [storyLoading, setStoryLoading] = useState(false);
-  const [showAiJson, setShowAiJson] = useState(false);
+  const isLead = group?.role === "lead";
 
+  // Data state
+  const [leagues, setLeagues] = useState<LeagueRow[]>([]);
+  const [currentLeagueId, setCurrentLeagueId] = useState<string | null>(null);
+  const [allRounds, setAllRounds] = useState<RoundRow[]>([]);
+  const [allSubmissions, setAllSubmissions] = useState<Map<string, SubmissionRow[]>>(new Map());
+  const [allVotes, setAllVotes] = useState<Map<string, VoteRow[]>>(new Map());
+  const [allAwards, setAllAwards] = useState<Map<string, RoundAwardRow[]>>(new Map());
+  const [pastSeasonStats, setPastSeasonStats] = useState<SeasonStatsRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  /* ========================================
+     Data Loading Effects
+     ======================================== */
+
+  // Load leagues
   useEffect(() => {
     if (!group) return;
-    const load = async () => {
-      const { data: leagueData } = await supabase
+
+    const loadLeagues = async () => {
+      const { data } = await supabase
         .from("leagues")
         .select("id,name,season_number")
         .eq("group_id", group.id)
         .order("season_number", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
-      const list = (leagueData as LeagueRow[]) ?? [];
+
+      const list = (data as LeagueRow[]) ?? [];
       setLeagues(list);
-      setSelectedLeagueId((prev) => prev ?? list[0]?.id ?? null);
+      setCurrentLeagueId(list[0]?.id ?? null);
     };
-    load();
+
+    loadLeagues();
   }, [group]);
 
+  // Load completed rounds from all leagues
   useEffect(() => {
-    if (!selectedLeagueId) return;
+    if (leagues.length === 0) return;
+
     const loadRounds = async () => {
+      setIsLoading(true);
+
+      // Get all league IDs
+      const leagueIds = leagues.map((l) => l.id);
+
+      // Load all completed rounds from all leagues
       const { data } = await supabase
         .from("rounds")
         .select(
-          "id,theme,theme_description,theme_author,season_number,round_number,status,created_at,submission_deadline,voting_deadline"
+          "id,theme,theme_description,theme_author,external_round_id,theme_image_url,winners_image_url,winners_image_visible,season_number,round_number,status,created_at,submission_deadline,voting_deadline,narrative"
         )
-        .eq("league_id", selectedLeagueId)
+        .in("league_id", leagueIds)
         .in("status", ["revealed", "archived"])
-        .order("round_number", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false });
+        .order("season_number", { ascending: false, nullsFirst: false })
+        .order("round_number", { ascending: false, nullsFirst: false });
+
       const rounds = (data as RoundRow[]) ?? [];
-      setCompletedRounds(rounds);
-      setSelectedRoundId((prev) => prev ?? rounds[0]?.id ?? null);
+      setAllRounds(rounds);
+
+      // Load submissions, votes, and awards for all rounds
+      if (rounds.length > 0) {
+        await loadRoundDetails(rounds);
+      }
+
+      setIsLoading(false);
     };
+
     loadRounds();
-  }, [selectedLeagueId]);
+  }, [leagues]);
 
-  useEffect(() => {
-    if (!selectedRoundId || !group) return;
-    const seedRoundChat = async () => {
-      const { count } = await supabase
-        .from("round_chats")
-        .select("id", { count: "exact", head: true })
-        .eq("round_id", selectedRoundId);
+  // Load submissions, votes, and awards for all rounds
+  const loadRoundDetails = async (rounds: RoundRow[]) => {
+    const roundIds = rounds.map((r) => r.id);
 
-      if (count && count > 0) return;
-      const round = completedRounds.find((item) => item.id === selectedRoundId);
-      if (!round) return;
+    // Load all submissions
+    const { data: submissionsData } = await supabase
+      .from("submissions")
+      .select(
+        "id,title,artist,link,submitter_name,artwork_url,release_year,genres,source_uri,created_at,round_id"
+      )
+      .in("round_id", roundIds)
+      .order("created_at", { ascending: true });
 
-      const start = round.created_at;
-      const end = round.voting_deadline ?? round.submission_deadline ?? round.created_at;
+    // Group submissions by round
+    const submissionsByRound = new Map<string, SubmissionRow[]>();
+    (submissionsData ?? []).forEach((sub: any) => {
+      const existing = submissionsByRound.get(sub.round_id) ?? [];
+      existing.push(sub);
+      submissionsByRound.set(sub.round_id, existing);
+    });
+    setAllSubmissions(submissionsByRound);
 
-      const { data: groupMessages } = await supabase
-        .from("group_messages")
-        .select("id,body,author_id,created_at")
-        .eq("group_id", group.id)
-        .gte("created_at", start)
-        .lte("created_at", end)
-        .order("created_at", { ascending: true });
+    // Load all votes
+    const allSubmissionIds = (submissionsData ?? []).map((s: any) => s.id);
+    if (allSubmissionIds.length > 0) {
+      const { data: votesData } = await supabase
+        .from("votes")
+        .select("submission_id,voter_name,points,comment")
+        .in("submission_id", allSubmissionIds);
 
-      if (!groupMessages?.length) return;
-      await supabase.from("round_chats").insert(
-        groupMessages.map((message) => ({
-          round_id: selectedRoundId,
-          body: message.body,
-          author_id: message.author_id,
-          created_at: message.created_at,
-        }))
-      );
-    };
-    seedRoundChat();
-  }, [selectedRoundId, completedRounds, group]);
-
-  useEffect(() => {
-    if (!selectedRoundId) {
-      setSubmissions([]);
-      setVotes([]);
-      return;
-    }
-    const loadRoundData = async () => {
-      const { data: submissionData } = await supabase
-        .from("submissions")
-        .select("id,title,artist,link,submitter_name,artwork_url,release_year,genres")
-        .eq("round_id", selectedRoundId)
-        .order("created_at", { ascending: true });
-      const submissionRows = (submissionData as SubmissionRow[]) ?? [];
-      setSubmissions(submissionRows);
-
-      if (submissionRows.length) {
-        const submissionIds = submissionRows.map((row) => row.id);
-        const { data: voteData } = await supabase
-          .from("votes")
-          .select("submission_id,voter_name,points,comment")
-          .in("submission_id", submissionIds);
-        setVotes((voteData as VoteRow[]) ?? []);
-      } else {
-        setVotes([]);
-      }
-    };
-    loadRoundData();
-  }, [selectedRoundId]);
-
-  useEffect(() => {
-    if (!selectedLeagueId) return;
-    const loadStats = async () => {
-      const { data: roundData } = await supabase
-        .from("rounds")
-        .select("id")
-        .eq("league_id", selectedLeagueId);
-      const roundIds = (roundData ?? []).map((row) => row.id);
-      if (!roundIds.length) {
-        setSeasonStats(null);
-        return;
-      }
-
-      const { data: submissionsData } = await supabase
-        .from("submissions")
-        .select("id,title,artist")
-        .in("round_id", roundIds);
-      const submissionIds = (submissionsData ?? []).map((row) => row.id);
-
-      let voteRows: VoteRow[] = [];
-      if (submissionIds.length) {
-        const { data: voteData } = await supabase
-          .from("votes")
-          .select("submission_id,points")
-          .in("submission_id", submissionIds);
-        voteRows = (voteData as VoteRow[]) ?? [];
-      }
-
-      const voteTotals = new Map<string, number>();
-      voteRows.forEach((vote) => {
-        if (!vote.submission_id) return;
-        voteTotals.set(vote.submission_id, (voteTotals.get(vote.submission_id) ?? 0) + (vote.points ?? 0));
+      // Group votes by submission (for later lookup)
+      const votesBySubmission = new Map<string, VoteRow[]>();
+      (votesData ?? []).forEach((vote: VoteRow) => {
+        const existing = votesBySubmission.get(vote.submission_id) ?? [];
+        existing.push(vote);
+        votesBySubmission.set(vote.submission_id, existing);
       });
-
-      const topTracks = (submissionsData ?? [])
-        .map((submission) => ({
-          title: submission.title,
-          artist: submission.artist ?? null,
-          points: voteTotals.get(submission.id) ?? 0,
-        }))
-        .sort((a, b) => b.points - a.points)
-        .slice(0, 5);
-
-      setSeasonStats({
-        totalRounds: roundIds.length,
-        totalSubmissions: submissionsData?.length ?? 0,
-        totalVotes: voteRows.reduce((sum, row) => sum + (row.points ?? 0), 0),
-        topTracks,
-      });
-    };
-    loadStats();
-  }, [selectedLeagueId]);
-
-  const roundSummary = useMemo(() => {
-    if (!selectedRoundId) return null;
-    const submissionVotes = new Map<string, number>();
-    votes.forEach((vote) => {
-      if (!vote.submission_id) return;
-      submissionVotes.set(vote.submission_id, (submissionVotes.get(vote.submission_id) ?? 0) + (vote.points ?? 0));
-    });
-
-    const genreCounts = new Map<string, number>();
-    const yearCounts = new Map<string, number>();
-    const songs = submissions.map((song) => {
-      const genre = song.genres ? song.genres.split(",")[0]?.trim() : "Unknown";
-      const year = song.release_year ? String(song.release_year) : "Unknown";
-      genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1);
-      yearCounts.set(year, (yearCounts.get(year) ?? 0) + 1);
-      return {
-        ...song,
-        points: submissionVotes.get(song.id) ?? 0,
-        primaryGenre: genre,
-        releaseYear: year,
-      };
-    });
-
-    const genreScatter = Array.from(genreCounts.entries())
-      .filter(([genre]) => genre !== "Unknown")
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10);
-    const yearChart = Array.from(yearCounts.entries())
-      .filter(([year]) => year !== "Unknown")
-      .sort((a, b) => Number(a[0]) - Number(b[0]));
-
-    return { songs, genreScatter, yearChart };
-  }, [selectedRoundId, submissions, votes]);
-
-  const generateNarrative = async () => {
-    if (!selectedRoundId || !roundSummary) return;
-    setStoryLoading(true);
-    const round = completedRounds.find((r) => r.id === selectedRoundId);
-    const { data, error } = await supabase.functions.invoke("openrouter-round-story", {
-      body: {
-        round: {
-          title: round?.theme,
-          description: round?.theme_description,
-          author: round?.theme_author,
-        },
-        songs: roundSummary.songs,
-        votes,
-      },
-    });
-    if (!error) {
-      setNarrative(data?.narrative ?? null);
-      setImagePrompt(data?.image_prompt ?? null);
+      setAllVotes(votesBySubmission);
     }
-    setStoryLoading(false);
+
+    // Load all awards
+    const { data: awardsData } = await supabase
+      .from("round_awards")
+      .select("id,round_id,award_id,award_name,award_description,trophy_url,winner_name,visible")
+      .in("round_id", roundIds)
+      .order("visible", { ascending: false })
+      .order("award_id", { ascending: true, nullsFirst: true });
+
+    // Group awards by round
+    const awardsByRound = new Map<string, RoundAwardRow[]>();
+    (awardsData ?? []).forEach((award: any) => {
+      const existing = awardsByRound.get(award.round_id) ?? [];
+      existing.push(award);
+      awardsByRound.set(award.round_id, existing);
+    });
+    setAllAwards(awardsByRound);
   };
 
-  const selectedRound = completedRounds.find((round) => round.id === selectedRoundId) ?? null;
+  // Load past season stats
+  useEffect(() => {
+    if (!group || leagues.length <= 1) {
+      setPastSeasonStats([]);
+      return;
+    }
+
+    const loadPastSeasons = async () => {
+      const pastLeagues = leagues.slice(1); // Exclude current league
+      const stats: SeasonStatsRow[] = [];
+
+      for (const league of pastLeagues) {
+        // Get rounds for this league
+        const { data: roundData } = await supabase
+          .from("rounds")
+          .select("id,theme")
+          .eq("league_id", league.id)
+          .in("status", ["revealed", "archived"]);
+
+        const roundIds = (roundData ?? []).map((r: any) => r.id);
+        const roundThemes = (roundData ?? []).map((r: any) => r.theme);
+
+        if (roundIds.length === 0) continue;
+
+        // Get submissions with genres and release year
+        const { data: submissionsData } = await supabase
+          .from("submissions")
+          .select("id,title,artist,artwork_url,submitter_name,genres,release_year,round_id")
+          .in("round_id", roundIds);
+
+        const submissionIds = (submissionsData ?? []).map((s: any) => s.id);
+
+        // Get votes with voter info
+        let totalVotes = 0;
+        const voteTotals = new Map<string, number>();
+        const submissionToSubmitter = new Map<string, string>();
+        const playerPoints = new Map<string, number>();
+        const voterToTarget = new Map<string, Map<string, number>>();
+
+        // Map submissions to submitters
+        (submissionsData ?? []).forEach((s: any) => {
+          if (s.submitter_name) {
+            submissionToSubmitter.set(s.id, s.submitter_name);
+          }
+        });
+
+        if (submissionIds.length > 0) {
+          const { data: votesData } = await supabase
+            .from("votes")
+            .select("submission_id,voter_name,points")
+            .in("submission_id", submissionIds);
+
+          (votesData ?? []).forEach((vote: any) => {
+            const points = vote.points ?? 0;
+            totalVotes += points;
+            voteTotals.set(
+              vote.submission_id,
+              (voteTotals.get(vote.submission_id) ?? 0) + points
+            );
+
+            // Track points received per player (for leaderboard)
+            const submitter = submissionToSubmitter.get(vote.submission_id);
+            if (submitter) {
+              playerPoints.set(submitter, (playerPoints.get(submitter) ?? 0) + points);
+            }
+
+            // Track voting patterns (voter -> target -> points)
+            if (vote.voter_name && submitter) {
+              if (!voterToTarget.has(vote.voter_name)) {
+                voterToTarget.set(vote.voter_name, new Map());
+              }
+              const targetMap = voterToTarget.get(vote.voter_name)!;
+              targetMap.set(submitter, (targetMap.get(submitter) ?? 0) + points);
+            }
+          });
+        }
+
+        // Calculate top tracks
+        const topTracks: TopTrack[] = (submissionsData ?? [])
+          .map((s: any) => ({
+            title: s.title,
+            artist: s.artist ?? undefined,
+            artworkUrl: s.artwork_url ?? undefined,
+            points: voteTotals.get(s.id) ?? 0,
+            submitterName: s.submitter_name ?? undefined,
+          }))
+          .sort((a, b) => b.points - a.points)
+          .slice(0, 5);
+
+        // Calculate leaderboard - count wins per player
+        const playerWins = new Map<string, number>();
+        const roundSubmissions = new Map<string, { submitter: string; points: number }[]>();
+
+        // Group submissions by round
+        (submissionsData ?? []).forEach((s: any) => {
+          const roundId = s.round_id;
+          if (!roundSubmissions.has(roundId)) {
+            roundSubmissions.set(roundId, []);
+          }
+          roundSubmissions.get(roundId)!.push({
+            submitter: s.submitter_name ?? "Unknown",
+            points: voteTotals.get(s.id) ?? 0,
+          });
+        });
+
+        // Find winner of each round
+        roundSubmissions.forEach((subs) => {
+          if (subs.length > 0) {
+            const winner = subs.reduce((a, b) => (a.points >= b.points ? a : b));
+            playerWins.set(winner.submitter, (playerWins.get(winner.submitter) ?? 0) + 1);
+          }
+        });
+
+        // Build leaderboard
+        const leaderboard: LeaderboardEntry[] = Array.from(playerPoints.entries())
+          .map(([name, totalPoints]) => ({
+            name,
+            totalPoints,
+            wins: playerWins.get(name) ?? 0,
+            rank: 0,
+          }))
+          .sort((a, b) => b.totalPoints - a.totalPoints)
+          .map((entry, index) => ({ ...entry, rank: index + 1 }));
+
+        // Calculate voting patterns (most/least for each voter)
+        const votingPatterns: VotingPattern[] = [];
+        voterToTarget.forEach((targetMap, voterName) => {
+          const entries = Array.from(targetMap.entries())
+            .filter(([targetName]) => targetName !== voterName); // Exclude self-votes
+
+          if (entries.length > 0) {
+            const sortedByPoints = [...entries].sort((a, b) => b[1] - a[1]);
+            const most = sortedByPoints[0];
+            const least = sortedByPoints[sortedByPoints.length - 1];
+
+            votingPatterns.push({
+              voterName,
+              targetName: most[0],
+              pointsGiven: most[1],
+              type: "most",
+            });
+
+            if (most[0] !== least[0]) {
+              votingPatterns.push({
+                voterName,
+                targetName: least[0],
+                pointsGiven: least[1],
+                type: "least",
+              });
+            }
+          }
+        });
+
+        // Calculate genre distribution
+        const genreCounts = new Map<string, number>();
+        (submissionsData ?? []).forEach((s: any) => {
+          if (s.genres) {
+            // Genres might be comma-separated
+            const genres = s.genres.split(",").map((g: string) => g.trim());
+            genres.forEach((genre: string) => {
+              if (genre) {
+                genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1);
+              }
+            });
+          }
+        });
+
+        const totalGenreCount = Array.from(genreCounts.values()).reduce((a, b) => a + b, 0);
+        const genreDistribution: DistributionItem[] = Array.from(genreCounts.entries())
+          .map(([label, count]) => ({
+            label,
+            count,
+            percentage: totalGenreCount > 0 ? Math.round((count / totalGenreCount) * 100) : 0,
+          }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 8); // Top 8 genres
+
+        // Calculate decade distribution
+        const decadeCounts = new Map<string, number>();
+        (submissionsData ?? []).forEach((s: any) => {
+          if (s.release_year) {
+            const decade = `${Math.floor(s.release_year / 10) * 10}s`;
+            decadeCounts.set(decade, (decadeCounts.get(decade) ?? 0) + 1);
+          }
+        });
+
+        const totalDecadeCount = Array.from(decadeCounts.values()).reduce((a, b) => a + b, 0);
+        const decadeDistribution: DistributionItem[] = Array.from(decadeCounts.entries())
+          .map(([label, count]) => ({
+            label,
+            count,
+            percentage: totalDecadeCount > 0 ? Math.round((count / totalDecadeCount) * 100) : 0,
+          }))
+          .sort((a, b) => {
+            // Sort by decade chronologically
+            const aYear = parseInt(a.label);
+            const bYear = parseInt(b.label);
+            return aYear - bYear;
+          });
+
+        // Season awards - use the champion and maybe top 3 awards
+        const seasonAwards: SeasonAward[] = [];
+        if (leaderboard.length > 0) {
+          seasonAwards.push({
+            awardName: "Season Champion",
+            awardDescription: `Winner of Season ${league.season_number ?? 0}`,
+            winnerName: leaderboard[0].name,
+          });
+        }
+        if (leaderboard.length > 1) {
+          seasonAwards.push({
+            awardName: "Runner Up",
+            awardDescription: "Second place overall",
+            winnerName: leaderboard[1].name,
+          });
+        }
+        // Most wins award
+        const mostWins = leaderboard.reduce(
+          (max, entry) => (entry.wins > max.wins ? entry : max),
+          leaderboard[0] || { wins: 0, name: "" }
+        );
+        if (mostWins.wins > 0 && mostWins.name !== leaderboard[0]?.name) {
+          seasonAwards.push({
+            awardName: "Most Round Wins",
+            awardDescription: `${mostWins.wins} first place finishes`,
+            winnerName: mostWins.name,
+          });
+        }
+
+        stats.push({
+          leagueId: league.id,
+          leagueName: league.name,
+          seasonNumber: league.season_number ?? 0,
+          totalRounds: roundIds.length,
+          totalSubmissions: submissionsData?.length ?? 0,
+          totalVotes,
+          topTracks,
+          roundThemes,
+          leaderboard,
+          seasonAwards,
+          votingPatterns,
+          genreDistribution,
+          decadeDistribution,
+        });
+      }
+
+      setPastSeasonStats(stats);
+    };
+
+    loadPastSeasons();
+  }, [group, leagues]);
+
+  /* ========================================
+     Transform Data to CardData[]
+     ======================================== */
+
+  const cardData = useMemo((): CardData[] => {
+    const cards: CardData[] = [];
+
+    // Current season rounds
+    allRounds.forEach((round) => {
+      const submissions = allSubmissions.get(round.id) ?? [];
+
+      // Calculate points for each submission
+      const submissionsWithVotes: SubmissionWithVotes[] = submissions.map((sub) => {
+        const votes = allVotes.get(sub.id) ?? [];
+        const totalPoints = votes.reduce((sum, v) => sum + (v.points ?? 0), 0);
+
+        return {
+          id: sub.id,
+          title: sub.title,
+          artist: sub.artist ?? undefined,
+          link: sub.link ?? undefined,
+          submitterName: sub.submitter_name ?? undefined,
+          artworkUrl: sub.artwork_url ?? undefined,
+          releaseYear: sub.release_year ?? undefined,
+          genres: sub.genres ?? undefined,
+          sourceUri: sub.source_uri ?? undefined,
+          createdAt: sub.created_at,
+          totalPoints,
+          voteCount: votes.length,
+        };
+      });
+
+      // Get unique voters for player count
+      const uniqueVoters = new Set<string>();
+      submissions.forEach((sub) => {
+        const votes = allVotes.get(sub.id) ?? [];
+        votes.forEach((v) => {
+          if (v.voter_name) uniqueVoters.add(v.voter_name);
+        });
+      });
+
+      // Get awards
+      const roundAwards = allAwards.get(round.id) ?? [];
+      const awards: RoundAward[] = roundAwards.map((a) => ({
+        id: a.id,
+        awardId: a.award_id ?? undefined,
+        awardName: a.award_name,
+        awardDescription: a.award_description ?? undefined,
+        trophyUrl: a.trophy_url ?? undefined,
+        winnerName: a.winner_name ?? undefined,
+        visible: a.visible ?? true,
+      }));
+
+      const totalVotes = submissionsWithVotes.reduce((sum, s) => sum + s.totalPoints, 0);
+
+      const roundCard: RoundCardData = {
+        id: round.id,
+        type: "round",
+        theme: round.theme,
+        themeDescription: round.theme_description,
+        themeAuthor: round.theme_author,
+        themeImageUrl: round.theme_image_url,
+        winnersImageUrl: round.winners_image_visible !== false ? round.winners_image_url : null,
+        roundNumber: round.round_number,
+        seasonNumber: round.season_number,
+        status: round.status as any,
+        submissions: submissionsWithVotes,
+        awards,
+        narrative: round.narrative,
+        stats: {
+          songs: submissions.length,
+          votes: totalVotes,
+          players: Math.max(uniqueVoters.size, submissions.length),
+        },
+      };
+
+      cards.push(roundCard);
+    });
+
+    // Past season recap cards
+    pastSeasonStats.forEach((season) => {
+      const recapCard: SeasonRecapCardData = {
+        id: `season-${season.leagueId}`,
+        type: "season-recap",
+        seasonNumber: season.seasonNumber,
+        leagueName: season.leagueName,
+        totalRounds: season.totalRounds,
+        totalSubmissions: season.totalSubmissions,
+        totalVotes: season.totalVotes,
+        topTracks: season.topTracks,
+        roundThemes: season.roundThemes,
+        leaderboard: season.leaderboard,
+        seasonAwards: season.seasonAwards,
+        votingPatterns: season.votingPatterns,
+        genreDistribution: season.genreDistribution,
+        decadeDistribution: season.decadeDistribution,
+      };
+
+      cards.push(recapCard);
+    });
+
+    return cards;
+  }, [allRounds, allSubmissions, allVotes, allAwards, pastSeasonStats]);
+
+  /* ========================================
+     Event Handlers
+     ======================================== */
+
+  const handleCardChange = (index: number, card: CardData) => {
+    // Could be used for analytics or loading additional data
+    console.log("Card changed:", index, card.id);
+  };
+
+  const handleCardTap = (card: CardData) => {
+    // Could open a detail modal or navigate to full round view
+    console.log("Card tapped:", card.id);
+  };
+
+  /* ========================================
+     Render
+     ======================================== */
+
+  if (!group) {
+    return (
+      <div className="history-loading">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="history-loading">
+        <p>Loading history...</p>
+      </div>
+    );
+  }
+
+  if (cardData.length === 0) {
+    return (
+      <div className="history-empty">
+        <p>No completed rounds yet</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <h1>History</h1>
-        <p>Explore completed rounds and season highlights.</p>
-      </div>
-
-      <div className="history-nav">
-        <a href="#round-review">Round review</a>
-        <a href="#season-snapshot">Season snapshot</a>
-      </div>
-
-      <section id="round-review" className="history-section">
-        <div className="section-header">
-          <div>
-            <h2>Round Review</h2>
-            <p className="muted">Pick a season and completed round to dive into the recap.</p>
-          </div>
-        </div>
-
-        <div className="history-dashboard">
-          <Card className="dashboard-card compact">
-            <h3>Season</h3>
-            <select
-              className="field-input"
-              value={selectedLeagueId ?? ""}
-              onChange={(event) => {
-                setSelectedLeagueId(event.target.value || null);
-                setSelectedRoundId(null);
-              }}
-            >
-              <option value="">Select season</option>
-              {leagues.map((league) => (
-                <option key={league.id} value={league.id}>
-                  Season {league.season_number ?? "—"} · {league.name}
-                </option>
-              ))}
-            </select>
-            <h3>Round</h3>
-            <select
-              className="field-input"
-              value={selectedRoundId ?? ""}
-              onChange={(event) => setSelectedRoundId(event.target.value || null)}
-            >
-              <option value="">Select round</option>
-              {completedRounds.map((round) => (
-                <option key={round.id} value={round.id}>
-                  {round.round_number ?? "Round"} · {round.theme}
-                </option>
-              ))}
-            </select>
-            <button
-              className="pill-button"
-              type="button"
-              onClick={() => {
-                if (!completedRounds.length) return;
-                const random = completedRounds[Math.floor(Math.random() * completedRounds.length)];
-                setSelectedRoundId(random.id);
-              }}
-            >
-              Random round
-            </button>
-          </Card>
-
-          <Card className="dashboard-card compact">
-            <h3>{selectedRound?.theme ?? "Pick a round"}</h3>
-            <p className="muted">{selectedRound?.theme_description ?? "Select a round to see details."}</p>
-            {selectedRound?.theme_author ? <p className="muted">Theme by {selectedRound.theme_author}</p> : null}
-            {selectedRound ? (
-              <div className="pill-row">
-                <span className="pill">Round {selectedRound.round_number ?? "—"}</span>
-                <span className="pill mint">{selectedRound.status.toUpperCase()}</span>
-              </div>
-            ) : null}
-          </Card>
-
-          <Card className="dashboard-card compact">
-            <h3>Round listening</h3>
-            <div className="round-track-grid">
-              {roundSummary?.songs?.length ? (
-                roundSummary.songs.slice(0, 6).map((song) => (
-                  <div key={song.id} className="round-track-card">
-                    {song.artwork_url ? (
-                      <img src={song.artwork_url} alt={song.title} />
-                    ) : (
-                      <div className="art-placeholder" />
-                    )}
-                    <div>
-                      <strong>{song.title}</strong>
-                      <span className="muted">{song.artist ?? "Unknown artist"}</span>
-                      <span className="muted">{song.releaseYear} · {song.primaryGenre}</span>
-                      {song.link ? (
-                        <a className="text-link" href={song.link} target="_blank" rel="noreferrer">
-                          Listen
-                        </a>
-                      ) : null}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="muted">No submissions yet for this round.</p>
-              )}
-            </div>
-          </Card>
-
-          <Card className="dashboard-card compact">
-            <h3>Release year mix</h3>
-            {roundSummary?.yearChart?.length ? (
-              <div className="year-chart">
-                {roundSummary.yearChart.map(([year, count]) => (
-                  <div key={year} className="year-bar">
-                    <span>{year}</span>
-                    <div className="bar">
-                      <div className="bar-fill" style={{ width: `${count * 18}px` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="muted">No release year data for this round yet.</p>
-            )}
-            <div className="genre-cloud">
-              {roundSummary?.genreScatter?.length ? (
-                roundSummary.genreScatter.map(([genre, count]) => (
-                  <span key={genre} className={`pill ${count > 2 ? "mint" : ""}`}>
-                    {genre}
-                  </span>
-                ))
-              ) : (
-                <span className="muted">No genre data yet.</span>
-              )}
-            </div>
-          </Card>
-
-          <Card className="dashboard-card compact">
-            <h3>AI narrative</h3>
-            <button className="button" type="button" onClick={generateNarrative} disabled={storyLoading}>
-              {storyLoading ? "Generating..." : "Generate round story + art prompt"}
-            </button>
-            {narrative ? (
-              <div className="narrative-block">
-                <h4>Round narrative</h4>
-                <p>{narrative}</p>
-              </div>
-            ) : null}
-            {imagePrompt ? (
-              <div className="narrative-block">
-                <h4>Hero image prompt</h4>
-                <p>{imagePrompt}</p>
-              </div>
-            ) : null}
-            <div className="round-track-footer">
-              <button className="pill-button" type="button" onClick={() => setShowAiJson((prev) => !prev)}>
-                {showAiJson ? "Hide JSON" : "Show JSON payload"}
-              </button>
-            </div>
-            {showAiJson ? (
-              <pre className="code-block">
-                {JSON.stringify({ round: selectedRound, songs: roundSummary?.songs ?? [], votes }, null, 2)}
-              </pre>
-            ) : null}
-          </Card>
-        </div>
-        {selectedRoundId ? (
-          <div className="history-chat">
-            <Card className="dashboard-card compact">
-              <h3>Round chat</h3>
-              <p className="muted">
-                This conversation starts with the group chat highlights from the round and continues here.
-              </p>
-              <RoundChat roundId={selectedRoundId} />
-            </Card>
-          </div>
-        ) : null}
-      </section>
-
-      <section id="season-snapshot" className="history-section">
-        <div className="section-header">
-          <div>
-            <h2>Season Snapshot</h2>
-            <p className="muted">Quick stats for the selected season.</p>
-          </div>
-        </div>
-        <div className="history-dashboard">
-          <Card className="dashboard-card compact">
-            <h3>Season totals</h3>
-            <div className="stat-highlight">
-              <strong>{seasonStats?.totalRounds ?? 0}</strong>
-              <span className="muted">Rounds</span>
-            </div>
-            <div className="stat-highlight">
-              <strong>{seasonStats?.totalSubmissions ?? 0}</strong>
-              <span className="muted">Submissions</span>
-            </div>
-            <div className="stat-highlight">
-              <strong>{seasonStats?.totalVotes ?? 0}</strong>
-              <span className="muted">Votes cast</span>
-            </div>
-          </Card>
-
-          <Card className="dashboard-card compact">
-            <h3>Top tracks</h3>
-            <ul className="highlight-list">
-              {seasonStats?.topTracks?.map((track) => (
-                <li key={`${track.title}-${track.artist}`}>
-                  <div>
-                    <strong>{track.title}</strong>
-                    <span className="muted">{track.artist ?? "Unknown artist"}</span>
-                  </div>
-                  <span className="pill">{track.points} pts</span>
-                </li>
-              ))}
-            </ul>
-          </Card>
-
-          <Card className="dashboard-card compact">
-            <h3>Completed rounds</h3>
-            <div className="history-list compact">
-              {completedRounds.map((round) => (
-                <div key={round.id} className="history-item">
-                  <div>
-                    <strong>{round.theme}</strong>
-                    <span className="muted">Round {round.round_number ?? "—"}</span>
-                  </div>
-                  <button className="pill-button" type="button" onClick={() => setSelectedRoundId(round.id)}>
-                    Review
-                  </button>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      </section>
-    </div>
+    <CardStack
+      cards={cardData}
+      onCardChange={handleCardChange}
+      onCardTap={handleCardTap}
+      swipeEnabled={true}
+    />
   );
 }

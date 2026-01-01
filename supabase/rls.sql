@@ -13,6 +13,9 @@ alter table season_competitors enable row level security;
 alter table season_round_comments enable row level security;
 alter table round_chats enable row level security;
 alter table round_imports enable row level security;
+alter table round_awards enable row level security;
+alter table player_connections enable row level security;
+alter table group_settings enable row level security;
 
 create or replace function public.is_group_member(p_group_id uuid)
 returns boolean
@@ -549,3 +552,92 @@ drop policy if exists "Round imports delete by owner" on round_imports;
 create policy "Round imports delete by owner" on round_imports
   for delete
   using (public.is_group_owner(round_imports.group_id));
+
+drop policy if exists "Group settings viewable by owner" on group_settings;
+create policy "Group settings viewable by members" on group_settings
+  for select
+  using (public.is_group_member(group_settings.group_id));
+
+drop policy if exists "Group settings insert by owner" on group_settings;
+create policy "Group settings insert by owner" on group_settings
+  for insert
+  with check (public.is_group_owner(group_settings.group_id));
+
+drop policy if exists "Group settings update by owner" on group_settings;
+create policy "Group settings update by owner" on group_settings
+  for update
+  using (public.is_group_owner(group_settings.group_id));
+
+drop policy if exists "Group settings delete by owner" on group_settings;
+create policy "Group settings delete by owner" on group_settings
+  for delete
+  using (public.is_group_owner(group_settings.group_id));
+
+drop policy if exists "Round awards viewable by group members" on round_awards;
+create policy "Round awards viewable by group members" on round_awards
+  for select
+  using (
+    exists (
+      select 1
+      from rounds r
+      join leagues l on l.id = r.league_id
+      join group_members gm on gm.group_id = l.group_id
+      where r.id = round_awards.round_id and gm.member_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Round awards insert by owner" on round_awards;
+create policy "Round awards insert by owner" on round_awards
+  for insert
+  with check (
+    exists (
+      select 1
+      from rounds r
+      join leagues l on l.id = r.league_id
+      where r.id = round_awards.round_id and public.is_group_owner(l.group_id)
+    )
+  );
+
+drop policy if exists "Round awards update by owner" on round_awards;
+create policy "Round awards update by owner" on round_awards
+  for update
+  using (
+    exists (
+      select 1
+      from rounds r
+      join leagues l on l.id = r.league_id
+      where r.id = round_awards.round_id and public.is_group_owner(l.group_id)
+    )
+  );
+
+drop policy if exists "Round awards delete by owner" on round_awards;
+create policy "Round awards delete by owner" on round_awards
+  for delete
+  using (
+    exists (
+      select 1
+      from rounds r
+      join leagues l on l.id = r.league_id
+      where r.id = round_awards.round_id and public.is_group_owner(l.group_id)
+    )
+  );
+
+drop policy if exists "Player connections viewable by owner" on player_connections;
+create policy "Player connections viewable by owner" on player_connections
+  for select
+  using (public.is_group_owner(player_connections.group_id));
+
+drop policy if exists "Player connections insert by owner" on player_connections;
+create policy "Player connections insert by owner" on player_connections
+  for insert
+  with check (public.is_group_owner(player_connections.group_id));
+
+drop policy if exists "Player connections update by owner" on player_connections;
+create policy "Player connections update by owner" on player_connections
+  for update
+  using (public.is_group_owner(player_connections.group_id));
+
+drop policy if exists "Player connections delete by owner" on player_connections;
+create policy "Player connections delete by owner" on player_connections
+  for delete
+  using (public.is_group_owner(player_connections.group_id));

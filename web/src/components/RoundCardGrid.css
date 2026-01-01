@@ -1,0 +1,607 @@
+/* ========================================
+   Round Card Grid - History View
+   ======================================== */
+
+/* Container */
+.round-card-grid-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* ========================================
+   Stats Summary Bar
+   ======================================== */
+.stats-summary {
+  display: flex;
+  gap: 24px;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(17, 193, 236, 0.08), rgba(255, 111, 97, 0.08));
+  border-radius: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  justify-content: space-around;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 100px;
+}
+
+.stat-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--navy, #0a1a2f);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(10, 26, 47, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ========================================
+   Filter Controls
+   ======================================== */
+.filter-controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.filter-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.filter-chip {
+  padding: 10px 20px;
+  background: rgba(10, 26, 47, 0.06);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--navy, #0a1a2f);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.filter-chip:hover {
+  background: rgba(10, 26, 47, 0.12);
+  transform: translateY(-1px);
+}
+
+.filter-chip:active {
+  transform: translateY(0);
+}
+
+.filter-chip.active {
+  background: var(--navy, #0a1a2f);
+  color: #fff;
+  border-color: var(--navy, #0a1a2f);
+  box-shadow: 0 4px 12px rgba(10, 26, 47, 0.2);
+}
+
+.filter-chip:focus-visible {
+  outline: 2px solid var(--navy, #0a1a2f);
+  outline-offset: 2px;
+}
+
+/* Sort Control */
+.sort-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sort-select {
+  padding: 10px 16px;
+  background: #fff;
+  border: 1px solid rgba(10, 26, 47, 0.2);
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--navy, #0a1a2f);
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+  min-width: 160px;
+}
+
+.sort-select:hover {
+  border-color: var(--navy, #0a1a2f);
+}
+
+.sort-select:focus {
+  outline: 2px solid var(--navy, #0a1a2f);
+  outline-offset: 2px;
+  border-color: var(--navy, #0a1a2f);
+}
+
+/* Screen reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Results Count */
+.results-count {
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.results-count p {
+  font-size: 0.875rem;
+  color: rgba(10, 26, 47, 0.7);
+  margin: 0;
+}
+
+.results-count strong {
+  color: var(--navy, #0a1a2f);
+  font-weight: 700;
+}
+
+/* ========================================
+   Card Grid - Responsive Layout
+   ======================================== */
+.round-card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+/* Tablet - 2 columns */
+@media (min-width: 640px) {
+  .round-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop - 3 columns */
+@media (min-width: 1024px) {
+  .round-card-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+}
+
+/* Large Desktop - maintain 3 columns with max width */
+@media (min-width: 1400px) {
+  .round-card-grid {
+    gap: 28px;
+  }
+}
+
+/* ========================================
+   Round Card
+   ======================================== */
+.round-card {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(10, 26, 47, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.round-card:hover,
+.round-card:focus-visible {
+  box-shadow: 0 8px 24px rgba(10, 26, 47, 0.16);
+  transform: translateY(-4px);
+}
+
+.round-card:focus-visible {
+  outline: 3px solid var(--navy, #0a1a2f);
+  outline-offset: 2px;
+}
+
+.round-card:active {
+  transform: translateY(-2px);
+}
+
+/* Card Image Container */
+.card-image-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg, rgba(17, 193, 236, 0.12), rgba(255, 111, 97, 0.12));
+  overflow: hidden;
+}
+
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.round-card:hover .card-image {
+  transform: scale(1.05);
+}
+
+.card-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(10, 26, 47, 0.3);
+}
+
+/* Trophy Overlay */
+.trophy-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  padding: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: trophyPulse 2s ease-in-out infinite;
+}
+
+@keyframes trophyPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.trophy-icon {
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* Round Badge */
+.round-badge {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.round-badge span {
+  background: rgba(10, 26, 47, 0.85);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  backdrop-filter: blur(8px);
+}
+
+/* ========================================
+   Card Content
+   ======================================== */
+.card-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--navy, #0a1a2f);
+  margin: 0;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Winner Info */
+.winner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: rgba(255, 215, 0, 0.1);
+  border-left: 3px solid #FFD700;
+  border-radius: 8px;
+}
+
+.winner-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: rgba(10, 26, 47, 0.6);
+  letter-spacing: 0.05em;
+}
+
+.winner-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--navy, #0a1a2f);
+}
+
+.winner-song {
+  font-size: 0.8125rem;
+  color: rgba(10, 26, 47, 0.7);
+  font-style: italic;
+}
+
+/* Your Submission */
+.your-submission {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(10, 26, 47, 0.1);
+}
+
+.submission-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: rgba(10, 26, 47, 0.6);
+  letter-spacing: 0.05em;
+}
+
+.submission-details {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.submission-artwork {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.submission-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--navy, #0a1a2f);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.submission-artist {
+  font-size: 0.8125rem;
+  color: rgba(10, 26, 47, 0.7);
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* ========================================
+   Expanded Details (Hover/Focus State)
+   ======================================== */
+.expanded-details {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(10, 26, 47, 0.1);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.theme-description {
+  font-size: 0.875rem;
+  color: rgba(10, 26, 47, 0.7);
+  line-height: 1.5;
+  margin: 0 0 10px 0;
+  font-style: italic;
+}
+
+.round-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 0.8125rem;
+  color: rgba(10, 26, 47, 0.6);
+}
+
+.participated-badge {
+  background: rgba(17, 193, 236, 0.15);
+  color: #0a76a8;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+/* ========================================
+   Empty State
+   ======================================== */
+.empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  text-align: center;
+  color: rgba(10, 26, 47, 0.5);
+}
+
+.empty-state svg {
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.empty-state h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: rgba(10, 26, 47, 0.7);
+  margin: 0 0 8px 0;
+}
+
+.empty-state p {
+  font-size: 1rem;
+  margin: 0;
+  color: rgba(10, 26, 47, 0.5);
+}
+
+/* ========================================
+   Accessibility & Performance
+   ======================================== */
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .round-card,
+  .card-image,
+  .expanded-details,
+  .trophy-overlay {
+    animation: none;
+    transition: none;
+  }
+
+  .round-card:hover {
+    transform: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .filter-chip {
+    border: 2px solid currentColor;
+  }
+
+  .round-card {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+  .round-card {
+    background: #1a2332;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .card-title {
+    color: #e8f0f8;
+  }
+
+  .winner-info,
+  .your-submission {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .filter-chip {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e8f0f8;
+  }
+
+  .filter-chip.active {
+    background: #4a90e2;
+    color: #fff;
+  }
+}
+
+/* ========================================
+   Loading Skeleton (Optional Enhancement)
+   ======================================== */
+.round-card.skeleton {
+  pointer-events: none;
+}
+
+.round-card.skeleton .card-image-container,
+.round-card.skeleton .card-title,
+.round-card.skeleton .winner-info,
+.round-card.skeleton .submission-details {
+  background: linear-gradient(
+    90deg,
+    rgba(10, 26, 47, 0.06) 25%,
+    rgba(10, 26, 47, 0.12) 50%,
+    rgba(10, 26, 47, 0.06) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ========================================
+   Mobile Optimizations
+   ======================================== */
+@media (max-width: 639px) {
+  .stats-summary {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .stat-value {
+    font-size: 2rem;
+  }
+
+  .filter-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sort-control {
+    width: 100%;
+  }
+
+  .sort-select {
+    width: 100%;
+  }
+
+  .card-content {
+    padding: 16px;
+  }
+
+  .card-title {
+    font-size: 1.125rem;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .round-card-grid {
+    gap: 20px;
+  }
+}

@@ -1,19 +1,33 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import AuthPage from "./pages/AuthPage";
-import OnboardingPage from "./pages/OnboardingPage";
-import ChatPage from "./pages/ChatPage";
-import HistoryPage from "./pages/HistoryPage";
-import AdminPage from "./pages/AdminPage";
-import RoundDetailPage from "./pages/RoundDetailPage";
-import SettingsPage from "./pages/SettingsPage";
-import InvitePage from "./pages/InvitePage";
-import NotFound from "./pages/NotFound";
+import { RoundProvider } from "./contexts/RoundContext";
+import { PeekPanelProvider } from "./components/pinned-peek";
 import TopBar from "./components/TopBar";
-import SideNav from "./components/SideNav";
 import BottomNav from "./components/BottomNav";
 import "./App.css";
+
+// Lazy load pages for better initial load performance
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
+const ChatPage = lazy(() => import("./pages/ChatPage"));
+const ChatPrototype = lazy(() => import("./pages/ChatPrototype"));
+const HistoryPage = lazy(() => import("./pages/HistoryPage"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const RoundDetailPage = lazy(() => import("./pages/RoundDetailPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const InvitePage = lazy(() => import("./pages/InvitePage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Loading fallback for lazy components
+function PageLoader() {
+  return (
+    <div className="app-loading">
+      <div className="loading-card">Loading...</div>
+    </div>
+  );
+}
 
 function AppShell() {
   const { loading, session, group } = useAuth();
@@ -35,28 +49,33 @@ function AppShell() {
   }
 
   return (
-    <div className="app-shell">
-      <TopBar />
-      <div className="app-shell-body">
-        <SideNav />
-        <main className="app-shell-main">
-          <Routes>
-            <Route index element={<ChatPage />} />
-            <Route path="chat" element={<ChatPage />} />
-            <Route path="round" element={<Navigate to="/app/chat" replace />} />
-            <Route path="round/:id" element={<RoundDetailPage />} />
-            <Route path="rounds/:id" element={<RoundDetailPage />} />
-            <Route path="leaderboard" element={<Navigate to="/app/history" replace />} />
-            <Route path="history" element={<HistoryPage />} />
-            <Route path="admin" element={<AdminPage />} />
-            <Route path="profile" element={<Navigate to="/app/settings" replace />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </main>
-      </div>
-      <BottomNav />
-    </div>
+    <RoundProvider>
+      <PeekPanelProvider>
+        <div className="app-shell">
+          <TopBar />
+          <div className="app-shell-body">
+            <main className="app-shell-main">
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route index element={<ChatPage />} />
+                  <Route path="chat" element={<ChatPage />} />
+                  <Route path="round" element={<Navigate to="/app/chat" replace />} />
+                  <Route path="round/:id" element={<RoundDetailPage />} />
+                  <Route path="rounds/:id" element={<RoundDetailPage />} />
+                  <Route path="leaderboard" element={<Navigate to="/app/history" replace />} />
+                  <Route path="history" element={<HistoryPage />} />
+                  <Route path="admin" element={<AdminPage />} />
+                  <Route path="profile" element={<ProfilePage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </main>
+          </div>
+          <BottomNav />
+        </div>
+      </PeekPanelProvider>
+    </RoundProvider>
   );
 }
 
@@ -78,13 +97,21 @@ function AuthGate() {
       localStorage.setItem("pending_invite", inviteParam);
     }
     const pendingInvite = inviteParam ?? localStorage.getItem("pending_invite");
+
+    // If user already has a group, clear any pending invite and go to app
+    if (group) {
+      if (pendingInvite) {
+        localStorage.removeItem("pending_invite");
+      }
+      return <Navigate to="/app" replace />;
+    }
+
+    // User has no group - check for pending invite
     if (pendingInvite) {
       return <Navigate to={`/invite?code=${pendingInvite}`} replace />;
     }
-    if (!group) {
-      return <Navigate to="/onboarding" replace />;
-    }
-    return <Navigate to="/app" replace />;
+
+    return <Navigate to="/onboarding" replace />;
   }
 
   return <AuthPage />;
@@ -128,15 +155,18 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/" element={<AuthGate />} />
-        <Route path="/onboarding" element={<OnboardingGate />} />
-        <Route path="/invite" element={<InvitePage />} />
-        <Route path="/app/*" element={<AppShell />} />
-        <Route path="/dashboard" element={<Navigate to="/app/chat" replace />} />
-        <Route path="/group-chat" element={<Navigate to="/app/chat" replace />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<AuthGate />} />
+          <Route path="/onboarding" element={<OnboardingGate />} />
+          <Route path="/invite" element={<InvitePage />} />
+          <Route path="/prototype" element={<ChatPrototype />} />
+          <Route path="/app/*" element={<AppShell />} />
+          <Route path="/dashboard" element={<Navigate to="/app/chat" replace />} />
+          <Route path="/group-chat" element={<Navigate to="/app/chat" replace />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </AuthProvider>
   );
 }

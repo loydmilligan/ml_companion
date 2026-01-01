@@ -104,6 +104,18 @@ This document outlines the high-level project plan for the Music League Family C
 * **US: Share Songs Outside the App:**
     * Integrate native sharing functionality to allow users to share links to individual songs or family-curated playlist links externally.
 
+### 2.8. Round Awards & Trophies
+* **US: Generate Round Awards:**
+    * Define a `round_awards` table to store finalized awards per round.
+    * Implement award calculation logic using submissions/votes/relationships data.
+    * Persist awards once per round (frozen history).
+* **US: Display Round Awards:**
+    * Build a cohesive History round recap block with awards, winners, and trophy images.
+    * Allow admins to regenerate or override award winners if needed.
+* **US: Trophy Asset Pipeline:**
+    * Create a dedicated storage bucket for award trophy images.
+    * Implement a batch trophy generation script from award prompts.
+
 ## Atomic Tasks List
 
 ### Foundational Elements & Backend Implementation

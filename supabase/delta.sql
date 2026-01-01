@@ -9,6 +9,7 @@ alter table profiles add column if not exists chat_notify_enabled boolean defaul
 alter table profiles add column if not exists email_notify_enabled boolean default true;
 alter table profiles add column if not exists can_toggle_chat_notify boolean default true;
 alter table profiles add column if not exists can_toggle_email_notify boolean default true;
+alter table profiles add column if not exists ai_image_traits text;
 
 -- Submissions columns
 alter table submissions add column if not exists submitter_name text;
@@ -32,6 +33,35 @@ alter table rounds add column if not exists external_round_id text;
 alter table rounds add column if not exists external_created_at timestamptz;
 alter table rounds add column if not exists external_playlist_url text;
 alter table rounds add column if not exists playlist_url text;
+alter table rounds add column if not exists theme_image_url text;
+alter table rounds add column if not exists winners_image_url text;
+alter table rounds add column if not exists winners_image_visible boolean default true;
+
+-- Round awards table
+create table if not exists round_awards (
+  id uuid primary key default gen_random_uuid(),
+  round_id uuid references rounds(id) on delete cascade,
+  award_id integer,
+  award_name text not null,
+  award_description text,
+  trophy_url text,
+  winner_name text,
+  winner_profile_id uuid references profiles(id),
+  winner_submission_id uuid references submissions(id),
+  visible boolean default true,
+  created_at timestamptz default now()
+);
+alter table round_awards add column if not exists visible boolean default true;
+
+-- Player connections table
+create table if not exists player_connections (
+  id uuid primary key default gen_random_uuid(),
+  group_id uuid references family_groups(id) on delete cascade,
+  source_profile_id uuid references profiles(id) on delete cascade,
+  target_profile_id uuid references profiles(id) on delete cascade,
+  relation_type text not null,
+  created_at timestamptz default now()
+);
 
 -- Leagues columns
 alter table leagues add column if not exists season_number integer;
@@ -59,8 +89,24 @@ create table if not exists season_competitors (
   external_id text,
   name text not null,
   profile_id uuid references profiles(id),
+  ai_image_traits text,
   created_at timestamptz default now()
 );
+alter table season_competitors add column if not exists ai_image_traits text;
+
+-- Group settings table
+create table if not exists group_settings (
+  id uuid primary key default gen_random_uuid(),
+  group_id uuid references family_groups(id) on delete cascade,
+  round_summary_model_key text,
+  round_story_image_model_key text,
+  round_theme_image_model_key text,
+  awards_model_key text,
+  trophy_image_model_key text,
+  logo_palette text,
+  updated_at timestamptz default now()
+);
+alter table group_settings add column if not exists logo_palette text;
 
 -- Round imports table
 create table if not exists round_imports (
@@ -163,6 +209,18 @@ begin
   if not exists (
     select 1
     from pg_constraint
+    where conname = 'group_settings_group_unique'
+  ) then
+    alter table group_settings
+      add constraint group_settings_group_unique unique (group_id);
+  end if;
+end $$;
+
+DO $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
     where conname = 'submissions_round_source_unique'
   ) then
     alter table submissions
@@ -179,5 +237,29 @@ begin
   ) then
     alter table votes
       add constraint votes_submission_voter_external_unique unique (submission_id, voter_external_id);
+  end if;
+end $$;
+
+DO $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'round_awards_round_award_unique'
+  ) then
+    alter table round_awards
+      add constraint round_awards_round_award_unique unique (round_id, award_id);
+  end if;
+end $$;
+
+DO $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'player_connections_unique'
+  ) then
+    alter table player_connections
+      add constraint player_connections_unique unique (group_id, source_profile_id, target_profile_id, relation_type);
   end if;
 end $$;

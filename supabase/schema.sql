@@ -12,6 +12,7 @@ create table profiles (
   email_notify_enabled boolean default true,
   can_toggle_chat_notify boolean default true,
   can_toggle_email_notify boolean default true,
+  ai_image_traits text,
   created_at timestamptz default now()
 );
 
@@ -20,6 +21,19 @@ create table family_groups (
   name text not null,
   owner_id uuid references profiles(id),
   created_at timestamptz default now()
+);
+
+create table group_settings (
+  id uuid primary key default gen_random_uuid(),
+  group_id uuid references family_groups(id) on delete cascade,
+  round_summary_model_key text,
+  round_story_image_model_key text,
+  round_theme_image_model_key text,
+  awards_model_key text,
+  trophy_image_model_key text,
+  logo_palette text,
+  updated_at timestamptz default now(),
+  unique (group_id)
 );
 
 create table group_members (
@@ -56,7 +70,34 @@ create table rounds (
   status text check (status in ('open','voting','revealed','archived')) default 'open',
   submission_deadline timestamptz,
   voting_deadline timestamptz,
+  theme_image_url text,
+  winners_image_url text,
+  winners_image_visible boolean default true,
   created_at timestamptz default now()
+);
+
+create table round_awards (
+  id uuid primary key default gen_random_uuid(),
+  round_id uuid references rounds(id) on delete cascade,
+  award_id integer,
+  award_name text not null,
+  award_description text,
+  trophy_url text,
+  winner_name text,
+  winner_profile_id uuid references profiles(id),
+  winner_submission_id uuid references submissions(id),
+  visible boolean default true,
+  created_at timestamptz default now()
+);
+
+create table player_connections (
+  id uuid primary key default gen_random_uuid(),
+  group_id uuid references family_groups(id) on delete cascade,
+  source_profile_id uuid references profiles(id) on delete cascade,
+  target_profile_id uuid references profiles(id) on delete cascade,
+  relation_type text not null,
+  created_at timestamptz default now(),
+  unique (group_id, source_profile_id, target_profile_id, relation_type)
 );
 
 create table submissions (
@@ -144,6 +185,7 @@ create table season_competitors (
   external_id text,
   name text not null,
   profile_id uuid references profiles(id),
+  ai_image_traits text,
   created_at timestamptz default now()
 );
 

@@ -1,35 +1,168 @@
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import { useRound } from "../contexts/RoundContext";
 import Avatar from "./Avatar";
+import SettingsGear from "./SettingsGear";
+import ProfileDrawer from "./ProfileDrawer";
+import SettingsDrawer from "./SettingsDrawer";
+import { DualNeedleGauge, PinnedBar, PeekPanel, usePeekPanel } from "./pinned-peek";
 
 export default function TopBar() {
-  const { profile } = useAuth();
+  const { profile, group, refresh } = useAuth();
+  const {
+    round,
+    submissions,
+    votes,
+    awards,
+    submittedCount,
+    votedCount,
+    totalMembers,
+    submissionUrgency,
+    votingUrgency,
+    isVotingComplete,
+  } = useRound();
+  const { isOpen: isPeekOpen, openPanel, closePanel, setQuotedSong } = usePeekPanel();
+
+  const isLead = group?.role === "lead";
+  const [pinnedBarOpen, setPinnedBarOpen] = useState(false);
+  const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
+  const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
+  const [logoPalette, setLogoPalette] = useState("ocean-coral");
 
   const displayName = profile?.display_name ?? "Family Lead";
 
+  const handleQuoteSong = (song: { id: string; title: string; artist: string | null; link: string | null; artwork_url: string | null }) => {
+    setQuotedSong(song);
+    closePanel();
+  };
+
+  // Close other drawers when one opens
+  const openPinnedBar = () => {
+    setProfileDrawerOpen(false);
+    setSettingsDrawerOpen(false);
+    setPinnedBarOpen((prev) => !prev);
+  };
+
+  const openProfileDrawer = () => {
+    setPinnedBarOpen(false);
+    setSettingsDrawerOpen(false);
+    setProfileDrawerOpen((prev) => !prev);
+  };
+
+  const openSettingsDrawer = () => {
+    setPinnedBarOpen(false);
+    setProfileDrawerOpen(false);
+    setSettingsDrawerOpen((prev) => !prev);
+  };
+
+  useEffect(() => {
+    if (!group?.id) return;
+    let active = true;
+    supabase
+      .from("group_settings")
+      .select("logo_palette")
+      .eq("group_id", group.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) {
+          console.error("Failed to load logo palette", error);
+          return;
+        }
+        setLogoPalette(data?.logo_palette ?? "ocean-coral");
+      });
+    return () => {
+      active = false;
+    };
+  }, [group?.id]);
+
+  useEffect(() => {
+    document.documentElement.dataset.logoPalette = logoPalette;
+    return () => {
+      if (document.documentElement.dataset.logoPalette === logoPalette) {
+        delete document.documentElement.dataset.logoPalette;
+      }
+    };
+  }, [logoPalette]);
+
   return (
-    <header className="top-bar">
-      <div className="top-bar-brand">
-        <div className="brand-mark">TM</div>
-        <div>
-          <div className="brand-title">Talking Music League</div>
-          <div className="brand-subtitle">Your family's league, connected.</div>
+    <>
+      <header className="top-bar">
+        <div className="top-bar-brand">
+          <div className="brand-mark" aria-hidden="true">
+            <img className="brand-mark-img" src="/brand-logo.png" alt="Talking Music League logo" />
+          </div>
+          <div>
+            <div className="brand-title">Talking Music League</div>
+            <div className="brand-subtitle">Your family's league, connected.</div>
+          </div>
         </div>
-      </div>
-      <nav className="top-bar-actions">
-        <Link className="top-link" to="/app/settings">
-          <Avatar src={profile?.avatar_url} name={displayName} size="sm" />
-          {displayName}
-        </Link>
-        <button
-          className="top-link top-link-ghost"
-          type="button"
-          onClick={() => supabase.auth.signOut()}
-        >
-          Sign out
-        </button>
-      </nav>
-    </header>
+        <nav className="top-bar-actions">
+          {/* Gauge - only show if there's an active round */}
+          {round && (
+            <DualNeedleGauge
+              submissionPct={submissionUrgency.pct}
+              votingPct={votingUrgency.pct}
+              submissionLevel={submissionUrgency.level}
+              votingLevel={votingUrgency.level}
+              size="md"
+              onClick={openPinnedBar}
+              showExpandIndicator
+            />
+          )}
+
+          {/* Avatar - opens profile drawer */}
+          <button
+            type="button"
+            className="top-bar-avatar-btn"
+            onClick={openProfileDrawer}
+            title={displayName}
+          >
+            <Avatar src={profile?.avatar_url} name={displayName} size="md" framed />
+          </button>
+
+          {/* Gear - opens settings drawer */}
+          <SettingsGear onClick={openSettingsDrawer} />
+        </nav>
+      </header>
+
+      {/* Pinned Bar Dropdown (Gauge drawer) */}
+      <PinnedBar
+        round={round}
+        isOpen={pinnedBarOpen}
+        onClose={() => setPinnedBarOpen(false)}
+        submittedCount={submittedCount}
+        votedCount={votedCount}
+        totalMembers={totalMembers}
+      />
+
+      {/* Profile Drawer (Avatar drawer) */}
+      <ProfileDrawer
+        isOpen={profileDrawerOpen}
+        onClose={() => setProfileDrawerOpen(false)}
+        profile={profile}
+        onProfileUpdate={refresh}
+      />
+
+      {/* Settings Drawer (Gear drawer) */}
+      <SettingsDrawer
+        isOpen={settingsDrawerOpen}
+        onClose={() => setSettingsDrawerOpen(false)}
+        isLead={isLead}
+      />
+
+      {/* Peek Panel (slide-out from right) */}
+      <PeekPanel
+        isOpen={isPeekOpen}
+        onClose={closePanel}
+        round={round}
+        submissions={submissions}
+        votes={votes}
+        awards={awards}
+        isVotingComplete={isVotingComplete}
+        onQuoteSong={handleQuoteSong}
+      />
+    </>
   );
 }

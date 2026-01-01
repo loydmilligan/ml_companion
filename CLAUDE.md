@@ -21,3 +21,9 @@ Follow this flow for each change request:
 ## Collaboration Notes
 - Keep edits focused and avoid drifting beyond the requested scope.
 - If a decision is ambiguous (e.g., licensing or platform choices), ask a brief question.
+
+## Mobile Performance Guidelines
+When discussing or implementing UI/frontend changes, always:
+1. Check for mobile performance implications
+2. Mention any concerns to the user before implementing
+3. Consider: bundle size, re-renders, DOM complexity, network requests, animations/transforms, and polling frequency

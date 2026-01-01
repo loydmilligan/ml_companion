@@ -1,24 +1,26 @@
 import { useEffect, useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
-import Avatar from "../components/Avatar";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
+const defaultEmojiOptions = ["👍", "❤️", "🔥", "😂", "👏", "🎵", "✨", "🙌"];
+
 export default function SettingsPage() {
-  const { profile, refresh } = useAuth();
+  const { profile } = useAuth();
   const [message, setMessage] = useState("Test notification from Talking Music League.");
   const [status, setStatus] = useState<string | null>(null);
   const [chatNotifyEnabled, setChatNotifyEnabled] = useState(profile?.chat_notify_enabled ?? true);
   const [emailNotifyEnabled, setEmailNotifyEnabled] = useState(profile?.email_notify_enabled ?? true);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [reactionNotifyEnabled, setReactionNotifyEnabled] = useState(profile?.reaction_notify_enabled ?? true);
   const [theme, setTheme] = useState(() => localStorage.getItem("tml_theme") ?? "ocean");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("tml_mode") === "dark");
+  const [defaultEmoji, setDefaultEmoji] = useState(() => localStorage.getItem("tml_default_emoji") ?? "👍");
 
   useEffect(() => {
     setChatNotifyEnabled(profile?.chat_notify_enabled ?? true);
     setEmailNotifyEnabled(profile?.email_notify_enabled ?? true);
+    setReactionNotifyEnabled(profile?.reaction_notify_enabled ?? true);
   }, [profile]);
 
   useEffect(() => {
@@ -29,36 +31,11 @@ export default function SettingsPage() {
     localStorage.setItem("tml_mode", darkMode ? "dark" : "light");
   }, [theme, darkMode]);
 
-  const handleAvatarUpload = async (file: File) => {
-    if (!profile) return;
-    setUploading(true);
-    setError(null);
-    const fileExt = file.name.split(".").pop() ?? "png";
-    const filePath = `${profile.id}/${Date.now()}.${fileExt}`;
-
-    const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, {
-      upsert: true,
-    });
-
-    if (uploadError) {
-      setError(uploadError.message);
-      setUploading(false);
-      return;
-    }
-
-    const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ avatar_url: data.publicUrl })
-      .eq("id", profile.id);
-
-    if (updateError) {
-      setError(updateError.message);
-    } else {
-      await refresh();
-    }
-    setUploading(false);
-  };
+  useEffect(() => {
+    localStorage.setItem("tml_default_emoji", defaultEmoji);
+    // Dispatch storage event so other components (ChatPage) pick up the change
+    window.dispatchEvent(new Event("storage"));
+  }, [defaultEmoji]);
 
   const saveChatToggle = async (enabled: boolean) => {
     if (!profile) return;
@@ -70,6 +47,12 @@ export default function SettingsPage() {
     if (!profile) return;
     setEmailNotifyEnabled(enabled);
     await supabase.from("profiles").update({ email_notify_enabled: enabled }).eq("id", profile.id);
+  };
+
+  const saveReactionToggle = async (enabled: boolean) => {
+    if (!profile) return;
+    setReactionNotifyEnabled(enabled);
+    await supabase.from("profiles").update({ reaction_notify_enabled: enabled }).eq("id", profile.id);
   };
 
   const sendTest = async () => {
@@ -91,34 +74,9 @@ export default function SettingsPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Account & Settings</h1>
-        <p>Profile details, appearance preferences, and notifications.</p>
+        <h1>Settings</h1>
+        <p>Appearance preferences and notification controls.</p>
       </div>
-      <Card>
-        <h2>Profile</h2>
-        <p className="muted">Keep your avatar and name in sync for chat and invites.</p>
-        <div className="profile-card">
-          <Avatar src={profile?.avatar_url} name={profile?.display_name ?? "Family Lead"} size="md" />
-          <div>
-            <h3>{profile?.display_name ?? "Family Lead"}</h3>
-            <p className="muted">{profile?.email}</p>
-          </div>
-        </div>
-        <div className="profile-actions">
-          <label className="file-input">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) handleAvatarUpload(file);
-              }}
-            />
-            {uploading ? "Uploading..." : "Upload avatar"}
-          </label>
-          {error ? <div className="auth-error">{error}</div> : null}
-        </div>
-      </Card>
       <Card>
         <h2>Appearance</h2>
         <p className="muted">Switch themes and toggle dark mode.</p>
@@ -134,6 +92,24 @@ export default function SettingsPage() {
           <input type="checkbox" checked={darkMode} onChange={(event) => setDarkMode(event.target.checked)} />
           <span>Dark mode</span>
         </label>
+        <div className="field" style={{ marginTop: "16px" }}>
+          <span className="field-label">Quick reaction emoji</span>
+          <p className="muted" style={{ marginBottom: "8px", fontSize: "0.85rem" }}>
+            This emoji appears next to the chat input for quick reactions.
+          </p>
+          <div className="emoji-selector">
+            {defaultEmojiOptions.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                className={`emoji-option ${defaultEmoji === emoji ? "selected" : ""}`}
+                onClick={() => setDefaultEmoji(emoji)}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
       </Card>
       <Card>
         <h2>Notification preferences</h2>
@@ -156,7 +132,16 @@ export default function SettingsPage() {
           />
           <span>Enable email notifications</span>
         </label>
-        {(profile?.can_toggle_chat_notify === false || profile?.can_toggle_email_notify === false) ? (
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={reactionNotifyEnabled}
+            onChange={(event) => saveReactionToggle(event.target.checked)}
+            disabled={profile?.can_toggle_reaction_notify === false}
+          />
+          <span>Enable reaction notifications</span>
+        </label>
+        {(profile?.can_toggle_chat_notify === false || profile?.can_toggle_email_notify === false || profile?.can_toggle_reaction_notify === false) ? (
           <span className="field-helper">An admin must enable notification controls for your account.</span>
         ) : null}
         <div className="notification-test">

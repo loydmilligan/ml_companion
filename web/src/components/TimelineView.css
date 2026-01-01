@@ -1,0 +1,591 @@
+/**
+ * TimelineView Styles
+ * Mobile-first vertical timeline with smooth animations
+ */
+
+/* Container & Track */
+.timeline-view {
+  position: relative;
+  padding: 24px 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Vertical timeline track - the connecting line */
+.timeline-track {
+  position: absolute;
+  left: 20px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(
+    to bottom,
+    rgba(10, 26, 47, 0.08) 0%,
+    rgba(10, 26, 47, 0.15) 50%,
+    rgba(10, 26, 47, 0.08) 100%
+  );
+  border-radius: 99px;
+}
+
+/* Season Container */
+.timeline-season {
+  position: relative;
+  margin-bottom: 32px;
+}
+
+.season-spacer {
+  height: 48px;
+}
+
+/* Timeline Markers - Generic */
+.timeline-marker {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.marker-dot {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(10, 26, 47, 0.12);
+}
+
+/* Season Marker - Large */
+.season-marker {
+  margin-bottom: 24px;
+}
+
+.season-dot {
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, #0a1a2f 0%, #1a3a5f 100%);
+  color: #fff;
+  font-size: 18px;
+  border: 4px solid #fff;
+}
+
+.season-number {
+  display: block;
+}
+
+.season-header {
+  flex: 1;
+  padding-top: 4px;
+}
+
+.season-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0a1a2f;
+  margin: 0 0 4px 0;
+  line-height: 1.2;
+}
+
+.season-meta {
+  font-size: 14px;
+  color: rgba(10, 26, 47, 0.6);
+  margin: 0;
+}
+
+.season-dates {
+  white-space: nowrap;
+}
+
+/* Round Marker - Smaller */
+.timeline-rounds {
+  position: relative;
+  padding-left: 28px;
+}
+
+.timeline-round {
+  margin-bottom: 16px;
+}
+
+.timeline-round.last {
+  margin-bottom: 0;
+}
+
+.round-marker {
+  align-items: stretch;
+  margin-bottom: 0;
+}
+
+.round-dot {
+  width: 32px;
+  height: 32px;
+  background: #fff;
+  border: 3px solid rgba(10, 26, 47, 0.2);
+  color: rgba(10, 26, 47, 0.6);
+  font-size: 13px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* User participation indicators */
+.round-dot.submitted {
+  border-color: #4a90e2;
+  background: #e8f2ff;
+  color: #4a90e2;
+}
+
+.round-dot.won {
+  border-color: #f4b942;
+  background: linear-gradient(135deg, #f4b942 0%, #e89b2e 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(244, 185, 66, 0.3);
+}
+
+/* Round Card */
+.round-card {
+  flex: 1;
+  background: #fff;
+  border: 1px solid rgba(10, 26, 47, 0.12);
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(10, 26, 47, 0.04);
+}
+
+.round-card:hover {
+  border-color: rgba(10, 26, 47, 0.24);
+  box-shadow: 0 4px 16px rgba(10, 26, 47, 0.08);
+  transform: translateX(2px);
+}
+
+.round-card:active {
+  transform: translateX(2px) scale(0.99);
+}
+
+.round-card.expanded {
+  border-color: rgba(10, 26, 47, 0.24);
+}
+
+/* Round Header */
+.round-header {
+  position: relative;
+}
+
+.round-info {
+  margin-bottom: 12px;
+}
+
+.round-theme {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0a1a2f;
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+  padding-right: 32px; /* Space for expand icon */
+}
+
+.round-description {
+  font-size: 14px;
+  color: rgba(10, 26, 47, 0.6);
+  margin: 0 0 6px 0;
+  line-height: 1.4;
+}
+
+.round-dates {
+  font-size: 13px;
+  color: rgba(10, 26, 47, 0.5);
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Winner Preview */
+.round-winner-preview {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  background: rgba(244, 185, 66, 0.08);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.winner-artwork {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.winner-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.winner-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #e89b2e;
+  font-weight: 700;
+}
+
+.winner-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0a1a2f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.winner-artist {
+  font-size: 13px;
+  color: rgba(10, 26, 47, 0.7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.winner-submitter {
+  font-size: 12px;
+  color: rgba(10, 26, 47, 0.5);
+  font-style: italic;
+}
+
+/* User Badges */
+.round-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.badge-won {
+  background: linear-gradient(135deg, #f4b942 0%, #e89b2e 100%);
+  color: #fff;
+}
+
+.badge-submitted {
+  background: #e8f2ff;
+  color: #4a90e2;
+}
+
+/* Expand Icon */
+.expand-icon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(10, 26, 47, 0.4);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+/* Expanded Round Songs */
+.round-songs {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              margin-top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.round-songs.visible {
+  max-height: 2000px; /* Large enough for typical content */
+  opacity: 1;
+  margin-top: 16px;
+}
+
+.songs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid rgba(10, 26, 47, 0.08);
+}
+
+.songs-header h4 {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(10, 26, 47, 0.7);
+  margin: 0;
+}
+
+.song-count {
+  font-size: 12px;
+  color: rgba(10, 26, 47, 0.5);
+  font-weight: 600;
+}
+
+/* Songs List */
+.songs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.song-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(10, 26, 47, 0.03);
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.song-item:hover {
+  background: rgba(10, 26, 47, 0.06);
+}
+
+.song-item.user-song {
+  background: rgba(74, 144, 226, 0.08);
+  border: 1px solid rgba(74, 144, 226, 0.2);
+}
+
+.song-position {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(10, 26, 47, 0.4);
+  min-width: 24px;
+  text-align: center;
+}
+
+.song-artwork {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.song-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.song-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0a1a2f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.song-artist {
+  font-size: 13px;
+  color: rgba(10, 26, 47, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.song-submitter {
+  font-size: 11px;
+  color: rgba(10, 26, 47, 0.5);
+  font-style: italic;
+}
+
+.song-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.song-points {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0a1a2f;
+}
+
+.song-link {
+  font-size: 12px;
+  color: #4a90e2;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.song-link:hover {
+  color: #357abd;
+  text-decoration: underline;
+}
+
+/* Tablet & Desktop (min-width: 640px) */
+@media (min-width: 640px) {
+  .timeline-view {
+    padding: 32px 0;
+  }
+
+  .timeline-track {
+    left: 32px;
+  }
+
+  .timeline-rounds {
+    padding-left: 48px;
+  }
+
+  .season-title {
+    font-size: 28px;
+  }
+
+  .round-theme {
+    font-size: 20px;
+  }
+
+  .round-card {
+    padding: 20px;
+  }
+
+  .round-winner-preview {
+    padding: 16px;
+  }
+
+  .winner-artwork {
+    width: 64px;
+    height: 64px;
+  }
+
+  .song-item {
+    padding: 12px;
+  }
+}
+
+/* Large Desktop (min-width: 1024px) */
+@media (min-width: 1024px) {
+  .timeline-view {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .timeline-track {
+    left: 40px;
+  }
+
+  .season-dot {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+
+  .round-dot {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+
+  /* Two-column layout for songs on large screens */
+  .songs-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+/* Accessibility - Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .round-card,
+  .round-dot,
+  .expand-icon,
+  .round-songs,
+  .song-item,
+  .song-link {
+    transition: none;
+  }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+  .timeline-track {
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.15) 50%,
+      rgba(255, 255, 255, 0.08) 100%
+    );
+  }
+
+  .season-title {
+    color: #fff;
+  }
+
+  .season-meta,
+  .round-dates {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .round-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .round-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.24);
+  }
+
+  .round-theme {
+    color: #fff;
+  }
+
+  .round-description {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .song-item {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .song-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .song-title {
+    color: #fff;
+  }
+
+  .song-artist {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .song-points {
+    color: #fff;
+  }
+}

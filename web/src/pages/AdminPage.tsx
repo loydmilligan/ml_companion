@@ -4,6 +4,7 @@ import Button from "../components/Button";
 import SeasonImport from "../components/SeasonImport";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import { uploadBase64Image } from "../lib/imageUpload";
 
 type LeagueSummary = {
   id: string;
@@ -17,6 +18,7 @@ type SeasonCompetitor = {
   name: string;
   profile_id: string | null;
   external_id: string | null;
+  ai_image_traits: string | null;
 };
 
 type UserRow = {
@@ -30,6 +32,8 @@ type UserRow = {
     email_notify_enabled: boolean | null;
     can_toggle_chat_notify: boolean | null;
     can_toggle_email_notify: boolean | null;
+    reaction_notify_enabled: boolean | null;
+    can_toggle_reaction_notify: boolean | null;
   } | null;
 };
 
@@ -46,6 +50,7 @@ type RoundSummary = {
   status: "open" | "voting" | "revealed" | "archived";
   submission_deadline: string | null;
   voting_deadline: string | null;
+  theme_image_url: string | null;
   created_at: string;
 };
 
@@ -58,7 +63,7 @@ type InviteRow = {
   used_by: string | null;
 };
 
-type TabId = "users" | "invites" | "leagues" | "rounds" | "competitors" | "imports";
+type TabId = "users" | "invites" | "leagues" | "rounds" | "competitors" | "imports" | "ai-settings";
 
 type RoundImportRow = {
   id: string;
@@ -69,6 +74,45 @@ type RoundImportRow = {
   external_created_at: string | null;
   round_id: string | null;
 };
+
+type PlayerConnectionRow = {
+  id: string;
+  source_profile_id: string;
+  target_profile_id: string;
+  relation_type: string;
+};
+
+type ConnectionDraft = {
+  targetId: string;
+  relation: string;
+};
+
+const RELATIONSHIP_OPTIONS = [
+  "Partner",
+  "Spouse",
+  "Sibling",
+  "Parent",
+  "Child",
+  "Grandparent",
+  "Grandchild",
+  "Cousin",
+  "Aunt/Uncle",
+  "Niece/Nephew",
+  "In-law",
+  "Best friend",
+  "Friend",
+  "Neighbor",
+  "Roommate",
+  "Coworker",
+  "Boss",
+  "Direct report",
+  "Mentor",
+  "Student",
+  "Teacher",
+  "Bandmate",
+  "Teammate",
+  "Babysitter",
+];
 
 export default function AdminPage() {
   const { group, profile } = useAuth();
@@ -96,6 +140,13 @@ export default function AdminPage() {
   const [importingCompetitors, setImportingCompetitors] = useState(false);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [roundImports, setRoundImports] = useState<RoundImportRow[]>([]);
+  const [competitorTraitsDrafts, setCompetitorTraitsDrafts] = useState<Record<string, string>>({});
+  const [playerConnections, setPlayerConnections] = useState<PlayerConnectionRow[]>([]);
+  const [connectionDrafts, setConnectionDrafts] = useState<Record<string, ConnectionDraft>>({});
+  const [groupSettings, setGroupSettings] = useState<GroupSettings | null>(null);
+  const [settingsDraft, setSettingsDraft] = useState<GroupSettings | null>(null);
+  const [bannerStatusByRound, setBannerStatusByRound] = useState<Record<string, string>>({});
+  const [bannerLoadingId, setBannerLoadingId] = useState<string | null>(null);
   const [editingLeagueId, setEditingLeagueId] = useState<string | null>(null);
   const [editingLeagueName, setEditingLeagueName] = useState("");
   const [editingLeagueSeason, setEditingLeagueSeason] = useState("");
@@ -126,7 +177,7 @@ export default function AdminPage() {
   const fetchCompetitors = async (groupId: string) => {
     const { data: competitorData } = await supabase
       .from("season_competitors")
-      .select("id,name,profile_id,external_id")
+      .select("id,name,profile_id,external_id,ai_image_traits")
       .eq("group_id", groupId)
       .order("name");
     setSeasonCompetitors((competitorData as SeasonCompetitor[]) ?? []);
@@ -171,7 +222,7 @@ export default function AdminPage() {
       if (leagueIds.length) {
       const { data: roundData } = await supabase
         .from("rounds")
-        .select("id,league_id,theme,theme_description,theme_author,season_number,round_number,external_round_id,playlist_url,status,submission_deadline,voting_deadline,created_at")
+        .select("id,league_id,theme,theme_description,theme_author,season_number,round_number,external_round_id,playlist_url,status,submission_deadline,voting_deadline,theme_image_url,created_at")
         .in("league_id", leagueIds)
         .order("created_at", { ascending: false });
 
@@ -183,12 +234,39 @@ export default function AdminPage() {
       const { data: userData } = await supabase
         .from("group_members")
         .select(
-          "member_id, role, profiles(id,display_name,email,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify)"
+          "member_id, role, profiles(id,display_name,email,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify,reaction_notify_enabled,can_toggle_reaction_notify)"
         )
         .eq("group_id", group.id)
         .order("created_at", { ascending: true });
 
       setUsers((userData as UserRow[]) ?? []);
+
+      const { data: connectionData } = await supabase
+        .from("player_connections")
+        .select("id,source_profile_id,target_profile_id,relation_type")
+        .eq("group_id", group.id)
+        .order("created_at", { ascending: true });
+      setPlayerConnections((connectionData as PlayerConnectionRow[]) ?? []);
+
+      const { data: settingsData } = await supabase
+        .from("group_settings")
+        .select(
+          "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette"
+        )
+        .eq("group_id", group.id)
+        .maybeSingle();
+      const fallback: GroupSettings = {
+        id: settingsData?.id ?? "",
+        group_id: group.id,
+        round_summary_model_key: settingsData?.round_summary_model_key ?? "OPENROUTER_MODEL",
+        round_story_image_model_key: settingsData?.round_story_image_model_key ?? "OPENROUTER_MID_MODEL",
+        round_theme_image_model_key: settingsData?.round_theme_image_model_key ?? "OPENROUTER_MID_MODEL",
+        awards_model_key: settingsData?.awards_model_key ?? "OPENROUTER_MODEL",
+        trophy_image_model_key: settingsData?.trophy_image_model_key ?? "OPENROUTER_MID_MODEL",
+        logo_palette: settingsData?.logo_palette ?? "ocean-coral",
+      };
+      setGroupSettings(fallback);
+      setSettingsDraft(fallback);
     };
 
     fetchData();
@@ -218,6 +296,29 @@ export default function AdminPage() {
     });
     return map;
   }, [users]);
+
+  const connectionsBySource = useMemo(() => {
+    const map = new Map<string, PlayerConnectionRow[]>();
+    playerConnections.forEach((connection) => {
+      const list = map.get(connection.source_profile_id) ?? [];
+      list.push(connection);
+      map.set(connection.source_profile_id, list);
+    });
+    return map;
+  }, [playerConnections]);
+
+  const getConnectionDraft = (userId: string) =>
+    connectionDrafts[userId] ?? { targetId: "", relation: "" };
+
+  const updateConnectionDraft = (userId: string, updates: Partial<ConnectionDraft>) => {
+    setConnectionDrafts((prev) => ({
+      ...prev,
+      [userId]: { ...getConnectionDraft(userId), ...updates },
+    }));
+  };
+
+  const getCompetitorTraitsDraft = (competitorId: string, fallback: string | null) =>
+    competitorTraitsDrafts[competitorId] ?? fallback ?? "";
 
   const handleCreateLeague = async () => {
     if (!group || !leagueName.trim()) return;
@@ -346,7 +447,7 @@ export default function AdminPage() {
       setNewCompetitor("");
       const { data } = await supabase
         .from("season_competitors")
-        .select("id,name,profile_id,external_id")
+        .select("id,name,profile_id,external_id,ai_image_traits")
         .eq("group_id", group.id)
         .order("name");
       setSeasonCompetitors((data as SeasonCompetitor[]) ?? []);
@@ -384,7 +485,7 @@ export default function AdminPage() {
 
     const { data } = await supabase
       .from("season_competitors")
-      .select("id,name,profile_id,external_id")
+      .select("id,name,profile_id,external_id,ai_image_traits")
       .eq("group_id", group.id)
       .order("name");
     setSeasonCompetitors((data as SeasonCompetitor[]) ?? []);
@@ -409,6 +510,132 @@ export default function AdminPage() {
     const { error } = await supabase.from("group_members").delete().eq("group_id", group.id).eq("member_id", userId);
     if (error) return;
     setUsers((prev) => prev.filter((user) => user.member_id !== userId));
+  };
+
+  const addConnection = async (userId: string) => {
+    if (!group) return;
+    const draft = getConnectionDraft(userId);
+    if (!draft.targetId || !draft.relation) return;
+    if (draft.targetId === userId) return;
+    const existing = connectionsBySource.get(userId) ?? [];
+    if (existing.length >= 5) return;
+    if (existing.some((row) => row.target_profile_id === draft.targetId && row.relation_type === draft.relation)) {
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("player_connections")
+      .insert({
+        group_id: group.id,
+        source_profile_id: userId,
+        target_profile_id: draft.targetId,
+        relation_type: draft.relation,
+      })
+      .select("id,source_profile_id,target_profile_id,relation_type")
+      .maybeSingle();
+
+    if (!error && data) {
+      setPlayerConnections((prev) => [...prev, data as PlayerConnectionRow]);
+      updateConnectionDraft(userId, { targetId: "", relation: "" });
+    }
+  };
+
+  const removeConnection = async (connectionId: string) => {
+    const { error } = await supabase.from("player_connections").delete().eq("id", connectionId);
+    if (!error) {
+      setPlayerConnections((prev) => prev.filter((row) => row.id !== connectionId));
+    }
+  };
+
+  const updateCompetitorTraits = async (competitorId: string, traits: string) => {
+    if (!group) return;
+    const { error } = await supabase
+      .from("season_competitors")
+      .update({ ai_image_traits: traits || null })
+      .eq("id", competitorId)
+      .eq("group_id", group.id);
+    if (error) return;
+    setSeasonCompetitors((prev) =>
+      prev.map((row) => (row.id === competitorId ? { ...row, ai_image_traits: traits || null } : row))
+    );
+  };
+
+  const saveSettings = async () => {
+    if (!group || !settingsDraft) return;
+    const payload = {
+      group_id: group.id,
+      round_summary_model_key: settingsDraft.round_summary_model_key,
+      round_story_image_model_key: settingsDraft.round_story_image_model_key,
+      round_theme_image_model_key: settingsDraft.round_theme_image_model_key,
+      awards_model_key: settingsDraft.awards_model_key,
+      trophy_image_model_key: settingsDraft.trophy_image_model_key,
+      logo_palette: settingsDraft.logo_palette,
+    };
+    const { data, error } = await supabase
+      .from("group_settings")
+      .upsert(payload, { onConflict: "group_id" })
+      .select(
+        "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette"
+      )
+      .maybeSingle();
+    if (!error && data) {
+      setGroupSettings(data as GroupSettings);
+      setSettingsDraft(data as GroupSettings);
+    }
+  };
+
+  const generateThemeBanner = async (round: RoundSummary) => {
+    if (!group) return;
+    setBannerLoadingId(round.id);
+    setBannerStatusByRound((prev) => ({ ...prev, [round.id]: "Generating..." }));
+    const { data, error } = await supabase.functions.invoke("openrouter-round-story", {
+      body: {
+        mode: "theme",
+        round: {
+          title: round.theme,
+          description: round.theme_description,
+          author: round.theme_author,
+        },
+        image_model_key: settingsDraft?.round_theme_image_model_key ?? "OPENROUTER_MID_MODEL",
+      },
+    });
+    if (error) {
+      setBannerStatusByRound((prev) => ({ ...prev, [round.id]: "Failed to generate." }));
+      setBannerLoadingId(null);
+      return;
+    }
+    const imageBase64 = data?.image_base64 ?? null;
+    const imageUrl = data?.image_url ?? null;
+    if (!imageBase64 && !imageUrl) {
+      setBannerStatusByRound((prev) => ({ ...prev, [round.id]: "No image returned." }));
+      setBannerLoadingId(null);
+      return;
+    }
+    let finalUrl = imageUrl;
+    if (imageBase64) {
+      const filePath = `round-images/${round.id}/theme-${Date.now()}.png`;
+      const upload = await uploadBase64Image("round-art", filePath, imageBase64);
+      if (upload.publicUrl) {
+        finalUrl = upload.publicUrl;
+      } else {
+        setBannerStatusByRound((prev) => ({ ...prev, [round.id]: upload.error ?? "Upload failed." }));
+        setBannerLoadingId(null);
+        return;
+      }
+    }
+    if (finalUrl) {
+      const { error: updateError } = await supabase
+        .from("rounds")
+        .update({ theme_image_url: finalUrl })
+        .eq("id", round.id);
+      if (!updateError) {
+        setRounds((prev) => prev.map((row) => (row.id === round.id ? { ...row, theme_image_url: finalUrl } : row)));
+        setBannerStatusByRound((prev) => ({ ...prev, [round.id]: "Banner saved." }));
+      } else {
+        setBannerStatusByRound((prev) => ({ ...prev, [round.id]: "Failed to save banner." }));
+      }
+    }
+    setBannerLoadingId(null);
   };
 
   const updateLeague = async () => {
@@ -629,6 +856,7 @@ export default function AdminPage() {
           { id: "rounds", label: "Rounds" },
           { id: "competitors", label: "Current competitors" },
           { id: "imports", label: "Imports" },
+          { id: "ai-settings", label: "AI settings" },
         ] as const).map((tab) => (
           <button
             key={tab.id}
@@ -651,6 +879,8 @@ export default function AdminPage() {
               const linkedCompetitor = seasonCompetitors.find((row) => row.profile_id === userId);
               const isOwner = group?.owner_id && userId === group.owner_id;
               const isSelf = profile?.id && userId === profile.id;
+              const connections = connectionsBySource.get(userId) ?? [];
+              const draft = getConnectionDraft(userId);
               return (
                 <div key={user.member_id} className="admin-user-row">
                   <div>
@@ -676,6 +906,68 @@ export default function AdminPage() {
                         ))}
                       </select>
                     </label>
+                    <div className="admin-connections">
+                      <span className="field-label">Player connections (max 5)</span>
+                      {connections.length ? (
+                        <div className="connection-list">
+                          {connections.map((connection) => {
+                            const target = usersById.get(connection.target_profile_id);
+                            return (
+                              <div key={connection.id} className="connection-row">
+                                <span>
+                                  {target?.display_name ?? target?.email ?? "Member"} · {connection.relation_type}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  onClick={() => removeConnection(connection.id)}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <span className="muted">No connections yet.</span>
+                      )}
+                      <div className="connection-controls">
+                        <select
+                          className="field-input"
+                          value={draft.targetId}
+                          onChange={(event) => updateConnectionDraft(userId, { targetId: event.target.value })}
+                        >
+                          <option value="">Select player</option>
+                          {users
+                            .filter((row) => row.profiles?.id && row.profiles.id !== userId)
+                            .map((row) => (
+                              <option key={row.profiles?.id} value={row.profiles?.id}>
+                                {row.profiles?.display_name ?? row.profiles?.email ?? "Member"}
+                              </option>
+                            ))}
+                        </select>
+                        <select
+                          className="field-input"
+                          value={draft.relation}
+                          onChange={(event) => updateConnectionDraft(userId, { relation: event.target.value })}
+                        >
+                          <option value="">Relation type</option>
+                          {RELATIONSHIP_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => addConnection(userId)}
+                          disabled={connections.length >= 5}
+                        >
+                          Add connection
+                        </Button>
+                      </div>
+                    </div>
                     <div className="admin-user-toggles">
                       <label className="checkbox-row">
                         <input
@@ -716,6 +1008,26 @@ export default function AdminPage() {
                           }
                         />
                         <span>Allow email toggle</span>
+                      </label>
+                      <label className="checkbox-row">
+                        <input
+                          type="checkbox"
+                          checked={user.profiles?.reaction_notify_enabled ?? true}
+                          onChange={(event) =>
+                            updateUser(user.profiles?.id ?? "", { reaction_notify_enabled: event.target.checked })
+                          }
+                        />
+                        <span>Reaction notify</span>
+                      </label>
+                      <label className="checkbox-row">
+                        <input
+                          type="checkbox"
+                          checked={user.profiles?.can_toggle_reaction_notify ?? true}
+                          onChange={(event) =>
+                            updateUser(user.profiles?.id ?? "", { can_toggle_reaction_notify: event.target.checked })
+                          }
+                        />
+                        <span>Allow reaction toggle</span>
                       </label>
                     </div>
                   </div>
@@ -1079,10 +1391,17 @@ export default function AdminPage() {
                           <Button type="button" variant="secondary" onClick={() => startEditRound(round)}>
                             Edit
                           </Button>
+                          <Button type="button" variant="secondary" onClick={() => generateThemeBanner(round)}>
+                            {bannerLoadingId === round.id ? "Generating..." : "Generate banner"}
+                          </Button>
                           <Button type="button" variant="secondary" onClick={() => deleteRound(round.id)}>
                             Delete
                           </Button>
                         </div>
+                        {round.theme_image_url ? <span className="muted">Banner set</span> : null}
+                        {bannerStatusByRound[round.id] ? (
+                          <span className="muted">{bannerStatusByRound[round.id]}</span>
+                        ) : null}
                       </>
                     )}
                   </div>
@@ -1111,7 +1430,9 @@ export default function AdminPage() {
                 <div key={competitor.id} className={`competitor-pill pill ${styleClass}`}>
                   <div>
                     <strong>{competitor.name}</strong>
-                    <span className="muted">{linkedProfile?.display_name ? `Linked to ${linkedProfile.display_name}` : "Unlinked"}</span>
+                    <span className="muted">
+                      {linkedProfile?.display_name ? `Linked to ${linkedProfile.display_name}` : "Unlinked"}
+                    </span>
                   </div>
                   <select
                     className="field-input"
@@ -1129,6 +1450,36 @@ export default function AdminPage() {
                       ) : null
                     )}
                   </select>
+                  <label className="field">
+                    <span className="field-label">AI image traits</span>
+                    <textarea
+                      className="field-input"
+                      rows={3}
+                      placeholder='{"Age":"27","Gender":"NB","Hair style with color":"cropped blonde","Personality trait":"Overconfident","Hobby or Job":"Accountant"}'
+                      value={getCompetitorTraitsDraft(competitor.id, competitor.ai_image_traits)}
+                      onChange={(event) =>
+                        setCompetitorTraitsDrafts((prev) => ({
+                          ...prev,
+                          [competitor.id]: event.target.value,
+                        }))
+                      }
+                    />
+                    <span className="field-helper">
+                      Use double quotes around keys and values; keep numbers in quotes for consistency.
+                    </span>
+                  </label>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() =>
+                      updateCompetitorTraits(
+                        competitor.id,
+                        getCompetitorTraitsDraft(competitor.id, competitor.ai_image_traits).trim()
+                      )
+                    }
+                  >
+                    Save traits
+                  </Button>
                 </div>
               );
             })}
@@ -1249,6 +1600,147 @@ python scripts/build_track_metadata.py`}
           </Card>
         </div>
       ) : null}
+
+      {activeTab === "ai-settings" ? (
+        <Card className="dashboard-card">
+          <h2>AI Settings</h2>
+          <p className="muted">Choose which model variable to use for each AI call.</p>
+          <div className="admin-form">
+            <label className="field">
+              <span className="field-label">Round summary (text)</span>
+              <select
+                className="field-input"
+                value={settingsDraft?.round_summary_model_key ?? "OPENROUTER_MODEL"}
+                onChange={(event) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, round_summary_model_key: event.target.value } : prev
+                  )
+                }
+              >
+                {MODEL_OPTIONS.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label} {option.image ? "· image" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span className="field-label">Round story art (winners)</span>
+              <select
+                className="field-input"
+                value={settingsDraft?.round_story_image_model_key ?? "OPENROUTER_MID_MODEL"}
+                onChange={(event) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, round_story_image_model_key: event.target.value } : prev
+                  )
+                }
+              >
+                {MODEL_OPTIONS.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label} {option.image ? "· image" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span className="field-label">Round theme banner</span>
+              <select
+                className="field-input"
+                value={settingsDraft?.round_theme_image_model_key ?? "OPENROUTER_MID_MODEL"}
+                onChange={(event) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, round_theme_image_model_key: event.target.value } : prev
+                  )
+                }
+              >
+                {MODEL_OPTIONS.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label} {option.image ? "· image" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span className="field-label">Awards selection</span>
+              <select
+                className="field-input"
+                value={settingsDraft?.awards_model_key ?? "OPENROUTER_MODEL"}
+                onChange={(event) =>
+                  setSettingsDraft((prev) => (prev ? { ...prev, awards_model_key: event.target.value } : prev))
+                }
+              >
+                {MODEL_OPTIONS.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label} {option.image ? "· image" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span className="field-label">Trophy generator (script)</span>
+              <select
+                className="field-input"
+                value={settingsDraft?.trophy_image_model_key ?? "OPENROUTER_MID_MODEL"}
+                onChange={(event) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, trophy_image_model_key: event.target.value } : prev
+                  )
+                }
+              >
+                {MODEL_OPTIONS.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label} {option.image ? "· image" : ""}
+                  </option>
+                ))}
+              </select>
+              <span className="field-helper">This is for the local trophy script.</span>
+            </label>
+            <label className="field">
+              <span className="field-label">Logo palette</span>
+              <select
+                className="field-input"
+                value={settingsDraft?.logo_palette ?? "ocean-coral"}
+                onChange={(event) =>
+                  setSettingsDraft((prev) => (prev ? { ...prev, logo_palette: event.target.value } : prev))
+                }
+              >
+                {LOGO_PALETTE_OPTIONS.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <span className="field-helper">Controls the top-bar logo colors.</span>
+            </label>
+            <Button type="button" variant="secondary" onClick={saveSettings} disabled={!settingsDraft}>
+              Save AI settings
+            </Button>
+          </div>
+        </Card>
+      ) : null}
     </div>
   );
 }
+type GroupSettings = {
+  id: string;
+  group_id: string;
+  round_summary_model_key: string | null;
+  round_story_image_model_key: string | null;
+  round_theme_image_model_key: string | null;
+  awards_model_key: string | null;
+  trophy_image_model_key: string | null;
+  logo_palette: string | null;
+};
+
+const MODEL_OPTIONS = [
+  { key: "OPENROUTER_MODEL", label: "OPENROUTER_MODEL", image: false },
+  { key: "OPENROUTER_ROUND_IMAGE_MODEL", label: "OPENROUTER_ROUND_IMAGE_MODEL", image: true },
+  { key: "OPENROUTER_MID_MODEL", label: "OPENROUTER_MID_MODEL", image: true },
+  { key: "OPENROUTER_TROPHY_MODEL", label: "OPENROUTER_TROPHY_MODEL", image: true },
+] as const;
+
+const LOGO_PALETTE_OPTIONS = [
+  { key: "ocean-coral", label: "Ocean + Coral" },
+  { key: "teal-mango", label: "Teal Night + Mango" },
+  { key: "midnight-mint", label: "Midnight + Neon Mint" },
+] as const;

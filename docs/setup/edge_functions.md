@@ -2,6 +2,7 @@
 
 This project uses Supabase Edge Functions for:
 - OpenRouter song-connection summaries
+- OpenRouter round-story summaries
 - Notifications (ntfy + optional Gmail SMTP)
 
 ## 1) Install Supabase CLI
@@ -27,6 +28,7 @@ Copy values from `supabase/.env.example` and set them as Supabase secrets:
 
 ```bash
 supabase secrets set OPENROUTER_API_KEY=... OPENROUTER_MODEL=...
+supabase secrets set OPENROUTER_ROUND_IMAGE_MODEL=...
 
 supabase secrets set NTFY_SERVER_URL=... NTFY_TOPIC=... \
   NTFY_USERNAME=... NTFY_PASSWORD=...
@@ -37,6 +39,7 @@ supabase secrets set SMTP_USERNAME=... SMTP_PASSWORD=... SMTP_FROM_EMAIL=...
 ## 4) Deploy the Functions
 ```bash
 supabase functions deploy openrouter-compare
+supabase functions deploy openrouter-round-story
 supabase functions deploy notify
 ```
 

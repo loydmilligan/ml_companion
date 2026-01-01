@@ -23,3 +23,6 @@ Use this index to navigate the project documentation by stage.
 - `setup/web_app.md`: React app setup and UX guidance.
 - `setup/edge_functions.md`: OpenRouter + notification functions, plus avatar storage bucket.
 - `setup/apple_login.md`: Apple Sign In setup with troubleshooting.
+
+## Issues
+- `issues.md`: Reviewed issues and severity tracking.

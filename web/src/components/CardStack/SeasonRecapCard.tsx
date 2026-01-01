@@ -1,0 +1,304 @@
+/**
+ * SeasonRecapCard - Season summary card for past seasons
+ *
+ * Displays season statistics, leaderboard, awards, voting patterns,
+ * genre/decade distribution, top tracks, and round themes.
+ */
+
+import { useMemo } from "react";
+import type { SeasonRecapCardProps } from "../../types/cardstack.types";
+import { CARD_TRANSFORMS } from "../../types/cardstack.types";
+
+export default function SeasonRecapCard({
+  data,
+  position,
+  isActive,
+  dragOffset = 0,
+  isDragging = false,
+}: SeasonRecapCardProps) {
+  // Calculate transform style based on position and drag state
+  const transformStyle = useMemo(() => {
+    const baseTransform = CARD_TRANSFORMS[position] || CARD_TRANSFORMS[3];
+    const rotation = isDragging ? dragOffset / 20 : 0;
+
+    // Apply drag offset only to active card
+    const translateX = isActive ? dragOffset : 0;
+
+    return {
+      transform: `
+        translateX(${translateX}px)
+        translateY(${baseTransform.translateY}px)
+        scale(${baseTransform.scale})
+        rotate(${rotation}deg)
+      `,
+      opacity: baseTransform.opacity,
+      zIndex: baseTransform.zIndex,
+      transition: isDragging ? "none" : undefined,
+    };
+  }, [position, isActive, dragOffset, isDragging]);
+
+  // Group voting patterns by voter for display
+  const votingPatternsByVoter = useMemo(() => {
+    if (!data.votingPatterns) return [];
+    const grouped = new Map<string, { most?: string; mostPts?: number; least?: string; leastPts?: number }>();
+
+    data.votingPatterns.forEach((pattern) => {
+      const existing = grouped.get(pattern.voterName) || {};
+      if (pattern.type === "most") {
+        existing.most = pattern.targetName;
+        existing.mostPts = pattern.pointsGiven;
+      } else {
+        existing.least = pattern.targetName;
+        existing.leastPts = pattern.pointsGiven;
+      }
+      grouped.set(pattern.voterName, existing);
+    });
+
+    return Array.from(grouped.entries()).map(([voter, targets]) => ({
+      voter,
+      ...targets,
+    }));
+  }, [data.votingPatterns]);
+
+  return (
+    <article
+      className={`season-recap-card card-position-${position} ${isActive ? "active" : ""} ${isDragging ? "dragging" : ""}`}
+      style={transformStyle}
+      role="listitem"
+      aria-label={`Season ${data.seasonNumber} Recap`}
+    >
+      {/* Hero section with season info */}
+      <div className="recap-hero">
+        <div className="recap-hero-overlay" aria-hidden="true" />
+        <div className="recap-hero-content">
+          <span className="recap-badge">Season Recap</span>
+          <h2 className="season-title">Season {data.seasonNumber}</h2>
+          <p className="league-name">{data.leagueName}</p>
+        </div>
+      </div>
+
+      {/* Scrollable content area */}
+      <div className="card-content">
+        {/* Season stats grid */}
+        <div className="recap-stats-grid" role="group" aria-label="Season statistics">
+          <div className="recap-stat-box">
+            <span className="recap-stat-value">{data.totalRounds}</span>
+            <span className="recap-stat-label">Rounds</span>
+          </div>
+          <div className="recap-stat-box">
+            <span className="recap-stat-value">{data.totalSubmissions}</span>
+            <span className="recap-stat-label">Songs</span>
+          </div>
+          <div className="recap-stat-box">
+            <span className="recap-stat-value">{data.totalVotes}</span>
+            <span className="recap-stat-label">Points</span>
+          </div>
+        </div>
+
+        {/* Season Awards */}
+        {data.seasonAwards && data.seasonAwards.length > 0 && (
+          <div className="recap-awards">
+            <h3 className="section-label">
+              <span className="label-icon" aria-hidden="true">🏆</span>
+              Season Awards
+            </h3>
+            <div className="awards-list" role="list">
+              {data.seasonAwards.map((award, index) => (
+                <div key={index} className="season-award-item" role="listitem">
+                  <div className="award-trophy">
+                    {award.trophyUrl ? (
+                      <img src={award.trophyUrl} alt="" className="trophy-image" loading="lazy" />
+                    ) : (
+                      <span className="trophy-emoji" aria-hidden="true">
+                        {index === 0 ? "🥇" : index === 1 ? "🥈" : "🏅"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="award-info">
+                    <span className="award-name">{award.awardName}</span>
+                    {award.awardDescription && (
+                      <span className="award-description">{award.awardDescription}</span>
+                    )}
+                    {award.winnerName && (
+                      <span className="award-winner">{award.winnerName}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Leaderboard */}
+        {data.leaderboard && data.leaderboard.length > 0 && (
+          <div className="recap-leaderboard">
+            <h3 className="section-label">
+              <span className="label-icon" aria-hidden="true">📊</span>
+              Final Standings
+            </h3>
+            <div className="leaderboard-list" role="list">
+              {data.leaderboard.slice(0, 8).map((entry) => (
+                <div
+                  key={entry.name}
+                  className={`leaderboard-item rank-${entry.rank}`}
+                  role="listitem"
+                >
+                  <span className="leaderboard-rank">
+                    {entry.rank === 1 ? "🥇" : entry.rank === 2 ? "🥈" : entry.rank === 3 ? "🥉" : `#${entry.rank}`}
+                  </span>
+                  <span className="leaderboard-name">{entry.name}</span>
+                  <span className="leaderboard-stats">
+                    <span className="leaderboard-points">{entry.totalPoints} pts</span>
+                    {entry.wins > 0 && (
+                      <span className="leaderboard-wins">{entry.wins}W</span>
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Voting Patterns */}
+        {votingPatternsByVoter.length > 0 && (
+          <div className="recap-voting-patterns">
+            <h3 className="section-label">
+              <span className="label-icon" aria-hidden="true">🎯</span>
+              Voting Patterns
+            </h3>
+            <div className="voting-patterns-list" role="list">
+              {votingPatternsByVoter.map((pattern) => (
+                <div key={pattern.voter} className="voting-pattern-item" role="listitem">
+                  <span className="voter-name">{pattern.voter}</span>
+                  <div className="vote-targets">
+                    {pattern.most && (
+                      <span className="vote-target most">
+                        <span className="target-arrow">→</span>
+                        <span className="target-name">{pattern.most}</span>
+                        <span className="target-pts">{pattern.mostPts}</span>
+                      </span>
+                    )}
+                    {pattern.least && (
+                      <span className="vote-target least">
+                        <span className="target-arrow">⤳</span>
+                        <span className="target-name">{pattern.least}</span>
+                        <span className="target-pts">{pattern.leastPts}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Genre & Decade Distribution */}
+        {((data.genreDistribution && data.genreDistribution.length > 0) ||
+          (data.decadeDistribution && data.decadeDistribution.length > 0)) && (
+          <div className="recap-distribution">
+            <h3 className="section-label">
+              <span className="label-icon" aria-hidden="true">🎵</span>
+              Music Breakdown
+            </h3>
+
+            {/* Decade bars */}
+            {data.decadeDistribution && data.decadeDistribution.length > 0 && (
+              <div className="distribution-section">
+                <h4 className="distribution-subtitle">By Decade</h4>
+                <div className="distribution-bars">
+                  {data.decadeDistribution.map((item) => (
+                    <div key={item.label} className="distribution-bar-item">
+                      <span className="bar-label">{item.label}</span>
+                      <div className="bar-container">
+                        <div
+                          className="bar-fill decade-bar"
+                          style={{ width: `${item.percentage}%` }}
+                        />
+                      </div>
+                      <span className="bar-count">{item.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Genre pills */}
+            {data.genreDistribution && data.genreDistribution.length > 0 && (
+              <div className="distribution-section">
+                <h4 className="distribution-subtitle">Top Genres</h4>
+                <div className="genre-pills">
+                  {data.genreDistribution.slice(0, 6).map((item) => (
+                    <span key={item.label} className="genre-pill">
+                      {item.label}
+                      <span className="genre-count">{item.count}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Top tracks list */}
+        {data.topTracks.length > 0 && (
+          <div className="recap-top-tracks">
+            <h3 className="section-label">
+              <span className="label-icon" aria-hidden="true">⭐</span>
+              Top Tracks
+            </h3>
+            <div className="top-tracks-list" role="list">
+              {data.topTracks.slice(0, 5).map((track, index) => (
+                <div key={`${track.title}-${index}`} className="top-track-item" role="listitem">
+                  <span className="top-track-rank">{index + 1}</span>
+                  <div className="top-track-artwork">
+                    {track.artworkUrl ? (
+                      <img
+                        src={track.artworkUrl}
+                        alt=""
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="artwork-placeholder">🎵</div>
+                    )}
+                  </div>
+                  <div className="top-track-info">
+                    <span className="top-track-title">{track.title}</span>
+                    <span className="top-track-artist">
+                      {track.artist || "Unknown Artist"}
+                    </span>
+                    {track.submitterName && (
+                      <span className="top-track-submitter">
+                        by {track.submitterName}
+                      </span>
+                    )}
+                  </div>
+                  <div className="top-track-points">
+                    <span className="points-value">{track.points}</span>
+                    <span className="points-label">pts</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Round themes list */}
+        {data.roundThemes.length > 0 && (
+          <div className="recap-themes">
+            <h3 className="section-label">
+              <span className="label-icon" aria-hidden="true">🎯</span>
+              Round Themes
+            </h3>
+            <div className="themes-list">
+              {data.roundThemes.map((theme, index) => (
+                <span key={index} className="theme-pill">
+                  {theme}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}

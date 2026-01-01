@@ -20,6 +20,53 @@
   --shadow: 0 14px 30px rgba(10, 26, 47, 0.15);
   --shadow-soft: 0 8px 20px rgba(10, 26, 47, 0.08);
   --radius: 16px;
+
+  /* Gauge colors */
+  --gauge-safe: #18e0a8;
+  --gauge-warning: #ffd166;
+  --gauge-urgent: #ff6f61;
+  --gauge-bg: rgba(10, 26, 47, 0.15);
+
+  /* Peek panel */
+  --peek-width-mobile: 85vw;
+  --peek-width-desktop: 400px;
+  --peek-backdrop: rgba(10, 26, 47, 0.5);
+
+  /* Trophy colors */
+  --trophy-gold: #ffd700;
+  --trophy-silver: #c0c0c0;
+  --trophy-bronze: #cd7f32;
+
+  /* Logo palette (default: ocean-coral, light mode) */
+  --logo-mark-bg: #f4f8ff;
+  --logo-mark-border: rgba(11, 29, 51, 0.12);
+  --logo-bubble: #bfd6f2;
+  --logo-bubble-outline: rgba(11, 29, 51, 0.12);
+  --logo-note: #e65a4a;
+}
+
+:root[data-logo-palette="ocean-coral"] {
+  --logo-mark-bg: #f4f8ff;
+  --logo-mark-border: rgba(11, 29, 51, 0.12);
+  --logo-bubble: #35547a;
+  --logo-bubble-outline: rgba(11, 29, 51, 0.2);
+  --logo-note: #e65a4a;
+}
+
+:root[data-logo-palette="teal-mango"] {
+  --logo-mark-bg: #f3fbfd;
+  --logo-mark-border: rgba(10, 42, 51, 0.12);
+  --logo-bubble: #2a5a62;
+  --logo-bubble-outline: rgba(10, 42, 51, 0.2);
+  --logo-note: #d9821e;
+}
+
+:root[data-logo-palette="midnight-mint"] {
+  --logo-mark-bg: #f6f8ff;
+  --logo-mark-border: rgba(18, 26, 43, 0.12);
+  --logo-bubble: #394b7a;
+  --logo-bubble-outline: rgba(18, 26, 43, 0.2);
+  --logo-note: #00b885;
 }
 
 :root[data-theme="sunset"] {
@@ -38,6 +85,19 @@
   --light-blue: #b3f5e4;
 }
 
+/* Explicit light mode - overrides system dark preference */
+:root[data-mode="light"] {
+  color: #0a1a2f !important;
+  background-color: #f3f7fb !important;
+  --surface: #ffffff;
+  --surface-dark: #0f223f;
+  --text-primary: #0a1a2f;
+  --text-muted: #5a6b7f;
+  --page-bg: linear-gradient(160deg, #f7fbff 0%, #eef4ff 45%, #f8f4ff 100%);
+  --shadow: 0 14px 30px rgba(10, 26, 47, 0.15);
+  --shadow-soft: 0 8px 20px rgba(10, 26, 47, 0.08);
+}
+
 :root[data-mode="dark"] {
   color: #e9f1ff;
   background-color: #0b1322;
@@ -48,6 +108,30 @@
   --page-bg: linear-gradient(160deg, #0b1220 0%, #0a192f 60%, #0f1c2d 100%);
   --shadow: 0 16px 32px rgba(4, 8, 20, 0.45);
   --shadow-soft: 0 10px 24px rgba(4, 8, 20, 0.3);
+}
+
+:root[data-mode="dark"][data-logo-palette="ocean-coral"] {
+  --logo-mark-bg: #081426;
+  --logo-mark-border: rgba(230, 240, 255, 0.16);
+  --logo-bubble: #bfd6f2;
+  --logo-bubble-outline: rgba(230, 240, 255, 0.28);
+  --logo-note: #ff7a6b;
+}
+
+:root[data-mode="dark"][data-logo-palette="teal-mango"] {
+  --logo-mark-bg: #07161a;
+  --logo-mark-border: rgba(215, 244, 248, 0.16);
+  --logo-bubble: #b7dce6;
+  --logo-bubble-outline: rgba(215, 244, 248, 0.28);
+  --logo-note: #ffc66d;
+}
+
+:root[data-mode="dark"][data-logo-palette="midnight-mint"] {
+  --logo-mark-bg: #0a0f1f;
+  --logo-mark-border: rgba(233, 241, 255, 0.16);
+  --logo-bubble: #c9d5f0;
+  --logo-bubble-outline: rgba(233, 241, 255, 0.28);
+  --logo-note: #4ef2c0;
 }
 
 * {

@@ -26,3 +26,41 @@ node_modules/
 # App data artifacts
 web/public/data/archive/
 web/public/data/track_metadata.csv
+generated/award-trophy-model-compare.html
+generated/logo-ideas/
+
+# Development/prototype files
+.mcp.json
+.claude/
+prototypes/
+scripts/
+PROTOTYPE.md
+
+# Component development files
+web/card-grid-preview.html
+web/CARD_GRID_IMPLEMENTATION.md
+web/src/components/*.README.md
+web/src/components/*Example*.tsx
+web/src/components/*.example.tsx
+web/src/components/*.demo.tsx
+web/src/components/*.integration-example.tsx
+web/src/components/*.stories.tsx
+web/src/components/*.test.tsx
+web/src/components/awards-gallery-preview.html
+web/src/pages/*.README.md
+web/src/pages/*.QUICKREF.md
+web/src/pages/*SUMMARY*.md
+web/src/pages/*.example.tsx
+web/src/pages/*.stories.tsx
+web/src/pages/*.test.tsx
+
+# Stats Dashboard (not ready for production)
+web/src/pages/StatsDashboard.tsx
+web/src/pages/StatsDashboard.css
+
+# Design docs (keep in docs/ but not component-level)
+web/src/components/DESIGN_SYSTEM.md
+web/src/components/INTEGRATION_GUIDE.md
+
+# Sample data
+web/src/data/
