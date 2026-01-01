@@ -30,7 +30,14 @@ When discussing or implementing UI/frontend changes, always:
 
 ## Deployment Workflow
 
-After making any code changes that need testing, follow this workflow to deploy and verify:
+After making any code changes that need testing, follow this workflow to deploy and verify.
+
+### Prerequisites: SSH Key Setup (one-time)
+To enable passwordless deployment to the Pi:
+```bash
+ssh-copy-id pi@192.168.4.158
+```
+Enter the Pi password once, and subsequent SSH connections will use key auth.
 
 ### 1. Commit and Push
 ```bash
