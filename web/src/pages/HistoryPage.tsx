@@ -241,13 +241,13 @@ export default function HistoryPage() {
 
   // Load past season stats
   useEffect(() => {
-    if (!group || leagues.length <= 1) {
+    if (!group || leagues.length === 0) {
       setPastSeasonStats([]);
       return;
     }
 
     const loadPastSeasons = async () => {
-      const pastLeagues = leagues.slice(1); // Exclude current league
+      const pastLeagues = leagues; // Include all leagues (current and past)
       const stats: SeasonStatsRow[] = [];
 
       for (const league of pastLeagues) {
@@ -893,19 +893,17 @@ export default function HistoryPage() {
 
     // Get sorted season numbers (descending - newest first)
     const seasonNumbers = Array.from(roundsBySeason.keys()).sort((a, b) => b - a);
-    const currentSeasonNum = seasonNumbers[0] ?? 0;
 
-    // Build cards: for each season, add recap card first (if past season), then round cards
+    // Build cards: for each season, add recap card first, then round cards
     seasonNumbers.forEach((seasonNum) => {
       const seasonRounds = roundsBySeason.get(seasonNum) ?? [];
 
       // Sort rounds by round_number descending within season
       seasonRounds.sort((a, b) => (b.round_number ?? 0) - (a.round_number ?? 0));
 
-      // Add season recap card first (only for past seasons)
-      if (seasonNum !== currentSeasonNum) {
-        const seasonStats = pastSeasonStats.find((s) => s.seasonNumber === seasonNum);
-        if (seasonStats) {
+      // Add season recap card first (for all seasons with data)
+      const seasonStats = pastSeasonStats.find((s) => s.seasonNumber === seasonNum);
+      if (seasonStats) {
           const recapCard: SeasonRecapCardData = {
             id: `season-${seasonStats.leagueId}`,
             type: "season-recap",
@@ -923,7 +921,6 @@ export default function HistoryPage() {
             decadeDistribution: seasonStats.decadeDistribution,
           };
           cards.push(recapCard);
-        }
       }
 
       // Add round cards for this season
