@@ -109,7 +109,7 @@ export function RoundProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Get current round (open or voting)
+    // Get current round (open or voting) - lowest round number first
     const { data: roundData } = await supabase
       .from("rounds")
       .select(
@@ -117,8 +117,8 @@ export function RoundProvider({ children }: { children: ReactNode }) {
       )
       .eq("league_id", leagueData.id)
       .in("status", ["open", "voting", "revealed"])
-      .order("round_number", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false })
+      .order("round_number", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
 
@@ -200,13 +200,13 @@ export function RoundProvider({ children }: { children: ReactNode }) {
 
     if (!leagueData) return;
 
-    // Check current round status/submission count
+    // Check current round status/submission count - lowest round number first
     const { data: roundData } = await supabase
       .from("rounds")
       .select("id,status")
       .eq("league_id", leagueData.id)
       .in("status", ["open", "voting", "revealed"])
-      .order("round_number", { ascending: false, nullsFirst: false })
+      .order("round_number", { ascending: true, nullsFirst: false })
       .limit(1)
       .maybeSingle();
 

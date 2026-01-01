@@ -224,7 +224,8 @@ export default function AdminPage() {
         .from("rounds")
         .select("id,league_id,theme,theme_description,theme_author,season_number,round_number,external_round_id,playlist_url,status,submission_deadline,voting_deadline,theme_image_url,created_at")
         .in("league_id", leagueIds)
-        .order("created_at", { ascending: false });
+        .order("season_number", { ascending: false, nullsFirst: false })
+        .order("round_number", { ascending: true, nullsFirst: false });
 
       setRounds((roundData as RoundSummary[]) ?? []);
       } else {
@@ -384,7 +385,8 @@ export default function AdminPage() {
           .from("rounds")
           .select("id,league_id,theme,theme_description,theme_author,season_number,round_number,external_round_id,playlist_url,status,submission_deadline,voting_deadline,created_at")
           .in("league_id", leagueIds)
-          .order("created_at", { ascending: false });
+          .order("season_number", { ascending: false, nullsFirst: false })
+          .order("round_number", { ascending: true, nullsFirst: false });
         setRounds((data as RoundSummary[]) ?? []);
       }
       await supabase.functions.invoke("notify", {
