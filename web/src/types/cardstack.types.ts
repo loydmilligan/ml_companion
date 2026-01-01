@@ -205,6 +205,32 @@ export interface GestureState {
 }
 
 /**
+ * Admin generation callbacks for round cards
+ */
+export interface AdminGenerationCallbacks {
+  /** Generate theme banner image */
+  onGenerateThemeBanner?: (roundId: string) => Promise<void>;
+  /** Generate round story and winners art */
+  onGenerateStory?: (roundId: string) => Promise<void>;
+  /** Generate awards for round */
+  onGenerateAwards?: (roundId: string) => Promise<void>;
+}
+
+/**
+ * Admin generation state for a round
+ */
+export interface AdminGenerationState {
+  /** Currently generating theme banner for this round */
+  isBannerLoading?: boolean;
+  /** Currently generating story for this round */
+  isStoryLoading?: boolean;
+  /** Currently generating awards for this round */
+  isAwardsLoading?: boolean;
+  /** Status message */
+  statusMessage?: string;
+}
+
+/**
  * CardStack component props
  */
 export interface CardStackProps {
@@ -220,6 +246,12 @@ export interface CardStackProps {
   onThemeClick?: (theme: string, seasonNumber: number) => number | null;
   /** Enable/disable swipe gestures */
   swipeEnabled?: boolean;
+  /** Is the current user an admin (lead) */
+  isLead?: boolean;
+  /** Admin generation callbacks */
+  adminCallbacks?: AdminGenerationCallbacks;
+  /** Generation state per round ID */
+  generationState?: Map<string, AdminGenerationState>;
 }
 
 /**
@@ -242,6 +274,12 @@ export interface CardComponentProps {
 export interface RoundCardProps extends CardComponentProps {
   /** Round data */
   data: RoundCardData;
+  /** Is the current user an admin (lead) */
+  isLead?: boolean;
+  /** Admin generation callbacks */
+  adminCallbacks?: AdminGenerationCallbacks;
+  /** Generation state for this round */
+  generationState?: AdminGenerationState;
 }
 
 /**

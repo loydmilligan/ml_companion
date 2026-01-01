@@ -6,9 +6,10 @@
  * recap cards with summary statistics.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import { uploadBase64Image } from "../lib/imageUpload";
 import CardStack from "../components/CardStack/CardStack";
 import type {
   CardData,
@@ -19,8 +20,11 @@ import type {
   VotingPattern,
   DistributionItem,
   SeasonAward,
+  AdminGenerationCallbacks,
+  AdminGenerationState,
 } from "../types/cardstack.types";
 import type { RoundAward, TopTrack } from "../types/history.types";
+import awardsData from "../data/awards.json";
 
 /* ========================================
    Type Definitions (local to this page)
@@ -103,7 +107,7 @@ type SeasonStatsRow = {
 
 export default function HistoryPage() {
   const { group } = useAuth();
-  // const isLead = group?.role === "lead"; // Reserved for future admin features
+  const isLead = group?.role === "lead";
 
   // Data state
   const [leagues, setLeagues] = useState<LeagueRow[]>([]);
@@ -114,6 +118,9 @@ export default function HistoryPage() {
   const [allAwards, setAllAwards] = useState<Map<string, RoundAwardRow[]>>(new Map());
   const [pastSeasonStats, setPastSeasonStats] = useState<SeasonStatsRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Admin generation state
+  const [generationState, setGenerationState] = useState<Map<string, AdminGenerationState>>(new Map());
 
   /* ========================================
      Data Loading Effects
@@ -485,6 +492,323 @@ export default function HistoryPage() {
   }, [group, leagues]);
 
   /* ========================================
+     Admin Generation Callbacks
+     ======================================== */
+
+  const updateGenerationState = useCallback((roundId: string, update: Partial<AdminGenerationState>) => {
+    setGenerationState((prev) => {
+      const newMap = new Map(prev);
+      const current = newMap.get(roundId) ?? {};
+      newMap.set(roundId, { ...current, ...update });
+      return newMap;
+    });
+  }, []);
+
+  const handleGenerateThemeBanner = useCallback(async (roundId: string) => {
+    if (!group) return;
+    const round = allRounds.find((r) => r.id === roundId);
+    if (!round) return;
+
+    updateGenerationState(roundId, { isBannerLoading: true, statusMessage: "Generating banner..." });
+
+    try {
+      const { data, error } = await supabase.functions.invoke("openrouter-round-story", {
+        body: {
+          mode: "theme",
+          round: {
+            title: round.theme,
+            description: round.theme_description,
+            author: round.theme_author,
+          },
+          image_model_key: "OPENROUTER_MID_MODEL",
+        },
+      });
+
+      if (error) throw error;
+
+      const imageBase64 = data?.image_base64 ?? null;
+      const imageUrl = data?.image_url ?? null;
+
+      if (!imageBase64 && !imageUrl) {
+        updateGenerationState(roundId, { isBannerLoading: false, statusMessage: "No image returned." });
+        return;
+      }
+
+      let finalUrl = imageUrl;
+      if (imageBase64) {
+        const filePath = `round-images/${roundId}/theme-${Date.now()}.png`;
+        const upload = await uploadBase64Image("round-art", filePath, imageBase64);
+        if (upload.publicUrl) {
+          finalUrl = upload.publicUrl;
+        } else {
+          updateGenerationState(roundId, { isBannerLoading: false, statusMessage: upload.error ?? "Upload failed." });
+          return;
+        }
+      }
+
+      if (finalUrl) {
+        await supabase.from("rounds").update({ theme_image_url: finalUrl }).eq("id", roundId);
+        setAllRounds((prev) => prev.map((r) => r.id === roundId ? { ...r, theme_image_url: finalUrl } : r));
+        updateGenerationState(roundId, { isBannerLoading: false, statusMessage: "Banner saved!" });
+      }
+    } catch {
+      updateGenerationState(roundId, { isBannerLoading: false, statusMessage: "Failed to generate." });
+    }
+  }, [group, allRounds, updateGenerationState]);
+
+  const handleGenerateStory = useCallback(async (roundId: string) => {
+    if (!group) return;
+    const round = allRounds.find((r) => r.id === roundId);
+    if (!round) return;
+
+    updateGenerationState(roundId, { isStoryLoading: true, statusMessage: "Loading data..." });
+
+    try {
+      // Fetch submissions for this round
+      const { data: submissions } = await supabase
+        .from("submissions")
+        .select("id,title,artist,submitter_name,artwork_url,external_comment")
+        .eq("round_id", roundId);
+
+      if (!submissions || submissions.length === 0) {
+        updateGenerationState(roundId, { isStoryLoading: false, statusMessage: "No submissions found." });
+        return;
+      }
+
+      // Fetch votes for these submissions
+      const submissionIds = submissions.map((s) => s.id);
+      const { data: votes } = await supabase
+        .from("votes")
+        .select("submission_id,voter_name,points,comment")
+        .in("submission_id", submissionIds);
+
+      // Calculate totals per submission
+      type VoteEntry = { submission_id: string; voter_name: string | null; points: number; comment: string | null };
+      const votesBySubmission = new Map<string, { total: number; votes: VoteEntry[] }>();
+      (votes ?? []).forEach((vote) => {
+        const existing = votesBySubmission.get(vote.submission_id) || { total: 0, votes: [] };
+        existing.total += vote.points;
+        existing.votes.push(vote);
+        votesBySubmission.set(vote.submission_id, existing);
+      });
+
+      // Get top 3 winners
+      const ranked = submissions
+        .map((s) => ({ ...s, totalPoints: votesBySubmission.get(s.id)?.total ?? 0 }))
+        .sort((a, b) => b.totalPoints - a.totalPoints)
+        .slice(0, 3);
+
+      // Get competitor traits for winners
+      const winnerNames = ranked.map((r) => r.submitter_name).filter(Boolean);
+      const { data: competitors } = await supabase
+        .from("season_competitors")
+        .select("name,ai_image_traits")
+        .eq("group_id", group.id)
+        .in("name", winnerNames);
+
+      const traitsByName = new Map<string, string>();
+      (competitors ?? []).forEach((c) => {
+        if (c.ai_image_traits) traitsByName.set(c.name, c.ai_image_traits);
+      });
+
+      const winners = ranked.map((r, i) => ({
+        place: i + 1,
+        name: r.submitter_name,
+        song: r.title,
+        artist: r.artist,
+        traits: traitsByName.get(r.submitter_name ?? "") ?? null,
+      }));
+
+      // Prepare songs and votes for the edge function
+      const songsForApi = submissions.map((s) => ({
+        title: s.title,
+        artist: s.artist,
+        submitter: s.submitter_name,
+        comment: s.external_comment,
+        points: votesBySubmission.get(s.id)?.total ?? 0,
+      }));
+
+      const votesForApi = (votes ?? []).map((v) => ({
+        submission_id: v.submission_id,
+        voter: v.voter_name,
+        points: v.points,
+        comment: v.comment,
+      }));
+
+      updateGenerationState(roundId, { statusMessage: "Generating story..." });
+
+      const { data, error } = await supabase.functions.invoke("openrouter-round-story", {
+        body: {
+          mode: "story",
+          round: {
+            title: round.theme,
+            description: round.theme_description,
+            author: round.theme_author,
+          },
+          songs: songsForApi,
+          votes: votesForApi,
+          winners,
+          text_model_key: "OPENROUTER_MODEL",
+          image_model_key: "OPENROUTER_MID_MODEL",
+        },
+      });
+
+      if (error) throw error;
+
+      const narrative = data?.narrative ?? null;
+      const imageBase64 = data?.image_base64 ?? null;
+      const imageUrl = data?.image_url ?? null;
+
+      let finalImageUrl = imageUrl;
+      if (imageBase64) {
+        const filePath = `round-images/${roundId}/winners-${Date.now()}.png`;
+        const upload = await uploadBase64Image("round-art", filePath, imageBase64);
+        if (upload.publicUrl) {
+          finalImageUrl = upload.publicUrl;
+        }
+      }
+
+      // Update round with narrative and image
+      const updates: Record<string, string | null> = {};
+      if (narrative) updates.narrative = narrative;
+      if (finalImageUrl) updates.winners_image_url = finalImageUrl;
+
+      if (Object.keys(updates).length > 0) {
+        await supabase.from("rounds").update(updates).eq("id", roundId);
+        setAllRounds((prev) =>
+          prev.map((r) =>
+            r.id === roundId
+              ? { ...r, narrative: updates.narrative ?? r.narrative, winners_image_url: updates.winners_image_url ?? r.winners_image_url }
+              : r
+          )
+        );
+        updateGenerationState(roundId, { isStoryLoading: false, statusMessage: "Story saved!" });
+      } else {
+        updateGenerationState(roundId, { isStoryLoading: false, statusMessage: "No content generated." });
+      }
+    } catch {
+      updateGenerationState(roundId, { isStoryLoading: false, statusMessage: "Failed to generate." });
+    }
+  }, [group, allRounds, updateGenerationState]);
+
+  const handleGenerateAwards = useCallback(async (roundId: string) => {
+    if (!group) return;
+    const round = allRounds.find((r) => r.id === roundId);
+    if (!round) return;
+
+    updateGenerationState(roundId, { isAwardsLoading: true, statusMessage: "Loading data..." });
+
+    try {
+      // Fetch submissions for this round
+      const { data: submissions } = await supabase
+        .from("submissions")
+        .select("id,title,artist,submitter_name,external_comment,release_year,genres")
+        .eq("round_id", roundId);
+
+      if (!submissions || submissions.length === 0) {
+        updateGenerationState(roundId, { isAwardsLoading: false, statusMessage: "No submissions found." });
+        return;
+      }
+
+      // Fetch votes for these submissions
+      const submissionIds = submissions.map((s) => s.id);
+      const { data: votes } = await supabase
+        .from("votes")
+        .select("submission_id,voter_name,points,comment")
+        .in("submission_id", submissionIds);
+
+      // Get recent award IDs to avoid repetition
+      const { data: recentAwards } = await supabase
+        .from("round_awards")
+        .select("award_id")
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      const recentAwardIds = (recentAwards ?? []).map((a) => a.award_id).filter(Boolean);
+
+      // Prepare data for the edge function
+      const songsForApi = submissions.map((s) => ({
+        title: s.title,
+        artist: s.artist,
+        submitter: s.submitter_name,
+        comment: s.external_comment,
+        release_year: s.release_year,
+        genres: s.genres,
+      }));
+
+      const votesForApi = (votes ?? []).map((v) => ({
+        submission_id: v.submission_id,
+        voter: v.voter_name,
+        points: v.points,
+        comment: v.comment,
+      }));
+
+      updateGenerationState(roundId, { statusMessage: "Generating awards..." });
+
+      const { data, error } = await supabase.functions.invoke("openrouter-round-story", {
+        body: {
+          mode: "awards",
+          round: {
+            title: round.theme,
+            description: round.theme_description,
+            author: round.theme_author,
+          },
+          songs: songsForApi,
+          votes: votesForApi,
+          awards: awardsData.round_awards,
+          recent_awards: recentAwardIds,
+          awards_model_key: "OPENROUTER_MODEL",
+        },
+      });
+
+      if (error) throw error;
+
+      const generatedAwards = data?.awards ?? [];
+      if (generatedAwards.length === 0) {
+        updateGenerationState(roundId, { isAwardsLoading: false, statusMessage: "No awards generated." });
+        return;
+      }
+
+      // Insert awards into database
+      const awardsToInsert = generatedAwards.map((a: { award_id: number; award_name: string; reason: string; winner_name: string }) => ({
+        round_id: roundId,
+        award_id: a.award_id,
+        award_name: a.award_name,
+        award_description: a.reason,
+        winner_name: a.winner_name,
+        visible: false,
+      }));
+
+      await supabase.from("round_awards").insert(awardsToInsert);
+      updateGenerationState(roundId, { isAwardsLoading: false, statusMessage: `${generatedAwards.length} awards saved!` });
+
+      // Reload awards for this round
+      const { data: newAwards } = await supabase
+        .from("round_awards")
+        .select("id,round_id,award_id,award_name,award_description,trophy_url,winner_name,visible")
+        .eq("round_id", roundId)
+        .order("visible", { ascending: false })
+        .order("award_id", { ascending: true, nullsFirst: true });
+
+      if (newAwards) {
+        setAllAwards((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(roundId, newAwards);
+          return newMap;
+        });
+      }
+    } catch {
+      updateGenerationState(roundId, { isAwardsLoading: false, statusMessage: "Failed to generate." });
+    }
+  }, [group, allRounds, updateGenerationState]);
+
+  const adminCallbacks: AdminGenerationCallbacks = useMemo(() => ({
+    onGenerateThemeBanner: handleGenerateThemeBanner,
+    onGenerateStory: handleGenerateStory,
+    onGenerateAwards: handleGenerateAwards,
+  }), [handleGenerateThemeBanner, handleGenerateStory, handleGenerateAwards]);
+
+  /* ========================================
      Transform Data to CardData[]
      ======================================== */
 
@@ -670,6 +994,9 @@ export default function HistoryPage() {
       onCardTap={handleCardTap}
       onThemeClick={handleThemeClick}
       swipeEnabled={true}
+      isLead={isLead}
+      adminCallbacks={adminCallbacks}
+      generationState={generationState}
     />
   );
 }

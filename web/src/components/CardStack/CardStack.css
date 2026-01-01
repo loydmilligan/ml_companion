@@ -1354,3 +1354,121 @@
   background: rgba(255, 153, 20, 0.12);
   border-color: rgba(255, 153, 20, 0.25);
 }
+
+/* ========================================
+   Admin Generation Controls
+   ======================================== */
+
+.admin-generation-controls {
+  margin-top: 16px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(45, 70, 185, 0.08) 0%, rgba(45, 70, 185, 0.04) 100%);
+  border: 1px solid rgba(45, 70, 185, 0.15);
+  border-radius: 14px;
+}
+
+.admin-controls-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--cs-blue);
+  margin-bottom: 8px;
+}
+
+.admin-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.generation-status {
+  font-size: 11px;
+  color: #666;
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.admin-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-gen-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 8px;
+  background: white;
+  border: 1px solid rgba(45, 70, 185, 0.2);
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--cs-blue);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-gen-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.5;
+}
+
+.admin-gen-btn:hover:not(:disabled) {
+  background: var(--cs-blue);
+  color: white;
+  border-color: var(--cs-blue);
+}
+
+.admin-gen-btn:hover:not(:disabled) svg {
+  stroke: white;
+}
+
+.admin-gen-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.admin-gen-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f5f5f7;
+}
+
+/* Dark mode support for admin controls */
+[data-mode="dark"] .admin-generation-controls {
+  background: rgba(45, 70, 185, 0.15);
+  border-color: rgba(45, 70, 185, 0.25);
+}
+
+[data-mode="dark"] .admin-controls-header {
+  color: #7b93e0;
+}
+
+[data-mode="dark"] .generation-status {
+  background: rgba(255, 255, 255, 0.08);
+  color: #a1a1aa;
+}
+
+[data-mode="dark"] .admin-gen-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(45, 70, 185, 0.3);
+  color: #7b93e0;
+}
+
+[data-mode="dark"] .admin-gen-btn:hover:not(:disabled) {
+  background: var(--cs-blue);
+  color: white;
+}
+
+[data-mode="dark"] .admin-gen-btn:disabled {
+  background: rgba(255, 255, 255, 0.03);
+}

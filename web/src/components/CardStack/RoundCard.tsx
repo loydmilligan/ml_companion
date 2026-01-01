@@ -20,6 +20,9 @@ export default function RoundCard({
   isActive,
   dragOffset = 0,
   isDragging = false,
+  isLead = false,
+  adminCallbacks,
+  generationState,
 }: RoundCardProps) {
   // Calculate transform style based on position and drag state
   const transformStyle = useMemo(() => {
@@ -98,6 +101,72 @@ export default function RoundCard({
         {/* Awards preview */}
         {visibleAwards.length > 0 && (
           <AwardsPreview awards={visibleAwards} />
+        )}
+
+        {/* Admin generation controls */}
+        {isLead && adminCallbacks && (
+          <div className="admin-generation-controls">
+            <div className="admin-controls-header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="admin-icon">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+              </svg>
+              <span>Admin</span>
+            </div>
+            {generationState?.statusMessage && (
+              <p className="generation-status">{generationState.statusMessage}</p>
+            )}
+            <div className="admin-buttons">
+              <button
+                type="button"
+                className="admin-gen-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  adminCallbacks.onGenerateThemeBanner?.(data.id);
+                }}
+                disabled={generationState?.isBannerLoading}
+                title="Generate theme banner image"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <path d="M21 15l-5-5L5 21" />
+                </svg>
+                {generationState?.isBannerLoading ? "..." : "Banner"}
+              </button>
+              <button
+                type="button"
+                className="admin-gen-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  adminCallbacks.onGenerateStory?.(data.id);
+                }}
+                disabled={generationState?.isStoryLoading}
+                title="Generate round story and winners art"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+                {generationState?.isStoryLoading ? "..." : "Story"}
+              </button>
+              <button
+                type="button"
+                className="admin-gen-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  adminCallbacks.onGenerateAwards?.(data.id);
+                }}
+                disabled={generationState?.isAwardsLoading}
+                title="Generate awards for this round"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="8" r="7" />
+                  <path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12" />
+                </svg>
+                {generationState?.isAwardsLoading ? "..." : "Awards"}
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </article>

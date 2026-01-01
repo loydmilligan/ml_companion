@@ -27,6 +27,9 @@ export default function CardStack({
   onCardTap,
   onThemeClick,
   swipeEnabled = true,
+  isLead = false,
+  adminCallbacks,
+  generationState,
 }: CardStackProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [gesture, setGesture] = useState<GestureState>({
@@ -252,6 +255,9 @@ export default function CardStack({
                 isActive={isActive}
                 dragOffset={dragOffset}
                 isDragging={isActive && gesture.isDragging}
+                isLead={isLead}
+                adminCallbacks={adminCallbacks}
+                generationState={generationState?.get(card.id)}
               />
             );
           }
