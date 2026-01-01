@@ -93,7 +93,7 @@ const allEmojis = [
 
 export default function ChatPage() {
   const { group, profile } = useAuth();
-  const { round } = useRound();
+  useRound(); // Keep context active for peek panel
   const { quotedSong, clearQuotedSong, openPanel } = usePeekPanel();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [reactions, setReactions] = useState<Map<string, ReactionCount[]>>(new Map());
@@ -425,8 +425,8 @@ export default function ChatPage() {
 
   return (
     <div className="chat-page">
-      {/* Peek button inside chat area */}
-      {round && <PeekButton onClick={openPanel} variant="chat" />}
+      {/* Peek button inside chat area - always visible */}
+      <PeekButton onClick={openPanel} variant="chat" />
 
       <div
         className="chat-thread"
