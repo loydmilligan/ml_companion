@@ -755,7 +755,7 @@ export default function HistoryPage() {
           },
           songs: songsForApi,
           votes: votesForApi,
-          awards: awardsData.round_awards,
+          awards: awardsData.awards,
           recent_awards: recentAwardIds,
           awards_model_key: "OPENROUTER_MODEL",
         },
