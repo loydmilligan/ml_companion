@@ -753,6 +753,13 @@ export default function AdminPage() {
     setSeasonCompetitors((data as SeasonCompetitor[]) ?? []);
   };
 
+  const deleteCompetitor = async (competitorId: string) => {
+    if (!group) return;
+    const { error } = await supabase.from("season_competitors").delete().eq("id", competitorId);
+    if (error) return;
+    setSeasonCompetitors((prev) => prev.filter((c) => c.id !== competitorId));
+  };
+
   const linkUserToCompetitor = async (userId: string, competitorId: string | null) => {
     if (!group) return;
     await supabase.from("season_competitors").update({ profile_id: null }).eq("profile_id", userId);
@@ -1429,12 +1436,21 @@ export default function AdminPage() {
                   ? "pastel-yellow"
                   : "pastel-purple";
               return (
-                <div key={competitor.id} className={`competitor-pill pill ${styleClass}`}>
-                  <div>
-                    <strong>{competitor.name}</strong>
-                    <span className="muted">
-                      {linkedProfile?.display_name ? `Linked to ${linkedProfile.display_name}` : "Unlinked"}
-                    </span>
+                <div key={competitor.id} className={`competitor-pill ${styleClass}`}>
+                  <div className="competitor-pill-header">
+                    <div>
+                      <strong>{competitor.name}</strong>
+                      <span className="muted">
+                        {linkedProfile?.display_name ? `Linked to ${linkedProfile.display_name}` : "Unlinked"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="competitor-delete-btn"
+                      onClick={() => deleteCompetitor(competitor.id)}
+                    >
+                      Delete
+                    </button>
                   </div>
                   <select
                     className="field-input"
