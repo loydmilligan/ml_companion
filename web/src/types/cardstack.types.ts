@@ -216,6 +216,8 @@ export interface CardStackProps {
   onCardChange?: (index: number, card: CardData) => void;
   /** Callback when card is tapped */
   onCardTap?: (card: CardData) => void;
+  /** Callback when theme is clicked in season recap (returns round index to navigate to) */
+  onThemeClick?: (theme: string, seasonNumber: number) => number | null;
   /** Enable/disable swipe gestures */
   swipeEnabled?: boolean;
 }
@@ -248,6 +250,8 @@ export interface RoundCardProps extends CardComponentProps {
 export interface SeasonRecapCardProps extends CardComponentProps {
   /** Season data */
   data: SeasonRecapCardData;
+  /** Callback when a theme pill is clicked */
+  onThemeClick?: (theme: string) => void;
 }
 
 /**

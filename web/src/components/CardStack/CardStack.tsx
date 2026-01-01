@@ -25,6 +25,7 @@ export default function CardStack({
   initialIndex = 0,
   onCardChange,
   onCardTap,
+  onThemeClick,
   swipeEnabled = true,
 }: CardStackProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -256,6 +257,15 @@ export default function CardStack({
           }
 
           if (isSeasonRecapCard(card)) {
+            const handleThemeClick = (theme: string) => {
+              if (onThemeClick) {
+                const targetIndex = onThemeClick(theme, card.seasonNumber);
+                if (targetIndex !== null && targetIndex >= 0) {
+                  goToCard(targetIndex);
+                }
+              }
+            };
+
             return (
               <SeasonRecapCard
                 key={card.id}
@@ -264,6 +274,7 @@ export default function CardStack({
                 isActive={isActive}
                 dragOffset={dragOffset}
                 isDragging={isActive && gesture.isDragging}
+                onThemeClick={handleThemeClick}
               />
             );
           }

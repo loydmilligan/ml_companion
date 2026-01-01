@@ -15,6 +15,7 @@ export default function SeasonRecapCard({
   isActive,
   dragOffset = 0,
   isDragging = false,
+  onThemeClick,
 }: SeasonRecapCardProps) {
   // Calculate transform style based on position and drag state
   const transformStyle = useMemo(() => {
@@ -287,13 +288,19 @@ export default function SeasonRecapCard({
           <div className="recap-themes">
             <h3 className="section-label">
               <span className="label-icon" aria-hidden="true">🎯</span>
-              Round Themes
+              Round Themes {onThemeClick && <span className="muted">(tap to jump)</span>}
             </h3>
             <div className="themes-list">
               {data.roundThemes.map((theme, index) => (
-                <span key={index} className="theme-pill">
+                <button
+                  key={index}
+                  type="button"
+                  className={`theme-pill ${onThemeClick ? "clickable" : ""}`}
+                  onClick={() => onThemeClick?.(theme)}
+                  disabled={!onThemeClick}
+                >
                   {theme}
-                </span>
+                </button>
               ))}
             </div>
           </div>

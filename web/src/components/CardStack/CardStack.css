@@ -762,6 +762,22 @@
   font-weight: 600;
   border-radius: 16px;
   border: 1px solid rgba(45, 70, 185, 0.2);
+  cursor: default;
+}
+
+.theme-pill.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-pill.clickable:hover {
+  background: rgba(45, 70, 185, 0.2);
+  border-color: rgba(45, 70, 185, 0.4);
+  transform: scale(1.02);
+}
+
+.theme-pill.clickable:active {
+  transform: scale(0.98);
 }
 
 /* ========================================

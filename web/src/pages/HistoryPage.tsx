@@ -489,13 +489,10 @@ export default function HistoryPage() {
      ======================================== */
 
   const cardData = useMemo((): CardData[] => {
-    const cards: CardData[] = [];
-
-    // Current season rounds
-    allRounds.forEach((round) => {
+    // Helper to build round card (inside useMemo to use current state)
+    const buildRoundCard = (round: RoundRow): RoundCardData => {
       const submissions = allSubmissions.get(round.id) ?? [];
 
-      // Calculate points for each submission
       const submissionsWithVotes: SubmissionWithVotes[] = submissions.map((sub) => {
         const votes = allVotes.get(sub.id) ?? [];
         const totalPoints = votes.reduce((sum, v) => sum + (v.points ?? 0), 0);
@@ -516,7 +513,6 @@ export default function HistoryPage() {
         };
       });
 
-      // Get unique voters for player count
       const uniqueVoters = new Set<string>();
       submissions.forEach((sub) => {
         const votes = allVotes.get(sub.id) ?? [];
@@ -525,7 +521,6 @@ export default function HistoryPage() {
         });
       });
 
-      // Get awards
       const roundAwards = allAwards.get(round.id) ?? [];
       const awards: RoundAward[] = roundAwards.map((a) => ({
         id: a.id,
@@ -539,7 +534,7 @@ export default function HistoryPage() {
 
       const totalVotes = submissionsWithVotes.reduce((sum, s) => sum + s.totalPoints, 0);
 
-      const roundCard: RoundCardData = {
+      return {
         id: round.id,
         type: "round",
         theme: round.theme,
@@ -559,30 +554,58 @@ export default function HistoryPage() {
           players: Math.max(uniqueVoters.size, submissions.length),
         },
       };
+    };
 
-      cards.push(roundCard);
+    const cards: CardData[] = [];
+
+    // Group rounds by season
+    const roundsBySeason = new Map<number, RoundRow[]>();
+    allRounds.forEach((round) => {
+      const seasonNum = round.season_number ?? 0;
+      const existing = roundsBySeason.get(seasonNum) ?? [];
+      existing.push(round);
+      roundsBySeason.set(seasonNum, existing);
     });
 
-    // Past season recap cards
-    pastSeasonStats.forEach((season) => {
-      const recapCard: SeasonRecapCardData = {
-        id: `season-${season.leagueId}`,
-        type: "season-recap",
-        seasonNumber: season.seasonNumber,
-        leagueName: season.leagueName,
-        totalRounds: season.totalRounds,
-        totalSubmissions: season.totalSubmissions,
-        totalVotes: season.totalVotes,
-        topTracks: season.topTracks,
-        roundThemes: season.roundThemes,
-        leaderboard: season.leaderboard,
-        seasonAwards: season.seasonAwards,
-        votingPatterns: season.votingPatterns,
-        genreDistribution: season.genreDistribution,
-        decadeDistribution: season.decadeDistribution,
-      };
+    // Get sorted season numbers (descending - newest first)
+    const seasonNumbers = Array.from(roundsBySeason.keys()).sort((a, b) => b - a);
+    const currentSeasonNum = seasonNumbers[0] ?? 0;
 
-      cards.push(recapCard);
+    // Build cards: for each season, add recap card first (if past season), then round cards
+    seasonNumbers.forEach((seasonNum) => {
+      const seasonRounds = roundsBySeason.get(seasonNum) ?? [];
+
+      // Sort rounds by round_number descending within season
+      seasonRounds.sort((a, b) => (b.round_number ?? 0) - (a.round_number ?? 0));
+
+      // Add season recap card first (only for past seasons)
+      if (seasonNum !== currentSeasonNum) {
+        const seasonStats = pastSeasonStats.find((s) => s.seasonNumber === seasonNum);
+        if (seasonStats) {
+          const recapCard: SeasonRecapCardData = {
+            id: `season-${seasonStats.leagueId}`,
+            type: "season-recap",
+            seasonNumber: seasonStats.seasonNumber,
+            leagueName: seasonStats.leagueName,
+            totalRounds: seasonStats.totalRounds,
+            totalSubmissions: seasonStats.totalSubmissions,
+            totalVotes: seasonStats.totalVotes,
+            topTracks: seasonStats.topTracks,
+            roundThemes: seasonStats.roundThemes,
+            leaderboard: seasonStats.leaderboard,
+            seasonAwards: seasonStats.seasonAwards,
+            votingPatterns: seasonStats.votingPatterns,
+            genreDistribution: seasonStats.genreDistribution,
+            decadeDistribution: seasonStats.decadeDistribution,
+          };
+          cards.push(recapCard);
+        }
+      }
+
+      // Add round cards for this season
+      seasonRounds.forEach((round) => {
+        cards.push(buildRoundCard(round));
+      });
     });
 
     return cards;
@@ -600,6 +623,16 @@ export default function HistoryPage() {
   const handleCardTap = (card: CardData) => {
     // Could open a detail modal or navigate to full round view
     console.log("Card tapped:", card.id);
+  };
+
+  // Handle theme click from season recap - find and return the card index
+  const handleThemeClick = (theme: string, seasonNumber: number): number | null => {
+    // Find the round card matching this theme and season
+    const index = cardData.findIndex((card) => {
+      if (card.type !== "round") return false;
+      return card.theme === theme && card.seasonNumber === seasonNumber;
+    });
+    return index >= 0 ? index : null;
   };
 
   /* ========================================
@@ -635,6 +668,7 @@ export default function HistoryPage() {
       cards={cardData}
       onCardChange={handleCardChange}
       onCardTap={handleCardTap}
+      onThemeClick={handleThemeClick}
       swipeEnabled={true}
     />
   );
