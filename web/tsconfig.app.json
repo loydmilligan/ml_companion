@@ -25,5 +25,19 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "src/**/*.test.tsx",
+    "src/**/*.test.ts",
+    "src/**/*.stories.tsx",
+    "src/**/*.stories.ts",
+    "src/**/*.example.tsx",
+    "src/**/*.example.ts",
+    "src/**/*-example.tsx",
+    "src/**/*-example.ts",
+    "src/**/*.demo.tsx",
+    "src/**/*.demo.ts",
+    "src/**/*Example.tsx",
+    "src/**/*Example.ts"
+  ]
 }

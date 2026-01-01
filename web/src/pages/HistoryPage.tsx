@@ -103,11 +103,11 @@ type SeasonStatsRow = {
 
 export default function HistoryPage() {
   const { group } = useAuth();
-  const isLead = group?.role === "lead";
+  // const isLead = group?.role === "lead"; // Reserved for future admin features
 
   // Data state
   const [leagues, setLeagues] = useState<LeagueRow[]>([]);
-  const [currentLeagueId, setCurrentLeagueId] = useState<string | null>(null);
+  const [, setCurrentLeagueId] = useState<string | null>(null);
   const [allRounds, setAllRounds] = useState<RoundRow[]>([]);
   const [allSubmissions, setAllSubmissions] = useState<Map<string, SubmissionRow[]>>(new Map());
   const [allVotes, setAllVotes] = useState<Map<string, VoteRow[]>>(new Map());

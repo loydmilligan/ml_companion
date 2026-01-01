@@ -277,15 +277,14 @@ export default function SeasonRecap() {
 
     const roundHighlights = data.rounds.map((round) => {
       let best: { title: string; artist: string; points: number } | null = null;
-      data.submissions
-        .filter((row) => row["Round ID"] === round.ID)
-        .forEach((row) => {
-          const key = `${round.ID}::${row["Spotify URI"]}`;
-          const points = voteTotals.get(key) ?? 0;
-          if (!best || points > best.points) {
-            best = { title: row.Title, artist: row["Artist(s)"], points };
-          }
-        });
+      const roundSubmissions = data.submissions.filter((row) => row["Round ID"] === round.ID);
+      for (const row of roundSubmissions) {
+        const key = `${round.ID}::${row["Spotify URI"]}`;
+        const points = voteTotals.get(key) ?? 0;
+        if (!best || points > best.points) {
+          best = { title: row.Title, artist: row["Artist(s)"], points };
+        }
+      }
 
       return {
         id: round.ID,

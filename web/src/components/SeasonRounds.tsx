@@ -74,7 +74,7 @@ export default function SeasonRounds() {
         .select("id,round_external_id,body,created_at, profiles(display_name)")
         .eq("group_id", group.id)
         .order("created_at", { ascending: true });
-      setComments((data as CommentRow[]) ?? []);
+      setComments((data as unknown as CommentRow[]) ?? []);
     };
     loadComments();
   }, [group]);
@@ -117,7 +117,7 @@ export default function SeasonRounds() {
         .select("id,round_external_id,body,created_at, profiles(display_name)")
         .eq("group_id", group.id)
         .order("created_at", { ascending: true });
-      setComments((data as CommentRow[]) ?? []);
+      setComments((data as unknown as CommentRow[]) ?? []);
 
       const { data: memberData } = await supabase
         .from("group_members")
@@ -126,7 +126,7 @@ export default function SeasonRounds() {
         .limit(50);
 
       const emails = (memberData ?? [])
-        .map((row) => row.profiles as NotifyProfile)
+        .map((row) => row.profiles as unknown as NotifyProfile)
         .filter((member) => member?.chat_notify_enabled !== false && member?.email_notify_enabled !== false)
         .map((member) => member.email)
         .filter(Boolean) as string[];

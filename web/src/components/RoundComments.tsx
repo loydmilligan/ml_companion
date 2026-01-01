@@ -55,7 +55,7 @@ export default function RoundComments({ roundId }: { roundId: string }) {
         .order("created_at", { ascending: true });
 
       setSubmissions((submissionData as Submission[]) ?? []);
-      setComments((commentData as Comment[]) ?? []);
+      setComments((commentData as unknown as Comment[]) ?? []);
       setLoading(false);
     };
 
@@ -93,7 +93,7 @@ export default function RoundComments({ roundId }: { roundId: string }) {
         .order("created_at", { ascending: true });
       setComments((prev) => [
         ...prev.filter((comment) => comment.submission_id !== submissionId),
-        ...((commentData as Comment[]) ?? []),
+        ...((commentData as unknown as Comment[]) ?? []),
       ]);
 
       const { data: memberData } = await supabase
@@ -103,7 +103,7 @@ export default function RoundComments({ roundId }: { roundId: string }) {
         .limit(50);
 
       const emails = (memberData ?? [])
-        .map((row) => row.profiles as NotifyProfile)
+        .map((row) => row.profiles as unknown as NotifyProfile)
         .filter((member) => member?.chat_notify_enabled !== false && member?.email_notify_enabled !== false)
         .map((member) => member.email)
         .filter(Boolean) as string[];

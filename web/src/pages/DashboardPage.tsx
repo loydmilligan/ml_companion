@@ -101,7 +101,7 @@ export default function DashboardPage() {
         .order("created_at", { ascending: false })
         .limit(3);
 
-      setRecentMessages((messageData as GroupMessage[]) ?? []);
+      setRecentMessages((messageData as unknown as GroupMessage[]) ?? []);
 
       const { data: competitorData } = await supabase
         .from("season_competitors")
@@ -227,8 +227,8 @@ export default function DashboardPage() {
       .select("external_id")
       .eq("group_id", group.id);
 
-    const existingIds = new Set((existing ?? []).map((row) => row.external_id));
-    const rows = parsed.data
+    const existingIds = new Set((existing ?? []).map((row: { external_id: string }) => row.external_id));
+    const rows = (parsed.data as Array<{ ID?: string; Name?: string }>)
       .filter((row) => row.ID && row.Name && !existingIds.has(row.ID))
       .map((row) => ({
         group_id: group.id,

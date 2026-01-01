@@ -22,7 +22,8 @@ export default function TopBar() {
     votingUrgency,
     isVotingComplete,
   } = useRound();
-  const { isOpen: isPeekOpen, openPanel, closePanel, setQuotedSong } = usePeekPanel();
+  const { isOpen: isPeekOpen, openPanel: _openPanel, closePanel, setQuotedSong } = usePeekPanel();
+  void _openPanel; // Used in PeekButton
 
   const isLead = group?.role === "lead";
   const [pinnedBarOpen, setPinnedBarOpen] = useState(false);

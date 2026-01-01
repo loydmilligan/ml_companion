@@ -77,8 +77,9 @@ async function fetchGroup(userId: string) {
   }
 
   if (data?.family_groups) {
+    const fg = data.family_groups as unknown as { id: string; name: string; owner_id: string | null };
     return {
-      ...data.family_groups,
+      ...fg,
       role: (data.role ?? "member") as "lead" | "member",
     };
   }

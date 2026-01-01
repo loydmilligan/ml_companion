@@ -29,7 +29,7 @@ export default function RoundChat({ roundId }: { roundId: string }) {
       .select("id,body,author_id,created_at, profiles(display_name,avatar_url)")
       .eq("round_id", roundId)
       .order("created_at", { ascending: true });
-    setMessages((data as RoundChatMessage[]) ?? []);
+    setMessages((data as unknown as RoundChatMessage[]) ?? []);
     setLoading(false);
   }, [roundId]);
 

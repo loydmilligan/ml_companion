@@ -76,14 +76,15 @@ function toSpotifyLink(uri: string) {
   return trackId ? `https://open.spotify.com/track/${trackId}` : null;
 }
 
-async function insertInChunks(table: string, rows: Record<string, unknown>[]) {
+// Reserved for future use - upsertInChunks is currently preferred
+void (async function insertInChunks(table: string, rows: Record<string, unknown>[]) {
   const chunkSize = 200;
   for (let i = 0; i < rows.length; i += chunkSize) {
     const chunk = rows.slice(i, i + chunkSize);
     const { error } = await supabase.from(table).insert(chunk);
     if (error) throw error;
   }
-}
+});
 
 async function upsertInChunks(table: string, rows: Record<string, unknown>[], onConflict: string) {
   const chunkSize = 200;

@@ -143,7 +143,7 @@ export default function AdminPage() {
   const [competitorTraitsDrafts, setCompetitorTraitsDrafts] = useState<Record<string, string>>({});
   const [playerConnections, setPlayerConnections] = useState<PlayerConnectionRow[]>([]);
   const [connectionDrafts, setConnectionDrafts] = useState<Record<string, ConnectionDraft>>({});
-  const [groupSettings, setGroupSettings] = useState<GroupSettings | null>(null);
+  const [, setGroupSettings] = useState<GroupSettings | null>(null);
   const [settingsDraft, setSettingsDraft] = useState<GroupSettings | null>(null);
   const [bannerStatusByRound, setBannerStatusByRound] = useState<Record<string, string>>({});
   const [bannerLoadingId, setBannerLoadingId] = useState<string | null>(null);
@@ -240,7 +240,7 @@ export default function AdminPage() {
         .eq("group_id", group.id)
         .order("created_at", { ascending: true });
 
-      setUsers((userData as UserRow[]) ?? []);
+      setUsers((userData as unknown as UserRow[]) ?? []);
 
       const { data: connectionData } = await supabase
         .from("player_connections")
@@ -879,8 +879,8 @@ export default function AdminPage() {
             {users.map((user) => {
               const userId = user.profiles?.id ?? "";
               const linkedCompetitor = seasonCompetitors.find((row) => row.profile_id === userId);
-              const isOwner = group?.owner_id && userId === group.owner_id;
-              const isSelf = profile?.id && userId === profile.id;
+              const isOwner = Boolean(group?.owner_id && userId === group.owner_id);
+              const isSelf = Boolean(profile?.id && userId === profile.id);
               const connections = connectionsBySource.get(userId) ?? [];
               const draft = getConnectionDraft(userId);
               return (

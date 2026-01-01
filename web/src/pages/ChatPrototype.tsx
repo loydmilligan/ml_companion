@@ -52,14 +52,15 @@ function PressureGauge({
 
   // Determine color zone
   let color = "#18e0a8"; // green
-  let zone = "safe";
+  let _zone = "safe";
   if (remaining <= 1000 * 60 * 60 * 6) {
     color = "#ff6f61"; // red
-    zone = "urgent";
+    _zone = "urgent";
   } else if (remaining <= 1000 * 60 * 60 * 24) {
     color = "#ffd166"; // yellow
-    zone = "warning";
+    _zone = "warning";
   }
+  void _zone; // Reserved for future styling
 
   const hours = Math.max(0, Math.floor(remaining / (1000 * 60 * 60)));
   const minutes = Math.max(0, Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60)));
@@ -134,7 +135,8 @@ function PressureGauge({
 }
 
 export default function ChatPrototype() {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
+  void _navigate; // Reserved for future navigation
   const [activeTab, setActiveTab] = useState<TabType>("CHAT");
   const [activeView, setActiveView] = useState<ViewType>("CHAT");
   const [messages, setMessages] = useState(mockMessagesInitial);

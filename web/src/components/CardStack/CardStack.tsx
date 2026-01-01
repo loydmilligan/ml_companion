@@ -11,8 +11,6 @@ import type {
   CardStackProps,
   CardPosition,
   GestureState,
-  SWIPE_THRESHOLD,
-  CARD_TRANSFORMS,
 } from "../../types/cardstack.types";
 import { isRoundCard, isSeasonRecapCard } from "../../types/cardstack.types";
 import RoundCard from "./RoundCard";
@@ -182,16 +180,13 @@ export default function CardStack({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [goNext, goPrev]);
 
-  // Card tap handler
-  const handleCardTap = useCallback(
-    (card: CardData) => {
-      // Only trigger tap if not dragging
-      if (!gesture.isDragging && Math.abs(gesture.offsetX) < 10) {
-        onCardTap?.(card);
-      }
-    },
-    [gesture.isDragging, gesture.offsetX, onCardTap]
-  );
+  // Card tap handler (reserved for future use)
+  void ((card: CardData) => {
+    // Only trigger tap if not dragging
+    if (!gesture.isDragging && Math.abs(gesture.offsetX) < 10) {
+      onCardTap?.(card);
+    }
+  });
 
   // Calculate card position relative to current index
   const getCardPosition = (cardIndex: number): CardPosition => {

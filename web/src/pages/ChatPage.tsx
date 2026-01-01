@@ -160,7 +160,7 @@ export default function ChatPage() {
       .eq("group_id", group.id)
       .order("created_at", { ascending: true });
 
-    const msgs = (data as ChatMessage[]) ?? [];
+    const msgs = (data as unknown as ChatMessage[]) ?? [];
     setMessages(msgs);
 
     // Fetch reactions for all messages in one query
@@ -218,7 +218,7 @@ export default function ChatPage() {
         .eq("group_id", group.id)
         .order("created_at", { ascending: true });
 
-      const msgs = (data as ChatMessage[]) ?? [];
+      const msgs = (data as unknown as ChatMessage[]) ?? [];
       setMessages(msgs);
 
       if (msgs.length > 0) {
@@ -323,7 +323,7 @@ export default function ChatPage() {
         .select("id,body,author_id,created_at, profiles(display_name,avatar_url)")
         .eq("group_id", group.id)
         .order("created_at", { ascending: true });
-      setMessages((data as ChatMessage[]) ?? []);
+      setMessages((data as unknown as ChatMessage[]) ?? []);
     }
     setSending(false);
   };
@@ -399,7 +399,7 @@ export default function ChatPage() {
         .select("id,body,author_id,created_at, profiles(display_name,avatar_url)")
         .eq("group_id", group.id)
         .order("created_at", { ascending: true });
-      setMessages((data as ChatMessage[]) ?? []);
+      setMessages((data as unknown as ChatMessage[]) ?? []);
 
       const { data: memberData } = await supabase
         .from("group_members")
@@ -407,9 +407,9 @@ export default function ChatPage() {
         .eq("group_id", group.id);
 
       const emails = (memberData ?? [])
-        .map((row) => row.profiles as NotifyProfile)
+        .map((row) => row.profiles as unknown as NotifyProfile)
         .filter((member) => member?.chat_notify_enabled !== false && member?.email_notify_enabled !== false)
-        .map((member) => member.email)
+        .map((member) => member?.email)
         .filter(Boolean) as string[];
 
       await supabase.functions.invoke("notify", {
