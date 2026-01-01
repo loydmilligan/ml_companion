@@ -32,13 +32,6 @@ When discussing or implementing UI/frontend changes, always:
 
 After making any code changes that need testing, follow this workflow to deploy and verify.
 
-### Prerequisites: SSH Key Setup (one-time)
-To enable passwordless deployment to the Pi:
-```bash
-ssh-copy-id pi@192.168.4.158
-```
-Enter the Pi password once, and subsequent SSH connections will use key auth.
-
 ### 1. Commit and Push
 ```bash
 cd /home/mmariani/Projects/ml_companion/web
@@ -49,7 +42,7 @@ git push
 
 ### 2. Deploy to Pi
 ```bash
-ssh pi@192.168.4.158 "cd /home/pi/ml_companion && git pull && docker compose up -d --build"
+ssh pi "cd /home/pi/ml_companion && git pull && docker compose up -d --build"
 ```
 
 This single command:
@@ -72,7 +65,7 @@ Look for:
 ### Quick Deploy Command
 For convenience, the full deploy + verify can be run as:
 ```bash
-git add -A && git commit -m "message" && git push && ssh pi@192.168.4.158 "cd /home/pi/ml_companion && git pull && docker compose up -d --build"
+git add -A && git commit -m "message" && git push && ssh pi "cd /home/pi/ml_companion && git pull && docker compose up -d --build"
 ```
 
 Then use browser MCP to verify.
@@ -80,5 +73,5 @@ Then use browser MCP to verify.
 ### Rollback
 If deployment fails:
 ```bash
-ssh pi@192.168.4.158 "cd /home/pi/ml_companion && git checkout HEAD~1 && docker compose up -d --build"
+ssh pi "cd /home/pi/ml_companion && git checkout HEAD~1 && docker compose up -d --build"
 ```
