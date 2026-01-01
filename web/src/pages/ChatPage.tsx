@@ -5,6 +5,9 @@ import { useAuth } from "../contexts/AuthContext";
 import { useRound } from "../contexts/RoundContext";
 import { usePeekPanel, PeekButton } from "../components/pinned-peek";
 
+// AI mention detection pattern
+const AI_MENTION_PATTERN = /@AI\b/i;
+
 // Pull-to-refresh constants
 const PULL_THRESHOLD = 80;
 const MAX_PULL = 120;
@@ -93,13 +96,14 @@ const allEmojis = [
 
 export default function ChatPage() {
   const { group, profile } = useAuth();
-  useRound(); // Keep context active for peek panel
+  const { round } = useRound(); // Get round for AI context
   const { quotedSong, clearQuotedSong, openPanel } = usePeekPanel();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [reactions, setReactions] = useState<Map<string, ReactionCount[]>>(new Map());
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [aiTyping, setAiTyping] = useState(false);
   const [emojiDrawerOpen, setEmojiDrawerOpen] = useState(false);
   const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null);
   const [defaultEmoji, setDefaultEmoji] = useState(() => localStorage.getItem("tml_default_emoji") ?? "👍");
@@ -383,13 +387,48 @@ export default function ChatPage() {
     setReactionPickerFor(null);
   };
 
+  // Call AI assistant for @AI mentions
+  const callAIAssistant = useCallback(async (userQuery: string) => {
+    if (!round) return null;
+
+    try {
+      const recentMsgs = messages.slice(-10).map((m) => ({
+        body: m.body,
+        author: m.profiles?.display_name ?? "Unknown",
+      }));
+
+      const { data, error } = await supabase.functions.invoke("ai-assistant", {
+        body: {
+          mode: "chat_response",
+          round: {
+            theme: round.theme,
+            theme_description: round.theme_description,
+            theme_author: round.theme_author,
+          },
+          user_query: userQuery,
+          recent_messages: recentMsgs,
+        },
+      });
+
+      if (error) throw error;
+      return data?.response ?? null;
+    } catch (err) {
+      console.error("Error calling AI assistant:", err);
+      return "Sorry, I'm having trouble responding right now. Please try again.";
+    }
+  }, [round, messages]);
+
   const sendMessage = async () => {
     if (!group || !profile || !message.trim()) return;
     setSending(true);
+
+    const trimmedMessage = message.trim();
+    const hasAIMention = AI_MENTION_PATTERN.test(trimmedMessage);
+
     const { error } = await supabase.from("group_messages").insert({
       group_id: group.id,
       author_id: profile.id,
-      body: message.trim(),
+      body: trimmedMessage,
     });
 
     if (!error) {
@@ -400,6 +439,31 @@ export default function ChatPage() {
         .eq("group_id", group.id)
         .order("created_at", { ascending: true });
       setMessages((data as unknown as ChatMessage[]) ?? []);
+
+      // Handle @AI mention
+      if (hasAIMention && round) {
+        setAiTyping(true);
+        const query = trimmedMessage.replace(AI_MENTION_PATTERN, "").trim();
+        const aiResponse = await callAIAssistant(query);
+
+        if (aiResponse) {
+          // Insert AI response as a system message
+          await supabase.from("group_messages").insert({
+            group_id: group.id,
+            author_id: null, // System/AI message
+            body: `🤖 League Bot: ${aiResponse}`,
+          });
+
+          // Refresh messages to show AI response
+          const { data: updatedData } = await supabase
+            .from("group_messages")
+            .select("id,body,author_id,created_at, profiles(display_name,avatar_url)")
+            .eq("group_id", group.id)
+            .order("created_at", { ascending: true });
+          setMessages((updatedData as unknown as ChatMessage[]) ?? []);
+        }
+        setAiTyping(false);
+      }
 
       const { data: memberData } = await supabase
         .from("group_members")
@@ -415,7 +479,7 @@ export default function ChatPage() {
       await supabase.functions.invoke("notify", {
         body: {
           title: "Group chat message",
-          message: `${profile.display_name ?? "Someone"}: ${message.trim()}`,
+          message: `${profile.display_name ?? "Someone"}: ${trimmedMessage}`,
           recipients: emails,
         },
       });
@@ -452,6 +516,20 @@ export default function ChatPage() {
         {!loading && !messages.length ? (
           <p className="muted">No messages yet. Start the conversation.</p>
         ) : null}
+        {/* AI typing indicator */}
+        {aiTyping && (
+          <div className="chat-bubble ai-typing">
+            <div className="chat-meta">
+              <div className="chat-avatar ai">
+                <span>🤖</span>
+              </div>
+              <span className="chat-author">League Bot</span>
+            </div>
+            <p className="typing-indicator">
+              <span></span><span></span><span></span>
+            </p>
+          </div>
+        )}
         {messages.map((item, index) => {
           // Calculate shadow intensity based on recency (newer = more shadow)
           // Last message gets max shadow, older messages fade to minimal shadow

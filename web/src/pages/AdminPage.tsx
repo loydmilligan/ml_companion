@@ -12,6 +12,7 @@ type LeagueSummary = {
   name: string;
   season_number: number | null;
   created_at: string;
+  narrative: string | null;
 };
 
 type SeasonCompetitor = {
@@ -66,7 +67,16 @@ type InviteRow = {
   used_by: string | null;
 };
 
-type TabId = "users" | "invites" | "leagues" | "rounds" | "competitors" | "imports" | "ai-settings";
+type TabId = "users" | "invites" | "leagues" | "rounds" | "competitors" | "imports" | "ai-settings" | "bonus";
+
+type BonusPointEntry = {
+  id: string;
+  points: number;
+  reason: string | null;
+  created_at: string;
+  profiles: { display_name: string | null } | null;
+  rounds: { theme: string } | null;
+};
 
 type RoundImportRow = {
   id: string;
@@ -158,6 +168,8 @@ export default function AdminPage() {
   const [leagueAwardsLoadingId, setLeagueAwardsLoadingId] = useState<string | null>(null);
   const [seasonAwardsStatus, setSeasonAwardsStatus] = useState<Record<string, string>>({});
   const [seasonAwardsLoadingId, setSeasonAwardsLoadingId] = useState<string | null>(null);
+  const [seasonNarrativeStatus, setSeasonNarrativeStatus] = useState<Record<string, string>>({});
+  const [seasonNarrativeLoadingId, setSeasonNarrativeLoadingId] = useState<string | null>(null);
   const [editingLeagueId, setEditingLeagueId] = useState<string | null>(null);
   const [editingLeagueName, setEditingLeagueName] = useState("");
   const [editingLeagueSeason, setEditingLeagueSeason] = useState("");
@@ -173,6 +185,8 @@ export default function AdminPage() {
     submission_deadline: string;
     voting_deadline: string;
   } | null>(null);
+  const [bonusPoints, setBonusPoints] = useState<BonusPointEntry[]>([]);
+  const [bonusPointsDraft, setBonusPointsDraft] = useState<Record<string, { points: string; reason: string }>>({});
 
   useEffect(() => {
     if (!selectedLeagueId) return;
@@ -200,7 +214,7 @@ export default function AdminPage() {
     const fetchData = async () => {
       const { data: leagueData } = await supabase
         .from("leagues")
-        .select("id,name,season_number,created_at")
+        .select("id,name,season_number,created_at,narrative")
         .eq("group_id", group.id)
         .order("season_number", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
@@ -259,6 +273,14 @@ export default function AdminPage() {
         .eq("group_id", group.id)
         .order("created_at", { ascending: true });
       setPlayerConnections((connectionData as PlayerConnectionRow[]) ?? []);
+
+      // Fetch bonus points
+      const { data: bonusData } = await supabase
+        .from("challenge_bonus_points")
+        .select("id,points,reason,created_at,profiles(display_name),rounds(theme)")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      setBonusPoints((bonusData as unknown as BonusPointEntry[]) ?? []);
 
       const { data: settingsData } = await supabase
         .from("group_settings")
@@ -1273,6 +1295,116 @@ export default function AdminPage() {
     setSeasonAwardsLoadingId(null);
   };
 
+  const generateSeasonNarrative = async (league: LeagueSummary) => {
+    if (!group) return;
+    setSeasonNarrativeLoadingId(league.id);
+    setSeasonNarrativeStatus((prev) => ({ ...prev, [league.id]: "Gathering season data..." }));
+
+    // Get all rounds for this league
+    const leagueRounds = rounds.filter((r) => r.league_id === league.id);
+    if (leagueRounds.length === 0) {
+      setSeasonNarrativeStatus((prev) => ({ ...prev, [league.id]: "No rounds found." }));
+      setSeasonNarrativeLoadingId(null);
+      return;
+    }
+
+    // Fetch all submissions and votes for the season
+    const roundIds = leagueRounds.map((r) => r.id);
+    const { data: submissions } = await supabase
+      .from("submissions")
+      .select("id,round_id,submitter_name,title,artist,genres,release_year")
+      .in("round_id", roundIds);
+
+    if (!submissions || submissions.length === 0) {
+      setSeasonNarrativeStatus((prev) => ({ ...prev, [league.id]: "No submissions found." }));
+      setSeasonNarrativeLoadingId(null);
+      return;
+    }
+
+    const submissionIds = submissions.map((s) => s.id);
+    const { data: votes } = await supabase
+      .from("votes")
+      .select("submission_id,voter_name,points,comment")
+      .in("submission_id", submissionIds);
+
+    // Build season summary for narrative generation
+    const roundSummaries = leagueRounds.map((round) => {
+      const roundSubs = submissions.filter((s) => s.round_id === round.id);
+      const roundSubIds = roundSubs.map((s) => s.id);
+      const roundVotes = (votes ?? []).filter((v) => roundSubIds.includes(v.submission_id));
+
+      // Find winner
+      const subPoints = new Map<string, number>();
+      roundVotes.forEach((v) => {
+        subPoints.set(v.submission_id, (subPoints.get(v.submission_id) || 0) + v.points);
+      });
+      const topSub = roundSubs.reduce((best, s) => {
+        const pts = subPoints.get(s.id) || 0;
+        const bestPts = best ? (subPoints.get(best.id) || 0) : -1;
+        return pts > bestPts ? s : best;
+      }, null as typeof roundSubs[0] | null);
+
+      return {
+        theme: round.theme,
+        winner: topSub ? { name: topSub.submitter_name, song: topSub.title, artist: topSub.artist } : null,
+        submissionCount: roundSubs.length,
+      };
+    });
+
+    // Compute player totals
+    const playerPoints = new Map<string, number>();
+    submissions.forEach((sub) => {
+      const subVotes = (votes ?? []).filter((v) => v.submission_id === sub.id);
+      const pts = subVotes.reduce((sum, v) => sum + v.points, 0);
+      const name = sub.submitter_name || "Unknown";
+      playerPoints.set(name, (playerPoints.get(name) || 0) + pts);
+    });
+
+    const seasonData = {
+      leagueName: league.name,
+      totalRounds: leagueRounds.length,
+      totalSubmissions: submissions.length,
+      rounds: roundSummaries,
+      standings: Array.from(playerPoints.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, points]) => ({ name, points })),
+    };
+
+    setSeasonNarrativeStatus((prev) => ({ ...prev, [league.id]: "Generating narrative..." }));
+
+    const { data, error } = await supabase.functions.invoke("openrouter-round-story", {
+      body: {
+        mode: "season_narrative",
+        league_name: league.name,
+        season_data: seasonData,
+        text_model_key: settingsDraft?.round_summary_model_key ?? "OPENROUTER_MODEL",
+      },
+    });
+
+    if (error || !data?.narrative) {
+      setSeasonNarrativeStatus((prev) => ({ ...prev, [league.id]: "Failed to generate narrative." }));
+      setSeasonNarrativeLoadingId(null);
+      return;
+    }
+
+    // Save narrative to leagues table
+    const { error: updateError } = await supabase
+      .from("leagues")
+      .update({ narrative: data.narrative })
+      .eq("id", league.id);
+
+    if (updateError) {
+      setSeasonNarrativeStatus((prev) => ({ ...prev, [league.id]: "Failed to save narrative." }));
+    } else {
+      setLeagues((prev) =>
+        prev.map((l) => (l.id === league.id ? { ...l, narrative: data.narrative } : l))
+      );
+      setSeasonNarrativeStatus((prev) => ({ ...prev, [league.id]: "Narrative saved!" }));
+    }
+
+    setSeasonNarrativeLoadingId(null);
+  };
+
   const updateLeague = async () => {
     if (!editingLeagueId || !editingLeagueName.trim()) return;
     const seasonNumber = editingLeagueSeason ? Number(editingLeagueSeason) : null;
@@ -1499,6 +1631,7 @@ export default function AdminPage() {
           { id: "competitors", label: "Current competitors" },
           { id: "imports", label: "Imports" },
           { id: "ai-settings", label: "AI settings" },
+          { id: "bonus", label: "Bonus Points" },
         ] as const).map((tab) => (
           <button
             key={tab.id}
@@ -1820,12 +1953,26 @@ export default function AdminPage() {
                         >
                           {seasonAwardsLoadingId === league.id ? "Generating..." : "Season Awards"}
                         </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => generateSeasonNarrative(league)}
+                          disabled={seasonNarrativeLoadingId === league.id}
+                        >
+                          {seasonNarrativeLoadingId === league.id ? "Generating..." : "Season Narrative"}
+                        </Button>
                       </div>
                       {leagueAwardsStatus[league.id] ? (
                         <span className="muted">{leagueAwardsStatus[league.id]}</span>
                       ) : null}
                       {seasonAwardsStatus[league.id] ? (
                         <span className="muted">{seasonAwardsStatus[league.id]}</span>
+                      ) : null}
+                      {seasonNarrativeStatus[league.id] ? (
+                        <span className="muted">{seasonNarrativeStatus[league.id]}</span>
+                      ) : null}
+                      {league.narrative ? (
+                        <span className="muted">Narrative</span>
                       ) : null}
                     </>
                   )}
@@ -2404,6 +2551,118 @@ python scripts/build_track_metadata.py`}
             <Button type="button" variant="secondary" onClick={saveSettings} disabled={!settingsDraft}>
               Save AI settings
             </Button>
+          </div>
+        </Card>
+      ) : null}
+
+      {activeTab === "bonus" ? (
+        <Card className="dashboard-card">
+          <h2>Bonus Points</h2>
+          <p className="muted">Award bonus points for Round Challenge correct guesses and other achievements.</p>
+
+          {/* Award Form */}
+          <div className="admin-form" style={{ marginBottom: 24 }}>
+            <h3 style={{ margin: "0 0 12px 0", fontSize: "1rem" }}>Award Points</h3>
+            <div style={{ display: "grid", gap: 8, gridTemplateColumns: "1fr auto auto auto" }}>
+              <select
+                className="field-input"
+                value={bonusPointsDraft["new"]?.reason ?? ""}
+                onChange={(e) =>
+                  setBonusPointsDraft((prev) => ({
+                    ...prev,
+                    new: { ...prev.new, reason: e.target.value, points: prev.new?.points ?? "1" },
+                  }))
+                }
+              >
+                <option value="">Select player...</option>
+                {users.map((u) => (
+                  <option key={u.member_id} value={u.profiles?.display_name ?? ""}>
+                    {u.profiles?.display_name ?? "Unknown"}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="field-input"
+                value={bonusPointsDraft["new"]?.reason?.split(":")[0] ?? ""}
+                onChange={(e) => {
+                  const player = bonusPointsDraft["new"]?.reason?.split(":")[0] ?? "";
+                  setBonusPointsDraft((prev) => ({
+                    ...prev,
+                    new: { ...prev.new, reason: `${player}:${e.target.value}`, points: prev.new?.points ?? "1" },
+                  }));
+                }}
+              >
+                <option value="">Reason...</option>
+                <option value="Round Challenge - 1 correct">Round Challenge - 1 correct</option>
+                <option value="Round Challenge - 2 correct">Round Challenge - 2 correct</option>
+                <option value="Perfect Round">Perfect Round</option>
+                <option value="Bonus Award">Bonus Award</option>
+              </select>
+              <input
+                className="field-input"
+                type="number"
+                min="1"
+                max="10"
+                value={bonusPointsDraft["new"]?.points ?? "1"}
+                onChange={(e) =>
+                  setBonusPointsDraft((prev) => ({
+                    ...prev,
+                    new: { ...prev.new, points: e.target.value, reason: prev.new?.reason ?? "" },
+                  }))
+                }
+                style={{ width: 60 }}
+                placeholder="Pts"
+              />
+              <Button
+                type="button"
+                onClick={async () => {
+                  if (!group || !bonusPointsDraft["new"]?.reason) return;
+                  const [player, reason] = (bonusPointsDraft["new"]?.reason ?? "").split(":");
+                  const user = users.find((u) => u.profiles?.display_name === player);
+                  if (!user?.profiles?.id) return;
+
+                  await supabase.from("challenge_bonus_points").insert({
+                    round_id: rounds[0]?.id ?? null,
+                    user_id: user.profiles.id,
+                    points: parseInt(bonusPointsDraft["new"]?.points ?? "1", 10),
+                    reason: reason || "Bonus",
+                    awarded_by: profile?.id ?? null,
+                  });
+
+                  setBonusPointsDraft({});
+                  // Refresh bonus points
+                  const { data } = await supabase
+                    .from("challenge_bonus_points")
+                    .select("id,points,reason,created_at,profiles(display_name),rounds(theme)")
+                    .order("created_at", { ascending: false })
+                    .limit(50);
+                  setBonusPoints((data as unknown as BonusPointEntry[]) ?? []);
+                }}
+                disabled={!bonusPointsDraft["new"]?.reason}
+              >
+                Award
+              </Button>
+            </div>
+          </div>
+
+          {/* Recent Points Awarded */}
+          <h3 style={{ margin: "0 0 12px 0", fontSize: "1rem" }}>Recent Points Awarded</h3>
+          <div className="admin-list">
+            {bonusPoints.length > 0 ? (
+              bonusPoints.map((bp) => (
+                <div key={bp.id} className="admin-list-row" style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div>
+                    <strong>{bp.profiles?.display_name ?? "Unknown"}</strong>
+                    <span className="muted" style={{ marginLeft: 8 }}>
+                      +{bp.points} pts - {bp.reason ?? "Bonus"}
+                    </span>
+                  </div>
+                  <span className="muted">{new Date(bp.created_at).toLocaleDateString()}</span>
+                </div>
+              ))
+            ) : (
+              <p className="muted">No bonus points awarded yet.</p>
+            )}
           </div>
         </Card>
       ) : null}

@@ -263,3 +263,54 @@ begin
       add constraint player_connections_unique unique (group_id, source_profile_id, target_profile_id, relation_type);
   end if;
 end $$;
+
+-- Round Challenge game tables
+create table if not exists round_challenges (
+  id uuid primary key default gen_random_uuid(),
+  round_id uuid references rounds(id) on delete cascade,
+  group_id uuid references family_groups(id) on delete cascade,
+  song1_title text,
+  song1_artist text,
+  song1_spotify_url text,
+  song1_youtube_url text,
+  song1_correct_theme text,
+  song2_title text,
+  song2_artist text,
+  song2_spotify_url text,
+  song2_youtube_url text,
+  song2_correct_theme text,
+  active boolean default true,
+  created_at timestamptz default now()
+);
+
+create table if not exists challenge_guesses (
+  id uuid primary key default gen_random_uuid(),
+  challenge_id uuid references round_challenges(id) on delete cascade,
+  user_id uuid references profiles(id) on delete cascade,
+  song_number integer check (song_number in (1, 2)),
+  guessed_theme text not null,
+  is_correct boolean not null,
+  created_at timestamptz default now()
+);
+
+create table if not exists challenge_bonus_points (
+  id uuid primary key default gen_random_uuid(),
+  round_id uuid references rounds(id) on delete cascade,
+  user_id uuid references profiles(id) on delete cascade,
+  points integer default 0,
+  reason text,
+  awarded_by uuid references profiles(id),
+  created_at timestamptz default now()
+);
+
+DO $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'challenge_guesses_unique'
+  ) then
+    alter table challenge_guesses
+      add constraint challenge_guesses_unique unique (challenge_id, user_id, song_number);
+  end if;
+end $$;

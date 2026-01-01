@@ -227,6 +227,64 @@ ${JSON.stringify(seasonAwards)}`;
     );
   }
 
+  if (mode === "season_narrative") {
+    const seasonData = body?.season_data ?? {};
+    const leagueName = body?.league_name ?? "Music League";
+
+    const seasonNarrativePrompt = `You are a sports broadcaster and storyteller recapping an entire music league season.
+
+Write a compelling 6-10 sentence narrative that:
+- Celebrates the season's journey and evolution
+- Highlights standout players, memorable moments, and key trends
+- Notes any rivalries, surprise winners, or genre shifts
+- Ends on an uplifting note about what made this season special
+
+Keep the tone warm, family-friendly, and celebratory.
+
+League name: ${leagueName}
+
+Season statistics and highlights:
+${JSON.stringify(seasonData)}
+
+Return JSON ONLY with key: narrative`;
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: textModel,
+        messages: [{ role: "user", content: seasonNarrativePrompt }],
+        temperature: 0.85,
+        max_tokens: 800,
+      }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      return new Response(
+        JSON.stringify({ error: "OpenRouter request failed", detail: text }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const json = await response.json();
+    const content = json?.choices?.[0]?.message?.content ?? "";
+    let parsed: { narrative?: string } = {};
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      parsed = { narrative: content };
+    }
+
+    return new Response(
+      JSON.stringify({ narrative: parsed.narrative ?? content }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   if (mode === "awards") {
     const awardsPrompt = `You are an awards judge for a music league round.
 

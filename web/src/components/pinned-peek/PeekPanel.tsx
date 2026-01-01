@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import clsx from "clsx";
 import SongCard from "./SongCard";
+import AIAssistant from "./AIAssistant";
+import RoundChallenge from "./RoundChallenge";
 
 type SubmissionRow = {
   id: string;
@@ -156,6 +158,16 @@ export default function PeekPanel({
                   </p>
                 )}
               </div>
+
+              {/* AI Assistant (only during open/voting phase) */}
+              {(round.status === "open" || round.status === "voting") && (
+                <AIAssistant round={round} />
+              )}
+
+              {/* Round Challenge (only during open phase) */}
+              {round.status === "open" && (
+                <RoundChallenge roundId={round.id} currentTheme={round.theme} />
+              )}
 
               {/* Top 3 Results (if voting complete) */}
               {isVotingComplete && top3.length > 0 && (

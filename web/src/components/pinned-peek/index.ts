@@ -4,4 +4,6 @@ export { default as PinnedBar } from "./PinnedBar";
 export { default as PeekPanel } from "./PeekPanel";
 export { default as PeekButton } from "./PeekButton";
 export { default as SongCard } from "./SongCard";
+export { default as AIAssistant } from "./AIAssistant";
+export { default as RoundChallenge } from "./RoundChallenge";
 export { PeekPanelProvider, usePeekPanel } from "./PeekPanelContext";

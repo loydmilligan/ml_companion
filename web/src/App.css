@@ -3783,3 +3783,514 @@
     max-width: 90%;
   }
 }
+
+/* ========================================
+   YouTube Sidebar (Left side player)
+   ======================================== */
+
+.youtube-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--peek-backdrop);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 45;
+}
+
+.youtube-sidebar-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.youtube-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--peek-width-mobile);
+  max-width: var(--peek-width-desktop);
+  background: var(--surface);
+  box-shadow: 4px 0 24px rgba(10, 26, 47, 0.15);
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.youtube-sidebar.open {
+  transform: translateX(0);
+}
+
+.youtube-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid rgba(10, 26, 47, 0.08);
+  flex-shrink: 0;
+}
+
+.youtube-sidebar-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  margin-right: 12px;
+}
+
+.youtube-sidebar-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(10, 26, 47, 0.06);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  transition: transform 0.2s ease, background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.youtube-sidebar-close:hover {
+  transform: scale(1.1);
+  background: rgba(10, 26, 47, 0.1);
+}
+
+.youtube-sidebar-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.youtube-sidebar-player {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.youtube-sidebar-player iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Dark mode adjustments */
+[data-mode="dark"] .youtube-sidebar {
+  background: var(--surface);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+}
+
+[data-mode="dark"] .youtube-sidebar-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-mode="dark"] .youtube-sidebar-close {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+}
+
+[data-mode="dark"] .youtube-sidebar-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ========================================
+   AI Assistant Section in Peek Panel
+   ======================================== */
+
+.ai-assistant-section {
+  margin-bottom: 20px;
+}
+
+.ai-assistant-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.ai-assistant-tab {
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(10, 26, 47, 0.12);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ai-assistant-tab:hover {
+  background: rgba(10, 26, 47, 0.04);
+  border-color: rgba(10, 26, 47, 0.2);
+}
+
+.ai-assistant-tab.active {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+
+.ai-assistant-content {
+  padding: 12px;
+  background: rgba(10, 26, 47, 0.03);
+  border-radius: 12px;
+  min-height: 80px;
+}
+
+.ai-assistant-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 20px;
+}
+
+.ai-assistant-loading .spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(10, 26, 47, 0.1);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.ai-assistant-response {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.ai-assistant-response p {
+  margin: 0 0 12px 0;
+}
+
+.ai-assistant-response p:last-child {
+  margin-bottom: 0;
+}
+
+/* Validate Song Form */
+.ai-validate-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-validate-form input {
+  padding: 10px 12px;
+  border: 1px solid rgba(10, 26, 47, 0.15);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.ai-validate-form input::placeholder {
+  color: var(--text-muted);
+}
+
+.ai-validate-form button {
+  padding: 10px 16px;
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.ai-validate-form button:hover {
+  background: var(--surface-dark);
+}
+
+.ai-validate-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ai-validation-result {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.ai-validation-result.valid {
+  background: rgba(46, 204, 113, 0.1);
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.ai-validation-result.invalid {
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.ai-validation-result.uncertain {
+  background: rgba(241, 196, 15, 0.1);
+  border: 1px solid rgba(241, 196, 15, 0.3);
+}
+
+/* ========================================
+   Round Challenge Section
+   ======================================== */
+
+.round-challenge-section {
+  margin-bottom: 20px;
+}
+
+.round-challenge-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.round-challenge-header h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.round-challenge-score {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--blue);
+}
+
+.round-challenge-songs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.challenge-song-card {
+  padding: 14px;
+  background: rgba(10, 26, 47, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(10, 26, 47, 0.08);
+}
+
+.challenge-song-info {
+  margin-bottom: 12px;
+}
+
+.challenge-song-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.challenge-song-artist {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.challenge-song-links {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.challenge-link-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.challenge-link-btn.spotify {
+  background: #1DB954;
+  color: #fff;
+}
+
+.challenge-link-btn.spotify:hover {
+  background: #1ed760;
+}
+
+.challenge-link-btn.youtube {
+  background: #FF0000;
+  color: #fff;
+}
+
+.challenge-link-btn.youtube:hover {
+  background: #cc0000;
+}
+
+.challenge-guess-form {
+  display: flex;
+  gap: 8px;
+}
+
+.challenge-guess-form select {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid rgba(10, 26, 47, 0.15);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  background: var(--surface);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.challenge-guess-form button {
+  padding: 8px 14px;
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.challenge-guess-form button:hover {
+  background: var(--surface-dark);
+}
+
+.challenge-guess-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.challenge-result {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.challenge-result.correct {
+  background: rgba(46, 204, 113, 0.15);
+  color: #27ae60;
+}
+
+.challenge-result.incorrect {
+  background: rgba(231, 76, 60, 0.15);
+  color: #c0392b;
+}
+
+/* Dark mode for AI and Challenge sections */
+[data-mode="dark"] .ai-assistant-content {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-mode="dark"] .ai-assistant-tab {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-mode="dark"] .ai-assistant-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-mode="dark"] .ai-validate-form input {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-mode="dark"] .challenge-song-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-mode="dark"] .challenge-guess-form select {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ========================================
+   AI Chat Styling
+   ======================================== */
+
+/* AI typing indicator bubble */
+.chat-bubble.ai-typing {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.chat-bubble.ai-typing .chat-avatar.ai {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  animation: typingBounce 1.4s ease-in-out infinite;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+/* League Bot message styling */
+.chat-bubble:has(.chat-author:empty) {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(139, 92, 246, 0.08));
+  border-left: 3px solid #6366f1;
+}
+
+/* Style messages that start with the robot emoji (League Bot) */
+.chat-page .chat-bubble p:first-child {
+  word-break: break-word;
+}
