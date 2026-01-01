@@ -49,6 +49,8 @@ export default function SettingsDrawer({ isOpen, onClose, isLead }: SettingsDraw
   const handleSignOut = async () => {
     onClose();
     await supabase.auth.signOut();
+    // Force navigation to home page after sign out
+    window.location.href = "/";
   };
 
   return (
