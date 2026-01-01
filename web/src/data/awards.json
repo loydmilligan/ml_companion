@@ -1,0 +1,865 @@
+{
+  "awards": [
+    {
+      "id": 1,
+      "name": "The Landslide",
+      "description": "For the track that won by the largest margin. Dominant performance, no contest.",
+      "category": "performance",
+      "measurement": {
+        "qualifies": "Winning track's margin over 2nd place is the largest seen this round (and margin >= 5 points)",
+        "calculation": "margin = points_1st - points_2nd; qualifies if margin >= 5",
+        "sql_logic": "SELECT winner WHERE (points_rank_1 - points_rank_2) >= 5 ORDER BY margin DESC LIMIT 1"
+      },
+      "trophy_prompt": "Miniature snow globe containing a mountain with rocks mid-avalanche, dramatic frozen motion, collectible figurine style, white background"
+    },
+    {
+      "id": 2,
+      "name": "Photo Finish",
+      "description": "For the closest race of the week. When 1-2 points separate the top spots.",
+      "category": "performance",
+      "measurement": {
+        "qualifies": "Margin between 1st and 2nd place is <= 2 points",
+        "calculation": "margin = points_1st - points_2nd; qualifies if margin <= 2",
+        "sql_logic": "SELECT round WHERE (points_rank_1 - points_rank_2) <= 2"
+      },
+      "trophy_prompt": "Vintage polaroid camera with a photo emerging showing a tie, metallic gold finish, collectible object style, white background"
+    },
+    {
+      "id": 3,
+      "name": "The Underdog",
+      "description": "Lowest average vote count that still cracked the top 3. Nobody saw it coming.",
+      "category": "performance",
+      "measurement": {
+        "qualifies": "Track finished in top 3 AND had the lowest average points-per-vote among top 3 finishers",
+        "calculation": "avg_vote = sum(points) / count(votes); rank by total points; filter top 3; find min(avg_vote)",
+        "sql_logic": "SELECT track FROM top_3_tracks ORDER BY avg(points_per_vote) ASC LIMIT 1"
+      },
+      "trophy_prompt": "Small scrappy terrier dog figurine wearing a golden crown, standing proud, ceramic collectible style, white background"
+    },
+    {
+      "id": 4,
+      "name": "Zero to Hero",
+      "description": "Track that received at least one 0-point vote but still finished strong overall.",
+      "category": "performance",
+      "measurement": {
+        "qualifies": "Track received at least one vote with points_assigned = 0 AND finished in top half of rankings",
+        "calculation": "has_zero = any(votes.points == 0); rank <= ceil(num_tracks / 2)",
+        "sql_logic": "SELECT track WHERE EXISTS(vote.points = 0) AND rank <= ceil(count(tracks)/2)"
+      },
+      "trophy_prompt": "Enamel pin of a zero digit wearing a tiny superhero cape, bold colors, pin badge style, white background"
+    },
+    {
+      "id": 5,
+      "name": "The Shutout",
+      "description": "Track that received points from every single voter. Universal appeal.",
+      "category": "performance",
+      "measurement": {
+        "qualifies": "Every voter who voted in this round gave this track > 0 points",
+        "calculation": "count(votes WHERE points > 0) == count(distinct voters in round)",
+        "sql_logic": "SELECT track WHERE min(points_received_per_voter) > 0 AND count(voters) = count(votes)"
+      },
+      "trophy_prompt": "Golden magnet attracting colorful music notes from all directions, 3D render style, white background"
+    },
+    {
+      "id": 6,
+      "name": "The Kingmaker",
+      "description": "Voter whose points made the biggest difference in determining the winner.",
+      "category": "voting_behavior",
+      "measurement": {
+        "qualifies": "If you remove this voter's votes, the winner would change (or margin would flip)",
+        "calculation": "For each voter: recalculate rankings without their votes; check if 1st place changes",
+        "sql_logic": "FOR EACH voter: SELECT new_winner FROM votes WHERE voter_id != this_voter; compare to actual_winner"
+      },
+      "trophy_prompt": "Ornate chess king piece with a tiny crown being placed on top by a hand, bronze metallic finish, white background"
+    },
+    {
+      "id": 7,
+      "name": "The Spread",
+      "description": "Voter who distributed points most evenly across all tracks. Democracy in action.",
+      "category": "voting_behavior",
+      "measurement": {
+        "qualifies": "Voter has the lowest standard deviation in points assigned across their votes",
+        "calculation": "std_dev = stdev(points_assigned per voter); voter with min(std_dev)",
+        "sql_logic": "SELECT voter_id ORDER BY STDDEV(points_assigned) ASC LIMIT 1",
+        "threshold": "Must have voted on at least 5 tracks"
+      },
+      "trophy_prompt": "Butter knife spreading golden butter perfectly evenly on toast, satisfying smoothness, food illustration style, white background"
+    },
+    {
+      "id": 8,
+      "name": "All In",
+      "description": "Voter who concentrated their points most heavily on a single track. Ride or die.",
+      "category": "voting_behavior",
+      "measurement": {
+        "qualifies": "Voter gave >= 50% of their total points to a single track",
+        "calculation": "max_single_vote / sum(all_votes) >= 0.5",
+        "sql_logic": "SELECT voter WHERE max(points_to_one_track) / sum(all_points) >= 0.5"
+      },
+      "trophy_prompt": "Stack of casino poker chips all pushed forward, dramatic betting gesture frozen in time, metallic and felt textures, white background"
+    },
+    {
+      "id": 9,
+      "name": "The Snub",
+      "description": "Biggest gap between a track's final ranking and what one voter thought of it.",
+      "category": "voting_behavior",
+      "measurement": {
+        "qualifies": "Track finished 1st or 2nd overall BUT at least one voter gave it 0 or 1 points",
+        "calculation": "final_rank <= 2 AND min(individual_vote) <= 1",
+        "sql_logic": "SELECT track, voter WHERE track.rank <= 2 AND vote.points <= 1"
+      },
+      "trophy_prompt": "Cold shoulder - a tiny figurine of a person looking away with arms crossed, frosty ice crystals on one shoulder, white background"
+    },
+    {
+      "id": 10,
+      "name": "Cold Blooded",
+      "description": "Most zero-point votes cast in a single round by one voter.",
+      "category": "voting_behavior",
+      "measurement": {
+        "qualifies": "Voter gave 0 points to more tracks than any other voter this round (minimum 2 zeros)",
+        "calculation": "count(votes WHERE points == 0) per voter; max count >= 2",
+        "sql_logic": "SELECT voter_id ORDER BY count(votes WHERE points = 0) DESC LIMIT 1 HAVING count >= 2"
+      },
+      "trophy_prompt": "Realistic snake coiled around a frozen ice heart, scales glistening, dark elegant style, white background"
+    },
+    {
+      "id": 11,
+      "name": "The Archaeologist",
+      "description": "Oldest track submitted this round. Digging in the crates.",
+      "category": "submission_style",
+      "measurement": {
+        "qualifies": "Track has the earliest release_year among all submissions this round",
+        "calculation": "min(release_year) for round",
+        "sql_logic": "SELECT submission ORDER BY release_year ASC LIMIT 1"
+      },
+      "trophy_prompt": "Tiny golden shovel stuck in dirt with a vinyl record partially unearthed, archaeological dig style, white background"
+    },
+    {
+      "id": 12,
+      "name": "Fresh Pressed",
+      "description": "Newest track submitted. Keeping it current.",
+      "category": "submission_style",
+      "measurement": {
+        "qualifies": "Track has the latest release_year among all submissions this round",
+        "calculation": "max(release_year) for round",
+        "sql_logic": "SELECT submission ORDER BY release_year DESC LIMIT 1"
+      },
+      "trophy_prompt": "Steaming hot vinyl record fresh out of a record press, heat waves rising, industrial chic style, white background"
+    },
+    {
+      "id": 13,
+      "name": "The Deep Cut",
+      "description": "Least-known track of the round, based on vote comments indicating unfamiliarity.",
+      "category": "submission_style",
+      "measurement": {
+        "qualifies": "Track received the most comments containing phrases like 'never heard', 'new to me', 'don't know this', 'first time', 'who is this'",
+        "calculation": "count(vote_comments matching unfamiliarity keywords) per track; take max",
+        "sql_logic": "SELECT track ORDER BY count(comments LIKE '%never heard%' OR '%new to me%') DESC LIMIT 1",
+        "fallback": "If no such comments exist, award is not given this round"
+      },
+      "trophy_prompt": "Iceberg with only tip visible above water, a music note hidden in the massive underwater portion, cross-section view, white background"
+    },
+    {
+      "id": 14,
+      "name": "Genre Bender",
+      "description": "Submission furthest from the round's typical genre. The wildcard.",
+      "category": "submission_style",
+      "measurement": {
+        "qualifies": "Track's primary genre is shared by the fewest other tracks (ideally 0) this round",
+        "calculation": "For each track, count how many other tracks share its primary genre; lowest count wins",
+        "sql_logic": "SELECT track ORDER BY count(other_tracks_same_genre) ASC LIMIT 1"
+      },
+      "trophy_prompt": "Pretzel twisted into the shape of a music note, golden baked finish, quirky food art style, white background"
+    },
+    {
+      "id": 15,
+      "name": "The Oversharer",
+      "description": "Longest submission comment of the round. We appreciate the context.",
+      "category": "submission_style",
+      "measurement": {
+        "qualifies": "Submission has the longest comment (by character count) in this round",
+        "calculation": "max(len(submission.comment))",
+        "sql_logic": "SELECT submission ORDER BY LENGTH(comment) DESC LIMIT 1",
+        "threshold": "Minimum 75 characters to qualify"
+      },
+      "trophy_prompt": "Overflowing diary with pages spilling out, tiny handwritten text visible, golden lock broken open, white background"
+    },
+    {
+      "id": 16,
+      "name": "The Hype Man",
+      "description": "Most comments left on votes this round. They had thoughts.",
+      "category": "social",
+      "measurement": {
+        "qualifies": "Voter left non-empty comments on more votes than any other voter",
+        "calculation": "count(votes WHERE comment IS NOT NULL AND comment != '') per voter",
+        "sql_logic": "SELECT voter_id ORDER BY count(non_empty_comments) DESC LIMIT 1",
+        "threshold": "Minimum 3 comments to qualify"
+      },
+      "trophy_prompt": "Miniature megaphone covered in gold glitter with speech bubbles exploding out, energetic style, white background"
+    },
+    {
+      "id": 17,
+      "name": "Anonymous No More",
+      "description": "Set 'Visible to Voters' to Yes when their pick was dead obvious.",
+      "category": "social",
+      "measurement": {
+        "qualifies": "Submission has visible_to_voters = 'Yes' AND (is most associated with this submitter's known taste based on past submissions)",
+        "calculation": "visible = 'Yes' AND track shares artist/genre with >50% of submitter's historical picks",
+        "sql_logic": "SELECT submission WHERE visible = 'Yes' AND artist IN (SELECT artist FROM past_submissions WHERE submitter = this_submitter GROUP BY artist HAVING count > 1)",
+        "notes": "Subjective fallback: can be awarded manually if group consensus is 'we all knew it was them'"
+      },
+      "trophy_prompt": "Masquerade mask falling off to reveal a winking face underneath, theatrical gold and black, white background"
+    },
+    {
+      "id": 18,
+      "name": "The Recluse",
+      "description": "Submitted with no comment, received votes with no comments. A mystery.",
+      "category": "social",
+      "measurement": {
+        "qualifies": "Submission has empty/null comment AND all votes for this track have empty/null comments",
+        "calculation": "submission.comment IS NULL AND count(votes.comment WHERE track = this_track) == 0",
+        "sql_logic": "SELECT submission WHERE comment IS NULL AND NOT EXISTS (SELECT 1 FROM votes WHERE track = submission.track AND comment IS NOT NULL)"
+      },
+      "trophy_prompt": "Hermit crab in a beautiful shell with a tiny 'do not disturb' sign, peaceful solitude vibes, white background"
+    },
+    {
+      "id": 19,
+      "name": "Controversial Pick",
+      "description": "Highest variance in points received. Loved by some, hated by others.",
+      "category": "social",
+      "measurement": {
+        "qualifies": "Track has the highest standard deviation in points received across all voters",
+        "calculation": "std_dev(points_received) per track; take max",
+        "sql_logic": "SELECT track ORDER BY STDDEV(points_received) DESC LIMIT 1",
+        "threshold": "Minimum 5 votes received AND std_dev >= 2.0"
+      },
+      "trophy_prompt": "Marmite jar with a vinyl record label, 'love it or hate it' energy, iconic British product style, white background"
+    },
+    {
+      "id": 20,
+      "name": "The Echo Chamber",
+      "description": "Two or more voters gave nearly identical point distributions.",
+      "category": "social",
+      "measurement": {
+        "qualifies": "Two voters' point vectors have a Pearson correlation >= 0.9 OR exact match on all tracks",
+        "calculation": "For each voter pair: compute correlation(voter_a_points, voter_b_points); if >= 0.9, qualifies",
+        "sql_logic": "SELECT voter_a, voter_b WHERE CORR(a.points, b.points) >= 0.9",
+        "alternative": "Exact match: all points identical for all tracks"
+      },
+      "trophy_prompt": "Two parrots facing each other on a perch, mirror image poses, speech bubbles with identical music notes, white background"
+    },
+    {
+      "id": 21,
+      "name": "The Bridesmaid",
+      "description": "Always close, never wins. Finished 2nd or 3rd again.",
+      "category": "performance",
+      "measurement": {
+        "qualifies": "Player finishes 2nd or 3rd this round AND has finished 2nd or 3rd in at least 2 of their last 3 rounds",
+        "calculation": "current_rank IN (2,3) AND count(last_3_rounds WHERE rank IN (2,3)) >= 2",
+        "sql_logic": "SELECT submitter WHERE rank IN (2,3) AND (SELECT count(*) FROM last_3_rounds WHERE rank IN (2,3)) >= 2"
+      },
+      "trophy_prompt": "Slightly wilted bouquet of flowers with a silver '2nd' ribbon, bittersweet beauty, romantic illustration style, white background"
+    },
+    {
+      "id": 22,
+      "name": "The Comeback Kid",
+      "description": "Went from last place one week to top 3 the next.",
+      "category": "performance",
+      "measurement": {
+        "qualifies": "Player ranked last in round N-1 AND ranked 1st, 2nd, or 3rd in round N",
+        "calculation": "previous_round_rank == max_rank AND current_round_rank <= 3",
+        "sql_logic": "SELECT submitter WHERE prev_rank = (SELECT max(rank) FROM prev_round) AND curr_rank <= 3"
+      },
+      "trophy_prompt": "Phoenix bird rising from ashes shaped like broken vinyl records, flames in gold and orange, dramatic rebirth energy, white background"
+    },
+    {
+      "id": 23,
+      "name": "Consistent Mediocrity",
+      "description": "Finished in the exact middle of the pack.",
+      "category": "performance",
+      "measurement": {
+        "qualifies": "Player's rank equals ceil(num_submissions / 2)",
+        "calculation": "rank == ceil(count(submissions_in_round) / 2)",
+        "sql_logic": "SELECT submitter WHERE rank = CEIL(count(submissions) / 2.0)"
+      },
+      "trophy_prompt": "A perfectly level balance scale with a shrug emoji in the middle, beige and taupe colors, aggressively average energy, white background"
+    },
+    {
+      "id": 24,
+      "name": "The Wooden Spoon",
+      "description": "Last place, but with dignity. Still got meaningful points.",
+      "category": "performance",
+      "measurement": {
+        "qualifies": "Ranked last AND received >= 50% of the average points for that round",
+        "calculation": "rank == max(rank) AND points >= 0.5 * avg(all_points)",
+        "sql_logic": "SELECT track WHERE rank = max_rank AND points >= 0.5 * AVG(points)"
+      },
+      "trophy_prompt": "Elegant hand-carved wooden spoon with a tiny golden music note inlay, artisanal craftwork style, white background"
+    },
+    {
+      "id": 25,
+      "name": "Unanimous Bottom",
+      "description": "Every voter ranked this track dead last in their personal voting.",
+      "category": "performance",
+      "measurement": {
+        "qualifies": "For each voter who voted on this track, points_assigned equals their min points given this round",
+        "calculation": "For all voters: vote_for_track.points == min(voter's_points_this_round)",
+        "sql_logic": "SELECT track WHERE ALL(vote.points = voter_min_points) AND track.rank = last"
+      },
+      "trophy_prompt": "Anchor sinking to ocean floor with bubbles rising, peaceful descent vibes, nautical illustration style, white background"
+    },
+    {
+      "id": 26,
+      "name": "The Contrarian",
+      "description": "Voted opposite to the crowd.",
+      "category": "voting_behavior",
+      "measurement": {
+        "qualifies": "Voter gave their highest points to a bottom-3 track AND lowest points to a top-3 track",
+        "calculation": "max(voter_points) → track.rank in bottom 25% AND min(voter_points) → track.rank in top 25%",
+        "sql_logic": "SELECT voter WHERE track_with_max_vote.rank >= (count * 0.75) AND track_with_min_vote.rank <= (count * 0.25)"
+      },
+      "trophy_prompt": "Salmon swimming upstream against a current of other fish going downstream, determined expression, nature documentary style, white background"
+    },
+    {
+      "id": 27,
+      "name": "The Prophet",
+      "description": "Correctly predicted the winner by giving them their max points.",
+      "category": "voting_behavior",
+      "measurement": {
+        "qualifies": "Voter's highest-pointed track finished 1st place",
+        "calculation": "track WHERE voter gave max(points) matches track WHERE rank == 1",
+        "sql_logic": "SELECT voter WHERE vote.track = winner AND vote.points = voter_max_points"
+      },
+      "trophy_prompt": "Crystal ball on an ornate stand with a tiny vinyl record visible inside glowing, mystical purple fog, fortune teller aesthetic, white background"
+    },
+    {
+      "id": 28,
+      "name": "The Participation Trophy",
+      "description": "Voted on every track, even giving out zeros.",
+      "category": "voting_behavior",
+      "measurement": {
+        "qualifies": "Voter cast votes on all available tracks AND at least one vote was 0 points",
+        "calculation": "count(votes_by_voter) == count(eligible_tracks) AND min(points) == 0",
+        "sql_logic": "SELECT voter WHERE count(votes) = count(tracks) - 1 AND EXISTS(vote.points = 0)"
+      },
+      "trophy_prompt": "Tiny plastic trophy with 'I tried' engraved on it, slightly crooked, elementary school awards day energy, white background"
+    },
+    {
+      "id": 29,
+      "name": "The Generous Soul",
+      "description": "Gave the highest total points of any voter this round.",
+      "category": "voting_behavior",
+      "measurement": {
+        "qualifies": "sum(points_assigned) for this voter > all other voters",
+        "calculation": "rank(sum(points) GROUP BY voter) == 1",
+        "sql_logic": "SELECT voter ORDER BY sum(points) DESC LIMIT 1"
+      },
+      "trophy_prompt": "Overflowing cornucopia spilling out golden coins and music notes, abundant harvest energy, thanksgiving illustration style, white background"
+    },
+    {
+      "id": 30,
+      "name": "The Scrooge",
+      "description": "Gave the lowest total points of any voter this round.",
+      "category": "voting_behavior",
+      "measurement": {
+        "qualifies": "sum(points_assigned) for this voter < all other voters",
+        "calculation": "rank(sum(points) GROUP BY voter) == last",
+        "sql_logic": "SELECT voter ORDER BY sum(points) ASC LIMIT 1"
+      },
+      "trophy_prompt": "Tiny coin purse snapped tightly shut with a padlock, single coin trying to escape, dickensian miserly energy, white background"
+    },
+    {
+      "id": 31,
+      "name": "Hive Mind",
+      "description": "Two or more voters had nearly identical point distributions.",
+      "category": "voting_behavior",
+      "measurement": {
+        "qualifies": "Two voters' point vectors have correlation >= 0.9 or exact match",
+        "calculation": "corr(voter_a_points, voter_b_points) >= 0.9",
+        "sql_logic": "SELECT voter_a, voter_b WHERE CORR(points_a, points_b) >= 0.9"
+      },
+      "trophy_prompt": "Two bees wearing headphones sharing a single music note between them, honeycomb pattern background element, cute insect illustration, white background"
+    },
+    {
+      "id": 32,
+      "name": "The Sniper",
+      "description": "Only gave points to a small number of tracks. Concentrated fire.",
+      "category": "voting_behavior",
+      "measurement": {
+        "qualifies": "Voter gave >0 points to <= 3 tracks when >= 7 tracks were available",
+        "calculation": "count(votes WHERE points > 0) <= 3 AND count(submissions) >= 7",
+        "sql_logic": "SELECT voter WHERE count(votes WHERE points > 0) <= 3 AND count(tracks) >= 7"
+      },
+      "trophy_prompt": "Single golden bullet standing upright with a music note engraved on it, precision and focus energy, military medal style, white background"
+    },
+    {
+      "id": 33,
+      "name": "Time Traveler",
+      "description": "Submitted a track from a decade nobody else touched.",
+      "category": "submission_style",
+      "measurement": {
+        "qualifies": "Track's release decade has no other submissions this round",
+        "calculation": "count(submissions WHERE decade == this_track_decade) == 1",
+        "sql_logic": "SELECT submission WHERE count(same_decade_submissions) = 1"
+      },
+      "trophy_prompt": "Pocket watch with vinyl record as the clock face, hands pointing to different decades, steampunk time travel aesthetic, white background"
+    },
+    {
+      "id": 34,
+      "name": "Genre Orphan",
+      "description": "Submitted the only track of its primary genre this round.",
+      "category": "submission_style",
+      "measurement": {
+        "qualifies": "Track's first listed genre appears in no other submission",
+        "calculation": "Split genres by comma, take first; count(other submissions with same primary genre) == 0",
+        "sql_logic": "SELECT submission WHERE primary_genre NOT IN (SELECT primary_genre FROM other_submissions)"
+      },
+      "trophy_prompt": "Single different-colored puzzle piece that doesn't fit with the grey pieces around it, standing proud, misfit toy energy, white background"
+    },
+    {
+      "id": 35,
+      "name": "The Repeat Offender",
+      "description": "Submitted an artist they've submitted before.",
+      "category": "submission_style",
+      "measurement": {
+        "qualifies": "Artist appears in a previous submission by the same submitter",
+        "calculation": "count(past_submissions WHERE artist == current_artist AND submitter == current_submitter) >= 1",
+        "sql_logic": "SELECT submission WHERE artist IN (SELECT artist FROM past_submissions WHERE submitter = current_submitter)"
+      },
+      "trophy_prompt": "Rubber stamp pressing down leaving multiple identical marks, ink splatter, bureaucratic repetition energy, white background"
+    },
+    {
+      "id": 36,
+      "name": "The Novelist",
+      "description": "Longest submission comment of the round.",
+      "category": "submission_style",
+      "measurement": {
+        "qualifies": "len(comment) is maximum among all submissions this round AND >= 50 characters",
+        "calculation": "rank(len(comment) DESC) == 1 AND len(comment) >= 50",
+        "sql_logic": "SELECT submission ORDER BY LENGTH(comment) DESC LIMIT 1 HAVING LENGTH(comment) >= 50"
+      },
+      "trophy_prompt": "Tiny quill pen writing on an endless scroll that trails off the page, ink bottle nearby, epic storytelling energy, white background"
+    },
+    {
+      "id": 37,
+      "name": "The One-Worder",
+      "description": "Submitted a comment that was 3 words or fewer.",
+      "category": "submission_style",
+      "measurement": {
+        "qualifies": "Submission has a non-empty comment with <= 3 words",
+        "calculation": "len(comment.split()) <= 3 AND len(comment) > 0",
+        "sql_logic": "SELECT submission WHERE comment IS NOT NULL AND word_count(comment) <= 3"
+      },
+      "trophy_prompt": "Single Scrabble tile with a music note on it, simple and minimal, less is more energy, white background"
+    },
+    {
+      "id": 38,
+      "name": "The Critic",
+      "description": "Left the most vote comments this round.",
+      "category": "social",
+      "measurement": {
+        "qualifies": "Voter has the highest count of non-empty comments on their votes (min 3)",
+        "calculation": "rank(count(votes WHERE comment != '') GROUP BY voter) == 1 AND count >= 3",
+        "sql_logic": "SELECT voter ORDER BY count(non_empty_vote_comments) DESC LIMIT 1 HAVING count >= 3"
+      },
+      "trophy_prompt": "Fancy monocle with a tiny notepad and pencil attached by a chain, snooty reviewer energy, film critic aesthetic, white background"
+    },
+    {
+      "id": 39,
+      "name": "The Ghost",
+      "description": "Voted without leaving a single comment.",
+      "category": "social",
+      "measurement": {
+        "qualifies": "Voter cast >= 5 votes AND left 0 comments",
+        "calculation": "count(votes) >= 5 AND count(votes WHERE comment != '') == 0",
+        "sql_logic": "SELECT voter WHERE count(votes) >= 5 AND count(vote_comments) = 0"
+      },
+      "trophy_prompt": "Friendly cartoon ghost wearing headphones, finger over lips in 'shh' gesture, translucent and floating, cute spooky style, white background"
+    },
+    {
+      "id": 40,
+      "name": "Early Bird",
+      "description": "First person to cast their vote this round.",
+      "category": "timing",
+      "measurement": {
+        "qualifies": "Voter's first vote timestamp is the earliest across all voters",
+        "calculation": "min(vote.created) per voter; voter with overall minimum",
+        "sql_logic": "SELECT voter ORDER BY min(vote.created) ASC LIMIT 1"
+      },
+      "trophy_prompt": "Cute bird holding a worm that's shaped like a music note, sunrise colors in background, cheerful morning energy, white background"
+    },
+    {
+      "id": 41,
+      "name": "The Eager Beaver",
+      "description": "First to submit their track this round.",
+      "category": "timing",
+      "measurement": {
+        "qualifies": "Submission has the earliest Created timestamp in round",
+        "calculation": "min(submission.Created) per round",
+        "sql_logic": "SELECT submission ORDER BY Created ASC LIMIT 1"
+      },
+      "trophy_prompt": "Beaver in a hard hat eagerly placing a vinyl record like a construction brick, busy worker energy, cute animal illustration, white background"
+    },
+    {
+      "id": 42,
+      "name": "The Procrastinator",
+      "description": "Last to submit their track this round. Deadlines are suggestions.",
+      "category": "timing",
+      "measurement": {
+        "qualifies": "Submission has the latest Created timestamp in round",
+        "calculation": "max(submission.Created) per round",
+        "sql_logic": "SELECT submission ORDER BY Created DESC LIMIT 1"
+      },
+      "trophy_prompt": "Alarm clock showing 11:59 with a vinyl record being frantically slid under a closing door, last-minute panic energy, white background"
+    },
+    {
+      "id": 43,
+      "name": "The Night Owl",
+      "description": "Last to cast their votes this round.",
+      "category": "timing",
+      "measurement": {
+        "qualifies": "Voter's first vote timestamp is the latest among all voters",
+        "calculation": "max(min(vote.Created) GROUP BY voter)",
+        "sql_logic": "SELECT voter ORDER BY min(vote.Created) DESC LIMIT 1"
+      },
+      "trophy_prompt": "Wise owl wearing reading glasses, perched on a crescent moon, tiny headphones on, starry night vibes, white background"
+    },
+    {
+      "id": 44,
+      "name": "Serial Early Bird",
+      "description": "Consistently first to submit or vote across multiple rounds.",
+      "category": "timing",
+      "measurement": {
+        "qualifies": "Was first to submit OR first to vote in >= 3 rounds total",
+        "calculation": "count(rounds WHERE rank(submission.Created) == 1 OR rank(first_vote.Created) == 1) >= 3",
+        "sql_logic": "SELECT player WHERE count(first_place_timing) >= 3"
+      },
+      "trophy_prompt": "Rooster standing on a stack of vinyl records crowing at sunrise, golden morning light, farm meets music energy, white background"
+    },
+    {
+      "id": 45,
+      "name": "Serial Procrastinator",
+      "description": "Consistently last to submit or vote across multiple rounds.",
+      "category": "timing",
+      "measurement": {
+        "qualifies": "Was last to submit OR last to vote in >= 3 rounds total",
+        "calculation": "count(rounds WHERE rank(submission.Created) == last OR rank(last_vote.Created) == last) >= 3",
+        "sql_logic": "SELECT player WHERE count(last_place_timing) >= 3"
+      },
+      "trophy_prompt": "Sloth hanging from a tree branch, lazily holding a vinyl record, 'mañana' vibes, chill tropical energy, white background"
+    },
+    {
+      "id": 46,
+      "name": "Down to the Wire",
+      "description": "Submitted AND voted last in the same round. Living dangerously.",
+      "category": "timing",
+      "measurement": {
+        "qualifies": "Same person was last to submit AND last to vote in a single round",
+        "calculation": "last_submitter == last_voter for a given round",
+        "sql_logic": "SELECT player WHERE last_submit_rank = 1 AND last_vote_rank = 1 IN same round"
+      },
+      "trophy_prompt": "Tightrope walker balancing on a guitar string over a canyon, dramatic tension, circus daredevil energy, white background"
+    },
+    {
+      "id": 47,
+      "name": "First In, First Out",
+      "description": "Submitted first AND voted first in the same round. Efficiency goals.",
+      "category": "timing",
+      "measurement": {
+        "qualifies": "Same person was first to submit AND first to vote in a single round",
+        "calculation": "first_submitter == first_voter for a given round",
+        "sql_logic": "SELECT player WHERE first_submit_rank = 1 AND first_vote_rank = 1 IN same round"
+      },
+      "trophy_prompt": "Checkmark bursting through a finish line ribbon, speed lines, productivity guru energy, corporate achievement style, white background"
+    },
+    {
+      "id": 48,
+      "name": "The Flip-Flopper",
+      "description": "Went from submitting first one round to submitting last the next (or vice versa).",
+      "category": "timing",
+      "measurement": {
+        "qualifies": "Was first in round N and last in round N+1, OR last in N and first in N+1",
+        "calculation": "Compare consecutive round submission ranks for same submitter",
+        "sql_logic": "SELECT player WHERE (prev_rank = 1 AND curr_rank = last) OR (prev_rank = last AND curr_rank = 1)"
+      },
+      "trophy_prompt": "Flip flop sandal with one side gold (first) and one side wooden (last), beach meets competition energy, white background"
+    },
+    {
+      "id": 49,
+      "name": "Dominizing",
+      "description": "Both partners gave each other 3+ points in the same round. The gift exchange energy is strong.",
+      "category": "relationship",
+      "measurement": {
+        "qualifies": "Partner A gave Partner B >= 3 pts AND Partner B gave Partner A >= 3 pts in the same round",
+        "calculation": "For each couple: check if both votes exist this round AND both >= 3",
+        "couples": ["missmara112/Mashew", "mmariani13/Kristin", "gregamariani/margs"],
+        "notes": "Named after a legendary white elephant gift exchange strategy"
+      },
+      "trophy_prompt": "Two wrapped gift boxes exchanging themselves mid-air, ribbons intertwined forming a heart, white elephant party energy, white background"
+    },
+    {
+      "id": 50,
+      "name": "The Supporter",
+      "description": "Gave your partner/family member significantly more points than your average vote this round.",
+      "category": "relationship",
+      "measurement": {
+        "qualifies": "Vote to partner/family >= 2x your average vote this round",
+        "calculation": "vote_to_partner >= 2 * avg(your_votes_this_round)",
+        "relationships": ["couples", "siblings", "parent-child"]
+      },
+      "trophy_prompt": "Foam finger pointing up with a heart on it, sports fan cheering for family energy, stadium crowd style, white background"
+    },
+    {
+      "id": 51,
+      "name": "Keeping It Honest",
+      "description": "Voted your partner/family member BELOW your average. No special treatment here.",
+      "category": "relationship",
+      "measurement": {
+        "qualifies": "Vote to partner/family < your average vote this round",
+        "calculation": "vote_to_partner < avg(your_votes_this_round)",
+        "notes": "Lori averages 1.5-2.0 pts to her kids vs 2.65 baseline - queen of this award"
+      },
+      "trophy_prompt": "Judge's gavel with a blindfold wrapped around it, scales of justice nearby, impartial fairness energy, courtroom drama style, white background"
+    },
+    {
+      "id": 52,
+      "name": "Sibling Rivalry",
+      "description": "Siblings voted each other below average. Blood is thicker than water, but music taste isn't.",
+      "category": "relationship",
+      "measurement": {
+        "qualifies": "Both siblings gave each other below-average points in the same round",
+        "calculation": "sib_A_to_B < avg AND sib_B_to_A < avg for same round",
+        "siblings": ["jellydru/Sasha Mariana"]
+      },
+      "trophy_prompt": "Two kids in a backseat of a car with an invisible line drawn between them, 'don't cross' energy, nostalgic family road trip vibes, white background"
+    },
+    {
+      "id": 53,
+      "name": "Family Feud",
+      "description": "A family member gave another family member 0 points. Thanksgiving is going to be awkward.",
+      "category": "relationship",
+      "measurement": {
+        "qualifies": "Vote from family member to family member = 0 pts",
+        "calculation": "vote.points == 0 AND (voter, submitter) in family_relationships",
+        "relationships": ["all couples", "siblings", "parent-child"]
+      },
+      "trophy_prompt": "Turkey dinner table with one chair dramatically knocked over, single dinner roll mid-flight, thanksgiving disaster energy, white background"
+    },
+    {
+      "id": 54,
+      "name": "The Muse",
+      "description": "Theme creator whose prompt inspired the fastest submissions. Everyone knew exactly what to pick.",
+      "category": "theme",
+      "measurement": {
+        "qualifies": "Round has shortest average time from creation to submission",
+        "calculation": "avg(submission.Created - round.Created) per round; find minimum",
+        "requires": "Tracking which competitor created each round's theme"
+      },
+      "trophy_prompt": "Greek muse statue holding a lightbulb instead of a lyre, inspiration striking, classical meets modern style, white background"
+    },
+    {
+      "id": 55,
+      "name": "The Stumper",
+      "description": "Theme creator whose prompt left everyone scratching their heads. Submissions came in slow.",
+      "category": "theme",
+      "measurement": {
+        "qualifies": "Round has longest average time from creation to submission",
+        "calculation": "avg(submission.Created - round.Created) per round; find maximum",
+        "requires": "Tracking which competitor created each round's theme"
+      },
+      "trophy_prompt": "Question mark made of tangled headphone cords, confused energy, puzzle aesthetic, white background"
+    },
+    {
+      "id": 56,
+      "name": "Home Field Advantage",
+      "description": "Theme creator who won (or placed top 3) in the round they created. Knew the assignment because they wrote it.",
+      "category": "theme",
+      "measurement": {
+        "qualifies": "Theme creator's submission ranked 1st, 2nd, or 3rd in their own round",
+        "calculation": "theme_creator == submitter AND rank <= 3",
+        "requires": "Tracking which competitor created each round's theme"
+      },
+      "trophy_prompt": "Referee blowing whistle while simultaneously holding up a gold medal, suspicious side-eye, sports corruption humor, white background"
+    },
+    {
+      "id": 57,
+      "name": "Hoisted by Their Own Petard",
+      "description": "Theme creator who finished last in the round they created. The irony is palpable.",
+      "category": "theme",
+      "measurement": {
+        "qualifies": "Theme creator's submission ranked last in their own round",
+        "calculation": "theme_creator == submitter AND rank == max(rank)",
+        "requires": "Tracking which competitor created each round's theme"
+      },
+      "trophy_prompt": "Person stepping on a rake that's shaped like a music note, cartoon bonk moment, slapstick comedy style, white background"
+    },
+    {
+      "id": 58,
+      "name": "The Overcomplicator",
+      "description": "Theme with the longest description. We needed a paragraph to explain this one.",
+      "category": "theme",
+      "measurement": {
+        "qualifies": "Round description has the most words (or characters)",
+        "calculation": "max(word_count(round.Description)) or max(len(round.Description))"
+      },
+      "trophy_prompt": "Instruction manual thick as a phone book with 'How To Pick A Song' on the cover, bureaucratic nightmare energy, white background"
+    },
+    {
+      "id": 59,
+      "name": "The Simpleton",
+      "description": "Theme with the shortest description. Brief. Clear. Done.",
+      "category": "theme",
+      "measurement": {
+        "qualifies": "Round description has the fewest words (minimum 1 word)",
+        "calculation": "min(word_count(round.Description)) where word_count >= 1"
+      },
+      "trophy_prompt": "Single sticky note with one word on it, minimalist zen energy, clean design aesthetic, white background"
+    }
+  ],
+  "season_awards": [
+    {
+      "id": 101,
+      "name": "Season Champion",
+      "description": "Highest total points across all rounds this season. The ultimate winner.",
+      "category": "season",
+      "measurement": {
+        "qualifies": "Player with the highest sum of points received across all rounds",
+        "calculation": "sum(points_received) per player; rank by total"
+      },
+      "trophy_prompt": "Majestic golden crown with musical notes embedded as jewels, royal and triumphant, championship trophy style, white background"
+    },
+    {
+      "id": 102,
+      "name": "Most Wins",
+      "description": "Most first-place finishes this season. Consistency at the top.",
+      "category": "season",
+      "measurement": {
+        "qualifies": "Player with the most rounds where they finished first",
+        "calculation": "count(rounds WHERE rank == 1) per player"
+      },
+      "trophy_prompt": "Golden laurel wreath with the number 1 repeated multiple times inside it, victorious energy, ancient greek meets modern trophy, white background"
+    },
+    {
+      "id": 103,
+      "name": "Podium Regular",
+      "description": "Most top-3 finishes this season. Always in the running.",
+      "category": "season",
+      "measurement": {
+        "qualifies": "Player with the most rounds finishing 1st, 2nd, or 3rd",
+        "calculation": "count(rounds WHERE rank <= 3) per player"
+      },
+      "trophy_prompt": "Bronze, silver, and gold medals stacked together like a collection, ribbon display style, athletic achievement energy, white background"
+    },
+    {
+      "id": 104,
+      "name": "Iron Participant",
+      "description": "Submitted to every single round this season. Perfect attendance.",
+      "category": "season",
+      "measurement": {
+        "qualifies": "Player submitted in 100% of rounds",
+        "calculation": "count(submissions) == count(rounds) for player"
+      },
+      "trophy_prompt": "Iron anvil with a music note being forged on top, sparks flying, dedication and strength energy, blacksmith workshop style, white background"
+    },
+    {
+      "id": 105,
+      "name": "The Comeback King/Queen",
+      "description": "Biggest improvement in ranking from season start to finish.",
+      "category": "season",
+      "measurement": {
+        "qualifies": "Player with largest positive rank improvement comparing first half to second half",
+        "calculation": "avg(rank_second_half) - avg(rank_first_half) DESC"
+      },
+      "trophy_prompt": "Phoenix rising from ashes with a crown, dramatic rebirth energy, transformation and triumph, white background"
+    },
+    {
+      "id": 106,
+      "name": "The Fader",
+      "description": "Biggest decline in ranking from season start to finish.",
+      "category": "season",
+      "measurement": {
+        "qualifies": "Player with largest negative rank change comparing first half to second half",
+        "calculation": "avg(rank_first_half) - avg(rank_second_half) DESC"
+      },
+      "trophy_prompt": "Shooting star fading into darkness, bittersweet decline energy, once bright now dim, astronomical illustration, white background"
+    },
+    {
+      "id": 107,
+      "name": "Genre Explorer",
+      "description": "Submitted the most diverse range of genres this season.",
+      "category": "season",
+      "measurement": {
+        "qualifies": "Player with the highest count of unique genres in their submissions",
+        "calculation": "count(distinct genres) per player"
+      },
+      "trophy_prompt": "Compass with different genre symbols at each cardinal direction, musical exploration energy, adventure cartography style, white background"
+    },
+    {
+      "id": 108,
+      "name": "Time Capsule",
+      "description": "Submitted tracks spanning the widest range of decades.",
+      "category": "season",
+      "measurement": {
+        "qualifies": "Player with largest spread between oldest and newest track submitted",
+        "calculation": "max(release_year) - min(release_year) per player"
+      },
+      "trophy_prompt": "Ornate hourglass with vinyl records floating inside instead of sand, time travel energy, antique meets music, white background"
+    },
+    {
+      "id": 109,
+      "name": "The Voter",
+      "description": "Cast the most total points this season. Generous with appreciation.",
+      "category": "season",
+      "measurement": {
+        "qualifies": "Voter with highest sum of points given across all rounds",
+        "calculation": "sum(points_given) per voter"
+      },
+      "trophy_prompt": "Ballot box overflowing with golden tickets and music notes, democracy meets appreciation, civic duty style, white background"
+    },
+    {
+      "id": 110,
+      "name": "The Critic",
+      "description": "Left the most vote comments this season. Always had something to say.",
+      "category": "season",
+      "measurement": {
+        "qualifies": "Voter with highest count of non-empty comments on votes",
+        "calculation": "count(votes WHERE comment IS NOT NULL) per voter"
+      },
+      "trophy_prompt": "Vintage typewriter with music sheet paper scrolling out, prolific commentary energy, literary meets musical, white background"
+    }
+  ],
+  "categories": {
+    "performance": "Awards based on how tracks placed in the rankings",
+    "voting_behavior": "Awards based on how a voter distributed their points",
+    "submission_style": "Awards based on the track/artist/comment choices",
+    "social": "Awards based on engagement, comments, and interaction",
+    "timing": "Awards based on when submissions and votes were cast",
+    "relationship": "Awards based on voting patterns between couples, siblings, and family",
+    "theme": "Awards based on round themes and theme creators",
+    "season": "Awards based on aggregate performance across an entire season"
+  },
+  "relationships": {
+    "couples": [
+      {"person1": "missmara112", "person2": "Mashew"},
+      {"person1": "mmariani13", "person2": "Kristin"},
+      {"person1": "gregamariani", "person2": "margs"}
+    ],
+    "siblings": [
+      {"person1": "jellydru", "person2": "Sasha Mariana"}
+    ],
+    "parent_child": [
+      {"parent": "lorimariani", "child": "mmariani13"},
+      {"parent": "lorimariani", "child": "Mashew"},
+      {"parent": "lorimariani", "child": "gregamariani"}
+    ]
+  },
+  "data_requirements": {
+    "theme_creator_tracking": "Need to add a 'Creator ID' field to rounds.csv to track who created each theme"
+  },
+  "usage_notes": {
+    "per_round": "Most awards are evaluated per round. Some (like Bridesmaid, Repeat Offender, Serial Procrastinator) require historical data.",
+    "thresholds": "Several awards have minimum thresholds to avoid trivial qualification. Adjust based on your group size.",
+    "mutual_exclusivity": "Some awards are mutually exclusive (e.g., Landslide vs Photo Finish). Only one should be given per round.",
+    "ties": "When multiple people qualify, either award to all or pick randomly.",
+    "trophy_prompts": "All prompts designed for AI image generation. Add 'icon style' or '3D render' or 'flat illustration' to taste. White background for easy compositing."
+  }
+}
