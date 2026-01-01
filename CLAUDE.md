@@ -27,3 +27,51 @@ When discussing or implementing UI/frontend changes, always:
 1. Check for mobile performance implications
 2. Mention any concerns to the user before implementing
 3. Consider: bundle size, re-renders, DOM complexity, network requests, animations/transforms, and polling frequency
+
+## Deployment Workflow
+
+After making any code changes that need testing, follow this workflow to deploy and verify:
+
+### 1. Commit and Push
+```bash
+cd /home/mmariani/Projects/ml_companion/web
+git add -A
+git commit -m "Your commit message"
+git push
+```
+
+### 2. Deploy to Pi
+```bash
+ssh pi@192.168.4.158 "cd /home/pi/ml_companion && git pull && docker compose up -d --build"
+```
+
+This single command:
+- SSHs into the Pi
+- Pulls latest changes
+- Rebuilds and restarts the Docker container
+
+### 3. Verify Deployment
+Use the Chrome DevTools MCP to verify the app is accessible:
+```
+mcp__chrome-devtools__new_page with url: "https://talking.mattmariani.com/app"
+mcp__chrome-devtools__take_snapshot to verify page content loaded
+```
+
+Look for:
+- The page loads without errors
+- Key UI elements are present (TopBar, main content area)
+- No console errors (check with mcp__chrome-devtools__list_console_messages)
+
+### Quick Deploy Command
+For convenience, the full deploy + verify can be run as:
+```bash
+git add -A && git commit -m "message" && git push && ssh pi@192.168.4.158 "cd /home/pi/ml_companion && git pull && docker compose up -d --build"
+```
+
+Then use browser MCP to verify.
+
+### Rollback
+If deployment fails:
+```bash
+ssh pi@192.168.4.158 "cd /home/pi/ml_companion && git checkout HEAD~1 && docker compose up -d --build"
+```
