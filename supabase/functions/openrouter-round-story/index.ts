@@ -155,6 +155,78 @@ Deno.serve(async (req) => {
     );
   }
 
+  if (mode === "trophy") {
+    const trophyPrompt = body?.trophy_prompt ?? null;
+    if (!trophyPrompt) {
+      return new Response(
+        JSON.stringify({ error: "Missing trophy_prompt" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const trophyModel = resolveModelKey(body?.trophy_model_key) ?? OPENROUTER_TROPHY_MODEL ?? OPENROUTER_ROUND_IMAGE_MODEL ?? null;
+    const image = await generateImage(trophyPrompt, trophyModel);
+    return new Response(
+      JSON.stringify({ image_url: image.image_url, image_base64: image.image_base64 }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  if (mode === "season_awards") {
+    const seasonData = body?.season_data ?? {};
+    const seasonAwards = (body?.season_awards ?? []) as AwardInput[];
+
+    const seasonAwardsPrompt = `You are an awards judge for a music league season finale.
+
+Use the provided season statistics and the season awards catalog to select 3-5 awards that best recognize the season's achievements.
+- Only select awards whose criteria appear satisfied by the data.
+- Each award should go to the most deserving player based on the data.
+
+Return JSON ONLY in this format:
+{"awards":[{"award_id":101,"award_name":"...","winner_name":"...","reason":"..."}]}
+
+Season statistics:
+${JSON.stringify(seasonData)}
+
+Season awards catalog:
+${JSON.stringify(seasonAwards)}`;
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: awardsModel,
+        messages: [{ role: "user", content: seasonAwardsPrompt }],
+        temperature: 0.4,
+        max_tokens: 600,
+      }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      return new Response(
+        JSON.stringify({ error: "OpenRouter request failed", detail: text }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const json = await response.json();
+    const content = json?.choices?.[0]?.message?.content ?? "";
+    let parsed: { awards?: Array<Record<string, unknown>> } = {};
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      parsed = {};
+    }
+
+    return new Response(
+      JSON.stringify({ awards: parsed.awards ?? [] }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   if (mode === "awards") {
     const awardsPrompt = `You are an awards judge for a music league round.
 

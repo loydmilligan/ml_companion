@@ -30,48 +30,45 @@ When discussing or implementing UI/frontend changes, always:
 
 ## Deployment Workflow
 
-After making any code changes that need testing, follow this workflow to deploy and verify.
+**IMPORTANT**: After making any code changes, ALWAYS run the deploy script and verify with browser MCP.
 
-### 1. Commit and Push
+### Deploy Script
+Use the deploy script for all deployments:
 ```bash
-cd /home/mmariani/Projects/ml_companion/web
-git add -A
-git commit -m "Your commit message"
-git push
+./deploy.sh "Your commit message"
 ```
 
-### 2. Deploy to Pi
-```bash
-ssh pi "cd /home/pi/ml_companion && git pull && docker compose up -d --build"
-```
+This script automatically:
+1. Commits all changes with proper attribution
+2. Pushes to remote
+3. SSHs to Pi and pulls
+4. Builds the web app on Pi
 
-This single command:
-- SSHs into the Pi
-- Pulls latest changes
-- Rebuilds and restarts the Docker container
+### Browser Verification (Required)
+After every deploy, verify changes using Chrome DevTools MCP:
 
-### 3. Verify Deployment
-Use the Chrome DevTools MCP to verify the app is accessible:
-```
-mcp__chrome-devtools__new_page with url: "https://talking.mattmariani.com/app"
-mcp__chrome-devtools__take_snapshot to verify page content loaded
-```
+1. **Kill previous browser session** (start of each session):
+   ```
+   mcp__chrome-devtools__list_pages - find existing pages
+   mcp__chrome-devtools__close_page if needed
+   ```
 
-Look for:
-- The page loads without errors
-- Key UI elements are present (TopBar, main content area)
-- No console errors (check with mcp__chrome-devtools__list_console_messages)
+2. **Navigate to app**:
+   ```
+   mcp__chrome-devtools__new_page with url: "http://192.168.1.69:8080"
+   ```
 
-### Quick Deploy Command
-For convenience, the full deploy + verify can be run as:
-```bash
-git add -A && git commit -m "message" && git push && ssh pi "cd /home/pi/ml_companion && git pull && docker compose up -d --build"
-```
+3. **Login if needed** and verify:
+   ```
+   mcp__chrome-devtools__take_snapshot - check page content
+   mcp__chrome-devtools__list_console_messages - check for errors
+   ```
 
-Then use browser MCP to verify.
+4. **Confirm changes are visible** by interacting with the UI
 
 ### Rollback
 If deployment fails:
 ```bash
-ssh pi "cd /home/pi/ml_companion && git checkout HEAD~1 && docker compose up -d --build"
+ssh pi "cd ml_companion && git checkout HEAD~1"
+ssh pi "cd ml_companion/web && npm run build"
 ```

@@ -73,6 +73,7 @@
   flex: 1;
   width: 100%;
   max-width: 375px;
+  min-height: 450px;
   margin: 0 auto;
   padding: 0 16px;
   perspective: 1000px;
@@ -83,6 +84,7 @@
 @media (min-width: 768px) {
   .card-stack {
     max-width: 440px;
+    min-height: 520px;
     padding: 0 24px;
   }
 }
@@ -90,6 +92,7 @@
 @media (min-width: 1024px) {
   .card-stack {
     max-width: 480px;
+    min-height: 580px;
   }
 }
 
