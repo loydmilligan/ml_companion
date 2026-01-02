@@ -89,6 +89,7 @@ const callOpenRouter = async (prompt: string, temperature = 0.9, maxTokens = 500
     headers: {
       Authorization: `Bearer ${OPENROUTER_API_KEY}`,
       "Content-Type": "application/json",
+      "X-Title": "TML - Round Challenge",
     },
     body: JSON.stringify({
       model: OPENROUTER_MODEL,

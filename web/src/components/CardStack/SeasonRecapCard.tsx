@@ -5,9 +5,10 @@
  * genre/decade distribution, top tracks, and round themes.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { SeasonRecapCardProps } from "../../types/cardstack.types";
 import { CARD_TRANSFORMS } from "../../types/cardstack.types";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
 
 export default function SeasonRecapCard({
   data,
@@ -17,6 +18,9 @@ export default function SeasonRecapCard({
   isDragging = false,
   onThemeClick,
 }: SeasonRecapCardProps) {
+  // State for expandable season story
+  const [isStoryExpanded, setIsStoryExpanded] = useState(false);
+
   // Calculate transform style based on position and drag state
   const transformStyle = useMemo(() => {
     const baseTransform = CARD_TRANSFORMS[position] || CARD_TRANSFORMS[3];
@@ -76,13 +80,25 @@ export default function SeasonRecapCard({
           <h2 className="season-title">Season {data.seasonNumber}</h2>
           <p className="league-name">{data.leagueName}</p>
         </div>
+        {/* Book icon to expand season story */}
+        {data.seasonNarrative && (
+          <button
+            type="button"
+            className={`story-expand-btn ${isStoryExpanded ? "expanded" : ""}`}
+            onClick={() => setIsStoryExpanded(!isStoryExpanded)}
+            aria-label={isStoryExpanded ? "Collapse season story" : "Expand season story"}
+            aria-expanded={isStoryExpanded}
+          >
+            <MenuBookIcon />
+          </button>
+        )}
       </div>
 
       {/* Scrollable content area */}
       <div className="card-content">
-        {/* Season Narrative */}
-        {data.seasonNarrative && (
-          <div className="recap-narrative">
+        {/* Season Narrative - expandable via book icon */}
+        {data.seasonNarrative && isStoryExpanded && (
+          <div className="recap-narrative story-expanded">
             <h3 className="section-label">
               <span className="label-icon" aria-hidden="true">📖</span>
               Season Story

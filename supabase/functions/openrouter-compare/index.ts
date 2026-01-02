@@ -36,6 +36,7 @@ Song B: ${songB}`;
     headers: {
       Authorization: `Bearer ${OPENROUTER_API_KEY}`,
       "Content-Type": "application/json",
+      "X-Title": "TML - Song Compare",
     },
     body: JSON.stringify({
       model: OPENROUTER_MODEL,

@@ -325,6 +325,7 @@ alter table group_settings add column if not exists ai_validate_enabled boolean 
 alter table group_settings add column if not exists ai_hint_enabled boolean default true;
 alter table group_settings add column if not exists ai_assistant_enabled boolean default true;
 alter table group_settings add column if not exists ai_validate_daily_limit integer default 5;
+alter table group_settings add column if not exists ai_chat_enabled boolean default true;
 
 -- Round AI cache for explain/hints (generated once per round, shared by all)
 create table if not exists round_ai_cache (

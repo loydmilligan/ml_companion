@@ -119,12 +119,13 @@ You can help with:
 Don't reveal other players' submissions or votes. Remind them that the group has the final say on rules!`;
 };
 
-const callOpenRouter = async (prompt: string, temperature = 0.7, maxTokens = 300) => {
+const callOpenRouter = async (prompt: string, temperature = 0.7, maxTokens = 300, xTitle = "TML - AI Assistant") => {
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${OPENROUTER_API_KEY}`,
       "Content-Type": "application/json",
+      "X-Title": xTitle,
     },
     body: JSON.stringify({
       model: OPENROUTER_MODEL,
@@ -165,7 +166,7 @@ Deno.serve(async (req) => {
 
       const { data: settings } = await supabase
         .from("group_settings")
-        .select("ai_explain_enabled, ai_validate_enabled, ai_hint_enabled, ai_assistant_enabled, ai_validate_daily_limit")
+        .select("ai_explain_enabled, ai_validate_enabled, ai_hint_enabled, ai_assistant_enabled, ai_validate_daily_limit, ai_chat_enabled")
         .eq("group_id", group_id)
         .maybeSingle();
 
@@ -192,6 +193,7 @@ Deno.serve(async (req) => {
             ai_hint_enabled: settings?.ai_hint_enabled ?? true,
             ai_assistant_enabled: settings?.ai_assistant_enabled ?? true,
             ai_validate_daily_limit: settings?.ai_validate_daily_limit ?? 5,
+            ai_chat_enabled: settings?.ai_chat_enabled ?? true,
           },
           usage: {
             validate_today: usageToday,
@@ -219,7 +221,7 @@ Deno.serve(async (req) => {
     if (group_id) {
       const { data: settings } = await supabase
         .from("group_settings")
-        .select("ai_explain_enabled, ai_validate_enabled, ai_hint_enabled, ai_assistant_enabled, ai_validate_daily_limit")
+        .select("ai_explain_enabled, ai_validate_enabled, ai_hint_enabled, ai_assistant_enabled, ai_validate_daily_limit, ai_chat_enabled")
         .eq("group_id", group_id)
         .maybeSingle();
 
@@ -247,6 +249,12 @@ Deno.serve(async (req) => {
       if (mode === "generate_hint" && !(settings?.ai_hint_enabled ?? true)) {
         return new Response(
           JSON.stringify({ error: "Hint generation is disabled for this group" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (mode === "chat_response" && !(settings?.ai_chat_enabled ?? true)) {
+        return new Response(
+          JSON.stringify({ error: "Chat AI is disabled for this group" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -301,7 +309,7 @@ Deno.serve(async (req) => {
         }
 
         const prompt = buildExplainPrompt(round);
-        const explanation = await callOpenRouter(prompt, 0.7, 400);
+        const explanation = await callOpenRouter(prompt, 0.7, 400, "TML - Explain Theme");
 
         // Cache the result
         if (round.id && group_id) {
@@ -328,7 +336,7 @@ Deno.serve(async (req) => {
         }
 
         const prompt = buildValidatePrompt(round, song_info);
-        const response = await callOpenRouter(prompt, 0.3, 200);
+        const response = await callOpenRouter(prompt, 0.3, 200, "TML - Check Song");
 
         // Track usage
         if (user_id && group_id) {
@@ -391,7 +399,7 @@ Deno.serve(async (req) => {
         }
 
         const prompt = buildHintPrompt(round, user_query);
-        const hint = await callOpenRouter(prompt, 0.9, 200);
+        const hint = await callOpenRouter(prompt, 0.9, 200, "TML - Get Hint");
 
         // Cache the result
         if (round.id && group_id) {
@@ -417,7 +425,7 @@ Deno.serve(async (req) => {
           );
         }
         const prompt = buildChatPrompt(round, recent_messages ?? [], user_query);
-        const response = await callOpenRouter(prompt, 0.8, 200);
+        const response = await callOpenRouter(prompt, 0.8, 200, "TML - AI Chat");
         result = { response };
         break;
       }

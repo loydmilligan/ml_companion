@@ -72,7 +72,7 @@ const resolveModelKey = (key?: string | null) => {
   }
 };
 
-const generateImage = async (prompt: string, modelOverride?: string | null): Promise<ImageResult> => {
+const generateImage = async (prompt: string, modelOverride?: string | null, xTitle?: string): Promise<ImageResult> => {
   const model = modelOverride ?? OPENROUTER_ROUND_IMAGE_MODEL ?? null;
   if (!OPENROUTER_API_KEY || !model) {
     return { image_url: null, image_base64: null };
@@ -95,6 +95,7 @@ const generateImage = async (prompt: string, modelOverride?: string | null): Pro
     headers: {
       Authorization: `Bearer ${OPENROUTER_API_KEY}`,
       "Content-Type": "application/json",
+      "X-Title": xTitle ?? "TML - Image Generation",
     },
     body: JSON.stringify(body),
   });
@@ -148,7 +149,7 @@ Deno.serve(async (req) => {
 
   if (mode === "theme") {
     const themePrompt = buildThemePrompt(round);
-    const image = await generateImage(themePrompt, imageModel);
+    const image = await generateImage(themePrompt, imageModel, "TML - Round Banner");
     return new Response(
       JSON.stringify({ image_url: image.image_url, image_base64: image.image_base64 }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -164,7 +165,7 @@ Deno.serve(async (req) => {
       );
     }
     const trophyModel = resolveModelKey(body?.trophy_model_key) ?? OPENROUTER_TROPHY_MODEL ?? OPENROUTER_ROUND_IMAGE_MODEL ?? null;
-    const image = await generateImage(trophyPrompt, trophyModel);
+    const image = await generateImage(trophyPrompt, trophyModel, "TML - Trophy Image");
     return new Response(
       JSON.stringify({ image_url: image.image_url, image_base64: image.image_base64 }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -199,6 +200,7 @@ ${JSON.stringify(seasonAwards)}`;
       headers: {
         Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
+        "X-Title": "TML - Season Awards",
       },
       body: JSON.stringify({
         model: awardsModel,
@@ -257,6 +259,7 @@ Return JSON ONLY with key: narrative`;
       headers: {
         Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
+        "X-Title": "TML - Season Story",
       },
       body: JSON.stringify({
         model: textModel,
@@ -318,6 +321,7 @@ ${JSON.stringify(recentAwards)}`;
       headers: {
         Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
+        "X-Title": "TML - Round Awards",
       },
       body: JSON.stringify({
         model: awardsModel,
@@ -366,6 +370,7 @@ ${JSON.stringify({ round, songs, votes })}`;
     headers: {
       Authorization: `Bearer ${OPENROUTER_API_KEY}`,
       "Content-Type": "application/json",
+      "X-Title": "TML - Round Story",
     },
     body: JSON.stringify({
       model: textModel,
@@ -395,7 +400,7 @@ ${JSON.stringify({ round, songs, votes })}`;
   let imageResult: ImageResult = { image_url: null, image_base64: null };
   if (winners.length) {
     const imagePrompt = buildWinnersPrompt(winners, round?.title ?? null);
-    imageResult = await generateImage(imagePrompt, imageModel);
+    imageResult = await generateImage(imagePrompt, imageModel, "TML - Winners Image");
   }
 
   return new Response(

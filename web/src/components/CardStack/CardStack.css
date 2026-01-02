@@ -618,11 +618,45 @@
   opacity: 0.9;
 }
 
+/* Story expand button in hero */
+.story-expand-btn {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 1;
+}
+
+.story-expand-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.story-expand-btn.expanded {
+  background: rgba(255, 255, 255, 0.35);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.story-expand-btn svg {
+  font-size: 20px;
+}
+
 /* Season narrative */
 .recap-narrative {
   margin-bottom: 20px;
   padding: 16px;
   background: linear-gradient(135deg, rgba(17, 193, 236, 0.08) 0%, rgba(24, 224, 168, 0.08) 100%);
+  animation: storyFadeIn 0.3s ease-out;
   border-radius: 16px;
   border: 1px solid rgba(17, 193, 236, 0.15);
 }
@@ -634,7 +668,7 @@
 .recap-narrative .narrative-text {
   font-size: 14px;
   line-height: 1.6;
-  color: var(--cs-text-primary, #1a1a1a);
+  color: #e4e4e7;
   margin: 0;
 }
 
@@ -667,7 +701,7 @@
   display: block;
   font-size: 11px;
   font-weight: 600;
-  color: #555;
+  color: #a1a1aa;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -740,7 +774,7 @@
 .top-track-title {
   font-size: 13px;
   font-weight: 700;
-  color: var(--cs-black);
+  color: #f4f4f5;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -748,12 +782,12 @@
 
 .top-track-artist {
   font-size: 11px;
-  color: #555;
+  color: #a1a1aa;
 }
 
 .top-track-submitter {
   font-size: 10px;
-  color: #888;
+  color: #71717a;
 }
 
 .top-track-points {
@@ -1491,4 +1525,16 @@
 
 [data-mode="dark"] .admin-gen-btn:disabled {
   background: rgba(255, 255, 255, 0.03);
+}
+
+/* Story fade-in animation */
+@keyframes storyFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

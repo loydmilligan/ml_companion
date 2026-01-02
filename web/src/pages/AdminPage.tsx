@@ -189,6 +189,23 @@ export default function AdminPage() {
   const [bonusPointsDraft, setBonusPointsDraft] = useState<Record<string, { points: string; reason: string }>>({});
   const [roundAwardCounts, setRoundAwardCounts] = useState<Record<string, number>>({});
   const [seasonAwardCounts, setSeasonAwardCounts] = useState<Record<string, number>>({});
+  // Round Challenge state
+  const [challengeSongs, setChallengeSongs] = useState<{
+    song1: { title: string; artist: string; spotify_url: string; youtube_url: string; theme: string };
+    song2: { title: string; artist: string; spotify_url: string; youtube_url: string; theme: string };
+  } | null>(null);
+  const [challengeRoundId, setChallengeRoundId] = useState<string | null>(null);
+  const [challengeLinksEditing, setChallengeLinksEditing] = useState<{
+    song1_spotify_url: string;
+    song1_youtube_url: string;
+    song2_spotify_url: string;
+    song2_youtube_url: string;
+  }>({ song1_spotify_url: "", song1_youtube_url: "", song2_spotify_url: "", song2_youtube_url: "" });
+  const [challengeLoading, setChallengeLoading] = useState(false);
+  const [challengeSaving, setChallengeSaving] = useState(false);
+  const [roundChallengeExists, setRoundChallengeExists] = useState<Record<string, boolean>>({});
+  const [challengeGenLoadingId, setChallengeGenLoadingId] = useState<string | null>(null);
+  const [challengeStatusByRound, setChallengeStatusByRound] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!selectedLeagueId) return;
@@ -291,6 +308,21 @@ export default function AdminPage() {
           }
         });
         setSeasonAwardCounts(seasonCounts);
+
+        // Fetch which rounds have challenges
+        const { data: challengeData } = await supabase
+          .from("round_challenges")
+          .select("round_id")
+          .in("round_id", roundIds)
+          .eq("active", true);
+
+        const challengeExists: Record<string, boolean> = {};
+        (challengeData ?? []).forEach((c) => {
+          if (c.round_id) {
+            challengeExists[c.round_id] = true;
+          }
+        });
+        setRoundChallengeExists(challengeExists);
       }
       } else {
         setRounds([]);
@@ -324,7 +356,7 @@ export default function AdminPage() {
       const { data: settingsData } = await supabase
         .from("group_settings")
         .select(
-          "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit"
+          "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled"
         )
         .eq("group_id", group.id)
         .maybeSingle();
@@ -342,6 +374,7 @@ export default function AdminPage() {
         ai_validate_enabled: settingsData?.ai_validate_enabled ?? true,
         ai_hint_enabled: settingsData?.ai_hint_enabled ?? true,
         ai_validate_daily_limit: settingsData?.ai_validate_daily_limit ?? 5,
+        ai_chat_enabled: settingsData?.ai_chat_enabled ?? true,
       };
       setGroupSettings(fallback);
       setSettingsDraft(fallback);
@@ -639,6 +672,96 @@ export default function AdminPage() {
     );
   };
 
+  // Load round challenge for a specific round
+  const loadRoundChallenge = async (roundId: string) => {
+    if (!group) return;
+    setChallengeLoading(true);
+    setChallengeRoundId(roundId);
+    try {
+      const { data } = await supabase.functions.invoke("round-challenge", {
+        body: {
+          mode: "get_or_generate",
+          round_id: roundId,
+          group_id: group.id,
+          current_theme: rounds.find((r) => r.id === roundId)?.theme ?? "",
+        },
+      });
+      if (data?.songs && data.songs.length >= 2) {
+        setChallengeSongs({
+          song1: data.songs[0],
+          song2: data.songs[1],
+        });
+        setChallengeLinksEditing({
+          song1_spotify_url: data.songs[0].spotify_url ?? "",
+          song1_youtube_url: data.songs[0].youtube_url ?? "",
+          song2_spotify_url: data.songs[1].spotify_url ?? "",
+          song2_youtube_url: data.songs[1].youtube_url ?? "",
+        });
+      }
+    } catch (err) {
+      console.error("Error loading challenge:", err);
+    } finally {
+      setChallengeLoading(false);
+    }
+  };
+
+  // Save updated challenge links
+  const saveChallengeLinks = async () => {
+    if (!group || !challengeRoundId) return;
+    setChallengeSaving(true);
+    try {
+      await supabase.functions.invoke("round-challenge", {
+        body: {
+          mode: "admin_update",
+          round_id: challengeRoundId,
+          group_id: group.id,
+          song1_spotify_url: challengeLinksEditing.song1_spotify_url,
+          song1_youtube_url: challengeLinksEditing.song1_youtube_url,
+          song2_spotify_url: challengeLinksEditing.song2_spotify_url,
+          song2_youtube_url: challengeLinksEditing.song2_youtube_url,
+        },
+      });
+      // Reload to confirm changes
+      await loadRoundChallenge(challengeRoundId);
+    } catch (err) {
+      console.error("Error saving challenge links:", err);
+    } finally {
+      setChallengeSaving(false);
+    }
+  };
+
+  // Generate round challenge (bonus game)
+  const generateRoundChallenge = async (round: RoundSummary) => {
+    if (!group) return;
+    setChallengeGenLoadingId(round.id);
+    setChallengeStatusByRound((prev) => ({ ...prev, [round.id]: "Generating..." }));
+    try {
+      const { data, error } = await supabase.functions.invoke("round-challenge", {
+        body: {
+          mode: "get_or_generate",
+          round_id: round.id,
+          group_id: group.id,
+          current_theme: round.theme ?? "",
+        },
+      });
+      if (error) throw error;
+      if (data?.songs && data.songs.length >= 2) {
+        setRoundChallengeExists((prev) => ({ ...prev, [round.id]: true }));
+        setChallengeStatusByRound((prev) => ({
+          ...prev,
+          [round.id]: `✓ ${data.songs[0].title} / ${data.songs[1].title}`,
+        }));
+      } else {
+        setChallengeStatusByRound((prev) => ({ ...prev, [round.id]: "No songs generated" }));
+      }
+    } catch (err) {
+      console.error("Error generating challenge:", err);
+      setChallengeStatusByRound((prev) => ({ ...prev, [round.id]: "Generation failed" }));
+    } finally {
+      setChallengeGenLoadingId(null);
+    }
+  };
+
   const saveSettings = async () => {
     if (!group || !settingsDraft) return;
     const payload = {
@@ -654,12 +777,13 @@ export default function AdminPage() {
       ai_validate_enabled: settingsDraft.ai_validate_enabled,
       ai_hint_enabled: settingsDraft.ai_hint_enabled,
       ai_validate_daily_limit: settingsDraft.ai_validate_daily_limit,
+      ai_chat_enabled: settingsDraft.ai_chat_enabled,
     };
     const { data, error } = await supabase
       .from("group_settings")
       .upsert(payload, { onConflict: "group_id" })
       .select(
-        "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit"
+        "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled"
       )
       .maybeSingle();
     if (!error && data) {
@@ -2282,6 +2406,15 @@ export default function AdminPage() {
                           >
                             {awardsLoadingId === round.id ? "Generating..." : "Awards"}
                           </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className={roundChallengeExists[round.id] ? "button-has-content" : "button-no-content"}
+                            onClick={() => generateRoundChallenge(round)}
+                            disabled={challengeGenLoadingId === round.id}
+                          >
+                            {challengeGenLoadingId === round.id ? "Generating..." : "Challenge"}
+                          </Button>
                           <Button type="button" variant="secondary" onClick={() => deleteRound(round.id)}>
                             Delete
                           </Button>
@@ -2294,6 +2427,9 @@ export default function AdminPage() {
                         ) : null}
                         {awardsStatusByRound[round.id] ? (
                           <span className="muted">{awardsStatusByRound[round.id]}</span>
+                        ) : null}
+                        {challengeStatusByRound[round.id] ? (
+                          <span className="muted">{challengeStatusByRound[round.id]}</span>
                         ) : null}
                       </>
                     )}
@@ -2614,6 +2750,26 @@ python scripts/build_track_metadata.py`}
                 Limit how many songs each user can check per day (prevents API overuse)
               </span>
             </label>
+
+            <label className="field" style={{ display: "flex", alignItems: "center", gap: 12, opacity: settingsDraft?.ai_assistant_enabled ? 1 : 0.5 }}>
+              <input
+                type="checkbox"
+                checked={settingsDraft?.ai_chat_enabled ?? true}
+                onChange={(e) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, ai_chat_enabled: e.target.checked } : prev
+                  )
+                }
+                disabled={!settingsDraft?.ai_assistant_enabled}
+                style={{ width: 18, height: 18 }}
+              />
+              <div>
+                <span className="field-label" style={{ margin: 0 }}>Chat @AI Replies</span>
+                <span className="field-helper" style={{ display: "block", marginTop: 2 }}>
+                  AI responds to @AI mentions in chat. When disabled, shows &quot;away&quot; message.
+                </span>
+              </div>
+            </label>
           </div>
 
           <h3 style={{ margin: "0 0 12px 0", fontSize: "1rem" }}>Model Settings</h3>
@@ -2822,6 +2978,96 @@ python scripts/build_track_metadata.py`}
             </div>
           </div>
 
+          {/* Round Challenge Song Links */}
+          <div className="admin-form" style={{ marginBottom: 24 }}>
+            <h3 style={{ margin: "0 0 12px 0", fontSize: "1rem" }}>Edit Round Challenge Links</h3>
+            <p className="muted" style={{ marginBottom: 12 }}>Select a round to view/edit the bonus challenge song links.</p>
+
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              <select
+                className="field-input"
+                value={challengeRoundId ?? ""}
+                onChange={(e) => e.target.value && loadRoundChallenge(e.target.value)}
+                style={{ flex: 1 }}
+              >
+                <option value="">Select a round...</option>
+                {rounds.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    S{r.season_number ?? "?"} R{r.round_number ?? "?"}: {r.theme}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {challengeLoading && (
+              <div style={{ padding: 16, color: "var(--text-muted)" }}>Loading challenge...</div>
+            )}
+
+            {challengeSongs && !challengeLoading && (
+              <div style={{ display: "grid", gap: 16 }}>
+                {/* Song 1 */}
+                <div style={{ padding: 12, background: "var(--bg-secondary)", borderRadius: 8 }}>
+                  <div style={{ marginBottom: 8 }}>
+                    <strong>Song 1:</strong> {challengeSongs.song1.title} - {challengeSongs.song1.artist}
+                    <span className="muted" style={{ marginLeft: 8 }}>({challengeSongs.song1.theme})</span>
+                  </div>
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <label className="field" style={{ margin: 0 }}>
+                      <span className="field-label" style={{ fontSize: "0.8rem" }}>Spotify URL</span>
+                      <input
+                        className="field-input"
+                        value={challengeLinksEditing.song1_spotify_url}
+                        onChange={(e) => setChallengeLinksEditing((prev) => ({ ...prev, song1_spotify_url: e.target.value }))}
+                        placeholder="https://open.spotify.com/track/..."
+                      />
+                    </label>
+                    <label className="field" style={{ margin: 0 }}>
+                      <span className="field-label" style={{ fontSize: "0.8rem" }}>YouTube URL</span>
+                      <input
+                        className="field-input"
+                        value={challengeLinksEditing.song1_youtube_url}
+                        onChange={(e) => setChallengeLinksEditing((prev) => ({ ...prev, song1_youtube_url: e.target.value }))}
+                        placeholder="https://youtube.com/watch?v=..."
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Song 2 */}
+                <div style={{ padding: 12, background: "var(--bg-secondary)", borderRadius: 8 }}>
+                  <div style={{ marginBottom: 8 }}>
+                    <strong>Song 2:</strong> {challengeSongs.song2.title} - {challengeSongs.song2.artist}
+                    <span className="muted" style={{ marginLeft: 8 }}>({challengeSongs.song2.theme})</span>
+                  </div>
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <label className="field" style={{ margin: 0 }}>
+                      <span className="field-label" style={{ fontSize: "0.8rem" }}>Spotify URL</span>
+                      <input
+                        className="field-input"
+                        value={challengeLinksEditing.song2_spotify_url}
+                        onChange={(e) => setChallengeLinksEditing((prev) => ({ ...prev, song2_spotify_url: e.target.value }))}
+                        placeholder="https://open.spotify.com/track/..."
+                      />
+                    </label>
+                    <label className="field" style={{ margin: 0 }}>
+                      <span className="field-label" style={{ fontSize: "0.8rem" }}>YouTube URL</span>
+                      <input
+                        className="field-input"
+                        value={challengeLinksEditing.song2_youtube_url}
+                        onChange={(e) => setChallengeLinksEditing((prev) => ({ ...prev, song2_youtube_url: e.target.value }))}
+                        placeholder="https://youtube.com/watch?v=..."
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <Button type="button" onClick={saveChallengeLinks} disabled={challengeSaving}>
+                  {challengeSaving ? "Saving..." : "Save Links"}
+                </Button>
+              </div>
+            )}
+          </div>
+
           {/* Recent Points Awarded */}
           <h3 style={{ margin: "0 0 12px 0", fontSize: "1rem" }}>Recent Points Awarded</h3>
           <div className="admin-list">
@@ -2861,6 +3107,7 @@ type GroupSettings = {
   ai_validate_enabled: boolean;
   ai_hint_enabled: boolean;
   ai_validate_daily_limit: number;
+  ai_chat_enabled: boolean;
 };
 
 const MODEL_OPTIONS = [

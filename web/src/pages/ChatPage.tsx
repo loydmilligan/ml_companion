@@ -104,6 +104,7 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [aiTyping, setAiTyping] = useState(false);
+  const [aiChatEnabled, setAiChatEnabled] = useState(true);
   const [emojiDrawerOpen, setEmojiDrawerOpen] = useState(false);
   const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null);
   const [defaultEmoji, setDefaultEmoji] = useState(() => localStorage.getItem("tml_default_emoji") ?? "👍");
@@ -177,6 +178,14 @@ export default function ChatPage() {
 
       setReactions(groupReactionsByMessage((reactionData as MessageReaction[]) ?? []));
     }
+
+    // Fetch AI chat enabled setting
+    const { data: settingsData } = await supabase
+      .from("group_settings")
+      .select("ai_chat_enabled")
+      .eq("group_id", group.id)
+      .maybeSingle();
+    setAiChatEnabled(settingsData?.ai_chat_enabled ?? true);
 
     setLoading(false);
   }, [group, groupReactionsByMessage]);
@@ -442,9 +451,17 @@ export default function ChatPage() {
 
       // Handle @AI mention
       if (hasAIMention && round) {
-        setAiTyping(true);
-        const query = trimmedMessage.replace(AI_MENTION_PATTERN, "").trim();
-        const aiResponse = await callAIAssistant(query);
+        let aiResponse: string | null = null;
+
+        if (!aiChatEnabled) {
+          // AI is disabled - show away message
+          aiResponse = "Hey there! I'm taking a quick break right now, but I'll be back soon. In the meantime, the group has all the answers! 🎵";
+        } else {
+          // AI is enabled - call the assistant
+          setAiTyping(true);
+          const query = trimmedMessage.replace(AI_MENTION_PATTERN, "").trim();
+          aiResponse = await callAIAssistant(query);
+        }
 
         if (aiResponse) {
           // Insert AI response as a system message
