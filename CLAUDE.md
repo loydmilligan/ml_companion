@@ -47,8 +47,8 @@ git add -A && git commit -m "Your commit message"
 # 2. Push to remote
 git push
 
-# 3. SSH to Pi
-ssh pi@192.168.4.158
+# 3. SSH to Pi (use configured alias)
+ssh pi
 
 # 4. On Pi: Navigate to project
 cd ml_companion/
@@ -91,5 +91,5 @@ After deploy, verify using Chrome DevTools MCP:
 ### Rollback
 If deployment fails:
 ```bash
-ssh pi@192.168.4.158 "cd ml_companion && git checkout HEAD~1 && docker compose down && docker compose build && docker compose up -d"
+ssh pi "cd ml_companion && git checkout HEAD~1 && docker compose down && docker compose build && docker compose up -d"
 ```
