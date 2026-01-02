@@ -59,6 +59,8 @@ export interface RoundCardData {
   narrative: string | null;
   /** Quick stats */
   stats: RoundStats;
+  /** Spotify playlist URL */
+  playlistUrl: string | null;
 }
 
 /**
@@ -161,6 +163,8 @@ export interface SeasonRecapCardData {
   decadeDistribution?: DistributionItem[];
   /** AI-generated season narrative */
   seasonNarrative?: string | null;
+  /** Spotify playlist URL for season */
+  playlistUrl?: string | null;
 }
 
 /**

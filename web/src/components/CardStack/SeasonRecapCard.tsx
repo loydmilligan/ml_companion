@@ -10,6 +10,13 @@ import type { SeasonRecapCardProps } from "../../types/cardstack.types";
 import { CARD_TRANSFORMS } from "../../types/cardstack.types";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 
+// Simple Spotify icon SVG component
+const SpotifyIcon = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+  </svg>
+);
+
 export default function SeasonRecapCard({
   data,
   position,
@@ -75,23 +82,36 @@ export default function SeasonRecapCard({
       {/* Hero section with season info */}
       <div className="recap-hero">
         <div className="recap-hero-overlay" aria-hidden="true" />
+        {/* Hero action buttons - top left */}
+        <div className="hero-actions">
+          {data.seasonNarrative && (
+            <button
+              type="button"
+              className={`hero-action-btn story-btn ${isStoryExpanded ? "expanded" : ""}`}
+              onClick={() => setIsStoryExpanded(!isStoryExpanded)}
+              aria-label={isStoryExpanded ? "Collapse season story" : "Expand season story"}
+              aria-expanded={isStoryExpanded}
+            >
+              <MenuBookIcon />
+            </button>
+          )}
+          {data.playlistUrl && (
+            <a
+              href={data.playlistUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hero-action-btn spotify-btn"
+              aria-label="Open season playlist in Spotify"
+            >
+              <SpotifyIcon />
+            </a>
+          )}
+        </div>
         <div className="recap-hero-content">
           <span className="recap-badge">Season Recap</span>
           <h2 className="season-title">Season {data.seasonNumber}</h2>
           <p className="league-name">{data.leagueName}</p>
         </div>
-        {/* Book icon to expand season story */}
-        {data.seasonNarrative && (
-          <button
-            type="button"
-            className={`story-expand-btn ${isStoryExpanded ? "expanded" : ""}`}
-            onClick={() => setIsStoryExpanded(!isStoryExpanded)}
-            aria-label={isStoryExpanded ? "Collapse season story" : "Expand season story"}
-            aria-expanded={isStoryExpanded}
-          >
-            <MenuBookIcon />
-          </button>
-        )}
       </div>
 
       {/* Scrollable content area */}

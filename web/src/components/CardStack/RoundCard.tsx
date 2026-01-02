@@ -5,14 +5,21 @@
  * track list, story narrative, and awards.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import type { RoundCardProps } from "../../types/cardstack.types";
 import { CARD_TRANSFORMS } from "../../types/cardstack.types";
 import CardHero from "./CardHero";
 import QuickStats from "./QuickStats";
 import TrackList from "./TrackList";
-import StoryPanel from "./StoryPanel";
-import AwardsPreview from "./AwardsPreview";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+
+// Simple Spotify icon SVG component
+const SpotifyIcon = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+  </svg>
+);
 
 export default function RoundCard({
   data,
@@ -24,6 +31,32 @@ export default function RoundCard({
   adminCallbacks,
   generationState,
 }: RoundCardProps) {
+  // State for expandable sections
+  const [isStoryExpanded, setIsStoryExpanded] = useState(false);
+  const [isAwardsExpanded, setIsAwardsExpanded] = useState(false);
+  const [awardModalData, setAwardModalData] = useState<{name: string; description: string; winner: string} | null>(null);
+
+  // Refs for scrolling
+  const storyRef = useRef<HTMLDivElement>(null);
+  const awardsRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to section when expanded
+  useEffect(() => {
+    if (isStoryExpanded && storyRef.current && contentRef.current) {
+      setTimeout(() => {
+        storyRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }, [isStoryExpanded]);
+
+  useEffect(() => {
+    if (isAwardsExpanded && awardsRef.current && contentRef.current) {
+      setTimeout(() => {
+        awardsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }, [isAwardsExpanded]);
   // Calculate transform style based on position and drag state
   const transformStyle = useMemo(() => {
     const baseTransform = CARD_TRANSFORMS[position] || CARD_TRANSFORMS[3];
@@ -59,6 +92,10 @@ export default function RoundCard({
       .slice(0, 6);
   }, [data.submissions]);
 
+  // Check if we have story or awards content
+  const hasStory = data.narrative || data.winnersImageUrl;
+  const hasAwards = visibleAwards.length > 0;
+
   return (
     <article
       className={`round-card card-position-${position} ${isActive ? "active" : ""} ${isDragging ? "dragging" : ""}`}
@@ -67,17 +104,122 @@ export default function RoundCard({
       aria-label={`Round ${data.roundNumber}: ${data.theme}`}
     >
       {/* Hero section with theme banner */}
-      <CardHero
-        imageUrl={data.themeImageUrl}
-        roundNumber={data.roundNumber}
-        seasonNumber={data.seasonNumber}
-        theme={data.theme}
-        themeAuthor={data.themeAuthor}
-        status={data.status}
-      />
+      <div className="card-hero-wrapper">
+        <CardHero
+          imageUrl={data.themeImageUrl}
+          roundNumber={data.roundNumber}
+          seasonNumber={data.seasonNumber}
+          theme={data.theme}
+          themeAuthor={data.themeAuthor}
+          status={data.status}
+        />
+        {/* Hero action buttons */}
+        <div className="hero-actions">
+          {hasStory && (
+            <button
+              type="button"
+              className={`hero-action-btn story-btn ${isStoryExpanded ? "expanded" : ""}`}
+              onClick={() => setIsStoryExpanded(!isStoryExpanded)}
+              aria-label={isStoryExpanded ? "Collapse story" : "Expand story"}
+              aria-expanded={isStoryExpanded}
+            >
+              <MenuBookIcon />
+            </button>
+          )}
+          {hasAwards && (
+            <button
+              type="button"
+              className={`hero-action-btn awards-btn ${isAwardsExpanded ? "expanded" : ""}`}
+              onClick={() => setIsAwardsExpanded(!isAwardsExpanded)}
+              aria-label={isAwardsExpanded ? "Collapse awards" : "Expand awards"}
+              aria-expanded={isAwardsExpanded}
+            >
+              <EmojiEventsIcon />
+            </button>
+          )}
+          {data.playlistUrl && (
+            <a
+              href={data.playlistUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hero-action-btn spotify-btn"
+              aria-label="Open playlist in Spotify"
+            >
+              <SpotifyIcon />
+            </a>
+          )}
+        </div>
+      </div>
 
       {/* Scrollable content area */}
-      <div className="card-content">
+      <div className="card-content" ref={contentRef}>
+        {/* Collapsible Story Section */}
+        {hasStory && isStoryExpanded && (
+          <div className="collapsible-section story-expanded" ref={storyRef}>
+            <h3 className="section-label">
+              <span className="label-icon" aria-hidden="true">📖</span>
+              Round Story
+            </h3>
+            {data.narrative && (
+              <div className="story-text">
+                <p>{data.narrative}</p>
+              </div>
+            )}
+            {data.winnersImageUrl && (
+              <div className="winners-art-container">
+                <img
+                  src={data.winnersImageUrl}
+                  alt="Round winners illustration"
+                  className="winners-art"
+                  loading="lazy"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Collapsible Awards Section */}
+        {hasAwards && isAwardsExpanded && (
+          <div className="collapsible-section awards-expanded" ref={awardsRef}>
+            <h3 className="section-label">
+              <span className="label-icon" aria-hidden="true">🏆</span>
+              Awards
+            </h3>
+            <div className="awards-list" role="list">
+              {visibleAwards.map((award) => (
+                <button
+                  type="button"
+                  key={award.id}
+                  className="award-item clickable"
+                  role="listitem"
+                  onClick={() => setAwardModalData({
+                    name: award.awardName,
+                    description: award.awardDescription || "",
+                    winner: award.winnerName || ""
+                  })}
+                >
+                  <div className="award-trophy">
+                    {award.trophyUrl ? (
+                      <img src={award.trophyUrl} alt="" className="trophy-image" loading="lazy" />
+                    ) : (
+                      <span className="trophy-emoji" aria-hidden="true">🏆</span>
+                    )}
+                  </div>
+                  <div className="award-info">
+                    <span className="award-name">{award.awardName}</span>
+                    {award.awardDescription && (
+                      <span className="award-description">{award.awardDescription}</span>
+                    )}
+                    {award.winnerName && (
+                      <span className="award-winner">Won by {award.winnerName}</span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Quick stats */}
         <QuickStats
           songs={data.stats.songs}
@@ -88,19 +230,6 @@ export default function RoundCard({
         {/* Track list */}
         {topSubmissions.length > 0 && (
           <TrackList submissions={topSubmissions} />
-        )}
-
-        {/* Story panel with narrative and winners art */}
-        {(data.narrative || data.winnersImageUrl) && (
-          <StoryPanel
-            narrative={data.narrative}
-            winnersImageUrl={data.winnersImageUrl}
-          />
-        )}
-
-        {/* Awards preview */}
-        {visibleAwards.length > 0 && (
-          <AwardsPreview awards={visibleAwards} />
         )}
 
         {/* Admin generation controls */}
@@ -169,6 +298,31 @@ export default function RoundCard({
           </div>
         )}
       </div>
+
+      {/* Award Detail Modal */}
+      {awardModalData && (
+        <div className="award-modal-overlay" onClick={() => setAwardModalData(null)}>
+          <div className="award-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="award-modal-close"
+              onClick={() => setAwardModalData(null)}
+              aria-label="Close"
+            >
+              ✕
+            </button>
+            <h3 className="award-modal-title">{awardModalData.name}</h3>
+            {awardModalData.description && (
+              <p className="award-modal-description">{awardModalData.description}</p>
+            )}
+            {awardModalData.winner && (
+              <p className="award-modal-winner">
+                <span className="winner-label">Winner:</span> {awardModalData.winner}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </article>
   );
 }

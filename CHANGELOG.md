@@ -17,11 +17,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Theme Explainer: AI explains theme rules and edge cases
   - Rule Validator: Check if a song fits the current theme
   - Hint Generator: Get creative hints for finding songs
+  - @AI chat mentions: Tag @AI in chat for contextual responses
 - **Season Narratives**: AI-generated season recap stories stored on leagues table
 - **Round Narratives**: AI-generated round stories stored on rounds table
 - **Admin Panel Improvements**:
   - Button status colors (green if content exists, grey if not)
   - Visual feedback for Banner, Story, Awards generation status
+  - Round Challenge generation button with green/grey status indicator
+  - Edit Spotify/YouTube links for Round Challenge songs
+- **Season Card Enhancements**:
+  - Expandable season story with book icon button
+  - Dark mode text visibility fixes
 
 ### Changed
 - **Deployment Workflow**: Updated to use Docker Compose on Raspberry Pi
@@ -30,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Local fallback: `http://192.168.4.158:3080`
 - **Award Prompts**: Now include submitter name format for song-based awards
 - **Round Challenge**: Rewritten for full database persistence
+- **OpenRouter API Calls**: All calls now include X-Title header for app identification (format: "TML - [Feature Name]")
 
 ### Database
 - Added `narrative` column to `rounds` table
@@ -37,10 +44,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `round_challenges` table for bonus game songs
 - Added `challenge_guesses` table for user guesses
 - Added `challenge_bonus_points` table for admin bonus points
+- Added `ai_chat_enabled` column to `group_settings` table for chat AI toggle
 
 ### Edge Functions
 - `round-challenge`: New function for bonus game management
 - `openrouter-round-story`: Updated with award prompts and season narrative mode
+- `ai-assistant`: Added ai_chat_enabled support and X-Title headers
+- All functions: Added X-Title header to OpenRouter API calls for tracking
 
 ## [0.1.0] - 2024-12-01
 

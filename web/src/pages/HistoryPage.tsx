@@ -35,6 +35,7 @@ type LeagueRow = {
   name: string;
   season_number: number | null;
   narrative: string | null;
+  playlist_url: string | null;
 };
 
 type RoundRow = {
@@ -53,6 +54,7 @@ type RoundRow = {
   submission_deadline: string | null;
   voting_deadline: string | null;
   narrative: string | null;
+  playlist_url: string | null;
 };
 
 type SubmissionRow = {
@@ -134,7 +136,7 @@ export default function HistoryPage() {
     const loadLeagues = async () => {
       const { data } = await supabase
         .from("leagues")
-        .select("id,name,season_number,narrative")
+        .select("id,name,season_number,narrative,playlist_url")
         .eq("group_id", group.id)
         .order("season_number", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
@@ -161,7 +163,7 @@ export default function HistoryPage() {
       const { data } = await supabase
         .from("rounds")
         .select(
-          "id,theme,theme_description,theme_author,external_round_id,theme_image_url,winners_image_url,winners_image_visible,season_number,round_number,status,created_at,submission_deadline,voting_deadline,narrative"
+          "id,theme,theme_description,theme_author,external_round_id,theme_image_url,winners_image_url,winners_image_visible,season_number,round_number,status,created_at,submission_deadline,voting_deadline,narrative,playlist_url"
         )
         .in("league_id", leagueIds)
         .in("status", ["revealed", "archived"])
@@ -878,6 +880,7 @@ export default function HistoryPage() {
           votes: totalVotes,
           players: Math.max(uniqueVoters.size, submissions.length),
         },
+        playlistUrl: round.playlist_url,
       };
     };
 
@@ -923,6 +926,7 @@ export default function HistoryPage() {
             genreDistribution: seasonStats.genreDistribution,
             decadeDistribution: seasonStats.decadeDistribution,
             seasonNarrative: league?.narrative ?? null,
+            playlistUrl: league?.playlist_url ?? null,
           };
           cards.push(recapCard);
       }

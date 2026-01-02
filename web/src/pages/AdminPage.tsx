@@ -762,6 +762,49 @@ export default function AdminPage() {
     }
   };
 
+  // Generate All Peek Items (Banner, Story, Awards, Challenge) sequentially
+  const [generateAllLoadingId, setGenerateAllLoadingId] = useState<string | null>(null);
+  const [generateAllStatus, setGenerateAllStatus] = useState<Record<string, string>>({});
+
+  const generateAllPeekItems = async (round: RoundSummary) => {
+    if (!group) return;
+    setGenerateAllLoadingId(round.id);
+    setGenerateAllStatus((prev) => ({ ...prev, [round.id]: "Starting..." }));
+
+    try {
+      // 1. Banner (if not exists)
+      if (!round.theme_image_url) {
+        setGenerateAllStatus((prev) => ({ ...prev, [round.id]: "1/4 Banner..." }));
+        await generateThemeBanner(round);
+      }
+
+      // 2. Story (if not exists)
+      if (!round.narrative) {
+        setGenerateAllStatus((prev) => ({ ...prev, [round.id]: "2/4 Story..." }));
+        await generateRoundStory(round);
+      }
+
+      // 3. Awards (if none exist)
+      if ((roundAwardCounts[round.id] ?? 0) === 0) {
+        setGenerateAllStatus((prev) => ({ ...prev, [round.id]: "3/4 Awards..." }));
+        await generateRoundAwards(round);
+      }
+
+      // 4. Challenge (if not exists)
+      if (!roundChallengeExists[round.id]) {
+        setGenerateAllStatus((prev) => ({ ...prev, [round.id]: "4/4 Challenge..." }));
+        await generateRoundChallenge(round);
+      }
+
+      setGenerateAllStatus((prev) => ({ ...prev, [round.id]: "✓ All items generated!" }));
+    } catch (err) {
+      console.error("Error generating all peek items:", err);
+      setGenerateAllStatus((prev) => ({ ...prev, [round.id]: "Error during generation" }));
+    } finally {
+      setGenerateAllLoadingId(null);
+    }
+  };
+
   const saveSettings = async () => {
     if (!group || !settingsDraft) return;
     const payload = {
@@ -2415,10 +2458,25 @@ export default function AdminPage() {
                           >
                             {challengeGenLoadingId === round.id ? "Generating..." : "Challenge"}
                           </Button>
+                          <Button
+                            type="button"
+                            variant="primary"
+                            className="button-generate-all"
+                            onClick={() => generateAllPeekItems(round)}
+                            disabled={generateAllLoadingId === round.id}
+                            title="Generate Banner, Story, Awards, and Challenge (skips existing)"
+                          >
+                            {generateAllLoadingId === round.id ? "..." : "All"}
+                          </Button>
                           <Button type="button" variant="secondary" onClick={() => deleteRound(round.id)}>
                             Delete
                           </Button>
                         </div>
+                        {generateAllStatus[round.id] ? (
+                          <span className="muted" style={{ color: generateAllStatus[round.id].startsWith("✓") ? "var(--cs-green)" : undefined }}>
+                            {generateAllStatus[round.id]}
+                          </span>
+                        ) : null}
                         {bannerStatusByRound[round.id] ? (
                           <span className="muted">{bannerStatusByRound[round.id]}</span>
                         ) : null}

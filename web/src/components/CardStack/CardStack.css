@@ -618,37 +618,63 @@
   opacity: 0.9;
 }
 
-/* Story expand button in hero */
-.story-expand-btn {
+/* Hero action buttons (book, trophy) */
+.hero-action-btn {
   position: absolute;
-  left: 12px;
-  bottom: 12px;
+  top: 12px;
   width: 36px;
   height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   color: white;
   cursor: pointer;
   transition: all 0.2s ease;
-  z-index: 1;
+  z-index: 5;
+  backdrop-filter: blur(4px);
 }
 
-.story-expand-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+.hero-action-btn:hover {
+  background: rgba(0, 0, 0, 0.6);
   transform: scale(1.1);
 }
 
-.story-expand-btn.expanded {
-  background: rgba(255, 255, 255, 0.35);
-  border-color: rgba(255, 255, 255, 0.5);
+.hero-action-btn.expanded {
+  background: var(--cs-green);
+  border-color: var(--cs-green);
+  color: var(--cs-black);
 }
 
-.story-expand-btn svg {
-  font-size: 20px;
+.hero-action-btn svg {
+  font-size: 18px;
+}
+
+/* Story button - left side */
+.hero-action-btn.story-btn {
+  left: 12px;
+}
+
+/* Awards button - left side, second position */
+.hero-action-btn.awards-btn {
+  left: 54px;
+}
+
+/* Spotify button - right side */
+.hero-action-btn.spotify-btn {
+  left: auto;
+  right: 12px;
+  background: #1DB954;
+  border-color: #1DB954;
+  text-decoration: none;
+}
+
+.hero-action-btn.spotify-btn:hover {
+  background: #1ed760;
+  border-color: #1ed760;
+  transform: scale(1.1);
 }
 
 /* Season narrative */
@@ -1537,4 +1563,199 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ========================================
+   Hero Wrapper (for action buttons)
+   ======================================== */
+
+.card-hero-wrapper {
+  position: relative;
+  height: 42%;
+  min-height: 180px;
+}
+
+.card-hero-wrapper .card-hero {
+  height: 100%;
+}
+
+.hero-actions {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.hero-actions .hero-action-btn {
+  pointer-events: auto;
+}
+
+/* ========================================
+   Collapsible Sections
+   ======================================== */
+
+.collapsible-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  border-radius: 16px;
+  animation: storyFadeIn 0.3s ease-out;
+}
+
+.collapsible-section.story-expanded {
+  background: linear-gradient(135deg, rgba(45, 70, 185, 0.08) 0%, rgba(30, 215, 96, 0.08) 100%);
+  border: 1px solid rgba(45, 70, 185, 0.15);
+}
+
+.collapsible-section.awards-expanded {
+  background: linear-gradient(135deg, rgba(255, 153, 20, 0.08) 0%, rgba(242, 27, 63, 0.08) 100%);
+  border: 1px solid rgba(255, 153, 20, 0.2);
+}
+
+/* Clickable award items */
+.award-item.clickable {
+  cursor: pointer;
+  border: none;
+  width: 100%;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.award-item.clickable:hover {
+  background: rgba(255, 153, 20, 0.15);
+  transform: scale(1.02);
+}
+
+.award-item.clickable:active {
+  transform: scale(0.98);
+}
+
+/* ========================================
+   Award Detail Modal
+   ======================================== */
+
+.award-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.award-modal {
+  background: white;
+  border-radius: 20px;
+  padding: 24px;
+  max-width: 320px;
+  width: 100%;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.award-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.award-modal-close:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.award-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--cs-black);
+  margin: 0 0 12px;
+  padding-right: 40px;
+}
+
+.award-modal-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #555;
+  margin: 0 0 16px;
+}
+
+.award-modal-winner {
+  font-size: 14px;
+  color: var(--cs-red);
+  margin: 0;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(242, 27, 63, 0.08) 0%, rgba(255, 153, 20, 0.08) 100%);
+  border-radius: 12px;
+}
+
+.award-modal-winner .winner-label {
+  font-weight: 600;
+  color: #888;
+}
+
+/* Dark mode for modal */
+[data-mode="dark"] .award-modal {
+  background: #1a1a1a;
+}
+
+[data-mode="dark"] .award-modal-title {
+  color: #f4f4f5;
+}
+
+[data-mode="dark"] .award-modal-description {
+  color: #a1a1aa;
+}
+
+[data-mode="dark"] .award-modal-close {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+[data-mode="dark"] .award-modal-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-mode="dark"] .collapsible-section.story-expanded {
+  background: linear-gradient(135deg, rgba(45, 70, 185, 0.15) 0%, rgba(30, 215, 96, 0.12) 100%);
+  border-color: rgba(45, 70, 185, 0.25);
+}
+
+[data-mode="dark"] .collapsible-section.awards-expanded {
+  background: linear-gradient(135deg, rgba(255, 153, 20, 0.12) 0%, rgba(242, 27, 63, 0.12) 100%);
+  border-color: rgba(255, 153, 20, 0.25);
+}
+
+[data-mode="dark"] .award-item.clickable:hover {
+  background: rgba(255, 153, 20, 0.2);
 }

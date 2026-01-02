@@ -52,25 +52,42 @@ const buildGeneratePrompt = (currentTheme: string) => {
     (t) => t.toLowerCase() !== currentTheme.toLowerCase()
   );
 
-  return `You are a music expert helping with a fun family game.
+  return `You are a music expert helping create a fun trivia game for a family music league.
 
-Pick 2 songs that each fit one of these Season 1 music league themes:
+The game is: "Guess which Season 1 theme this song would fit!"
+
+Your job is to suggest 2 songs that COULD HAVE been submitted to these past themes, but probably weren't. The players will listen to the songs and try to guess which theme each one fits.
+
+Season 1 themes to choose from:
 ${themesExcludingCurrent.map((t, i) => `${i + 1}. "${t}"`).join("\n")}
 
 Requirements:
-1. Choose 2 DIFFERENT songs from 2 DIFFERENT themes
-2. Songs should be well-known enough that people might recognize them
-3. The connection to the theme should be interesting but not too obvious
-4. Songs should be from different decades/genres for variety
+1. Choose 2 DIFFERENT songs that fit 2 DIFFERENT themes
+2. Pick songs that are well-known enough that players might recognize them
+3. The connection to the theme should be clever and interesting - not too obvious, but not too obscure either
+4. The songs should make players think "Oh, that's a great pick for that theme!" when the answer is revealed
+5. Songs should ideally be from different decades/genres for variety
+6. DO NOT pick songs that are super obvious choices - pick creative interpretations
+
+Theme interpretation hints:
+- "Dance IF nobody's watching" = Songs about dancing freely, being uninhibited, solo dancing
+- "Movie Stars" = Songs about celebrities, Hollywood, fame, or songs by actors who sing
+- "Hit then quit it" = One-hit wonders, or songs about brief encounters/leaving
+- "Finding Emos" = Emo music, emotional songs, songs with "emo" themes
+- "I like big butts and a can of limes" = Songs about body parts, or songs with lime/lemon themes, tropical vibes
+- "Turn that Sh!# down!" = Loud, intense songs, or songs someone might complain about
+- "Most likely to..." = Songs about predictions, superlatives, being voted on
+- "Nada de ingles" = Non-English songs
+- "Eh for effort" = Canadian artists, or songs about trying
 
 For each song, provide:
 - title: exact song title
 - artist: artist name
-- theme: which Season 1 theme it fits
+- theme: which Season 1 theme it fits (copy exactly from list above)
 - spotify_url: a valid Spotify URL (format: https://open.spotify.com/track/[id])
 - youtube_url: a valid YouTube URL (format: https://www.youtube.com/watch?v=[id])
 
-IMPORTANT: Provide real, working URLs for actual songs on Spotify and YouTube.
+IMPORTANT: Provide real, working URLs for actual songs on Spotify and YouTube. Look up the actual track IDs.
 
 Respond in this exact JSON format:
 {
