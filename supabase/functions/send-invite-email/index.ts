@@ -9,7 +9,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://tml.mattmariani.com";
+const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://talking.mattmariani.com";
 
 const SMTP_USERNAME = Deno.env.get("SMTP_USERNAME");
 const SMTP_PASSWORD = Deno.env.get("SMTP_PASSWORD");
