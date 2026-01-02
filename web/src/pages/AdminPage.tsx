@@ -65,6 +65,8 @@ type InviteRow = {
   expires_at: string | null;
   used_at: string | null;
   used_by: string | null;
+  invite_email: string | null;
+  email_sent_at: string | null;
 };
 
 type TabId = "users" | "invites" | "leagues" | "rounds" | "competitors" | "imports" | "ai-settings" | "bonus";
@@ -147,6 +149,8 @@ export default function AdminPage() {
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [invites, setInvites] = useState<InviteRow[]>([]);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteEmailSending, setInviteEmailSending] = useState(false);
   const [rounds, setRounds] = useState<RoundSummary[]>([]);
   const [seasonCompetitors, setSeasonCompetitors] = useState<SeasonCompetitor[]>([]);
   const [newCompetitor, setNewCompetitor] = useState("");
@@ -255,7 +259,7 @@ export default function AdminPage() {
 
       const { data: inviteData } = await supabase
         .from("invites")
-        .select("id,code,created_at,expires_at,used_at,used_by")
+        .select("id,code,created_at,expires_at,used_at,used_by,invite_email,email_sent_at")
         .eq("group_id", group.id)
         .is("used_at", null)
         .order("created_at", { ascending: false });
@@ -509,15 +513,16 @@ export default function AdminPage() {
     }
   };
 
-  const handleGenerateInvite = async () => {
+  const handleGenerateInvite = async (sendEmail = false) => {
     if (!group) return;
     setInviteError(null);
     const code = crypto.randomUUID().split("-")[0];
-    const { error } = await supabase.from("invites").insert({
+    const { data: insertData, error } = await supabase.from("invites").insert({
       group_id: group.id,
       code,
       created_by: profile?.id,
-    });
+      invite_email: sendEmail && inviteEmail ? inviteEmail : null,
+    }).select("id").single();
 
     if (error) {
       setInviteError(error.message);
@@ -528,9 +533,30 @@ export default function AdminPage() {
     const link = `${baseUrl}/invite?code=${code}`;
     setInviteLink(link);
     await navigator.clipboard.writeText(link);
+
+    // Send email if requested and email provided
+    if (sendEmail && inviteEmail && insertData?.id) {
+      setInviteEmailSending(true);
+      try {
+        await supabase.functions.invoke("send-invite-email", {
+          body: {
+            invite_id: insertData.id,
+            email: inviteEmail,
+            group_name: group.name,
+            inviter_name: profile?.display_name || undefined,
+          },
+        });
+        setInviteEmail(""); // Clear email after sending
+      } catch (err) {
+        console.error("Error sending invite email:", err);
+      } finally {
+        setInviteEmailSending(false);
+      }
+    }
+
     const { data } = await supabase
       .from("invites")
-      .select("id,code,created_at,expires_at,used_at,used_by")
+      .select("id,code,created_at,expires_at,used_at,used_by,invite_email,email_sent_at")
       .eq("group_id", group.id)
       .is("used_at", null)
       .order("created_at", { ascending: false });
@@ -759,6 +785,40 @@ export default function AdminPage() {
       setChallengeStatusByRound((prev) => ({ ...prev, [round.id]: "Generation failed" }));
     } finally {
       setChallengeGenLoadingId(null);
+    }
+  };
+
+  // Regenerate round challenge (bonus game) - replaces existing
+  const [challengeRegenLoadingId, setChallengeRegenLoadingId] = useState<string | null>(null);
+
+  const regenerateRoundChallenge = async (round: RoundSummary) => {
+    if (!group) return;
+    setChallengeRegenLoadingId(round.id);
+    setChallengeStatusByRound((prev) => ({ ...prev, [round.id]: "Regenerating..." }));
+    try {
+      const { data, error } = await supabase.functions.invoke("round-challenge", {
+        body: {
+          mode: "regenerate",
+          round_id: round.id,
+          group_id: group.id,
+          current_theme: round.theme ?? "",
+        },
+      });
+      if (error) throw error;
+      if (data?.songs && data.songs.length >= 2) {
+        setRoundChallengeExists((prev) => ({ ...prev, [round.id]: true }));
+        setChallengeStatusByRound((prev) => ({
+          ...prev,
+          [round.id]: `✓ ${data.songs[0].title} / ${data.songs[1].title}`,
+        }));
+      } else {
+        setChallengeStatusByRound((prev) => ({ ...prev, [round.id]: "No songs generated" }));
+      }
+    } catch (err) {
+      console.error("Error regenerating challenge:", err);
+      setChallengeStatusByRound((prev) => ({ ...prev, [round.id]: "Regeneration failed" }));
+    } finally {
+      setChallengeRegenLoadingId(null);
     }
   };
 
@@ -2043,9 +2103,33 @@ export default function AdminPage() {
         <Card className="dashboard-card">
           <h2>Invites</h2>
           <p className="muted">Share links with family, then track outstanding invites.</p>
-          <Button type="button" variant="secondary" onClick={handleGenerateInvite}>
-            Generate Invite
-          </Button>
+          <div className="invite-form">
+            <input
+              className="field-input"
+              type="email"
+              placeholder="Email address (optional)"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              style={{ flex: 1, minWidth: 200 }}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => handleGenerateInvite(false)}
+              disabled={inviteEmailSending}
+            >
+              Generate Link
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => handleGenerateInvite(true)}
+              disabled={!inviteEmail || inviteEmailSending}
+              title={inviteEmail ? "Generate link and send email" : "Enter email to send invite"}
+            >
+              {inviteEmailSending ? "Sending..." : "Send Email"}
+            </Button>
+          </div>
           {inviteLink ? <div className="invite-link">{inviteLink}</div> : null}
           {inviteError ? <div className="auth-error">{inviteError}</div> : null}
           <div className="invite-list">
@@ -2058,6 +2142,12 @@ export default function AdminPage() {
                     <div>
                       <strong>{invite.code}</strong>
                       <span className="muted">Created {new Date(invite.created_at).toLocaleString()}</span>
+                      {invite.invite_email && (
+                        <span className="muted" style={{ marginLeft: 8 }}>
+                          → {invite.invite_email}
+                          {invite.email_sent_at && <span style={{ color: "var(--cs-green)" }}> ✓</span>}
+                        </span>
+                      )}
                     </div>
                     <div className="invite-actions">
                       <Button type="button" variant="secondary" onClick={() => navigator.clipboard.writeText(link)}>
@@ -2458,6 +2548,17 @@ export default function AdminPage() {
                           >
                             {challengeGenLoadingId === round.id ? "Generating..." : "Challenge"}
                           </Button>
+                          {roundChallengeExists[round.id] && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => regenerateRoundChallenge(round)}
+                              disabled={challengeRegenLoadingId === round.id}
+                              title="Regenerate challenge with new songs"
+                            >
+                              {challengeRegenLoadingId === round.id ? "..." : "↻"}
+                            </Button>
+                          )}
                           <Button
                             type="button"
                             variant="primary"

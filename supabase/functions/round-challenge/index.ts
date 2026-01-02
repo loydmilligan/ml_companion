@@ -25,7 +25,7 @@ const SEASON_1_THEMES = [
 ];
 
 type RequestBody = {
-  mode: "get_or_generate" | "admin_update" | "save_guess" | "get_guesses";
+  mode: "get_or_generate" | "regenerate" | "admin_update" | "save_guess" | "get_guesses";
   round_id?: string;
   group_id?: string;
   user_id?: string;
@@ -244,6 +244,87 @@ Deno.serve(async (req) => {
           songs,
           themes: SEASON_1_THEMES,
           from_db: false,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Regenerate challenge - deactivate old one and create new
+    if (mode === "regenerate") {
+      if (!round_id || !group_id) {
+        return new Response(
+          JSON.stringify({ error: "Missing round_id or group_id" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!OPENROUTER_API_KEY) {
+        return new Response(
+          JSON.stringify({ error: "Missing OPENROUTER_API_KEY" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Deactivate any existing challenges for this round
+      await supabase
+        .from("round_challenges")
+        .update({ active: false })
+        .eq("round_id", round_id)
+        .eq("group_id", group_id);
+
+      // Generate new challenge
+      const prompt = buildGeneratePrompt(current_theme ?? "");
+      const response = await callOpenRouter(prompt, 0.95, 500); // Higher temp for variety
+
+      let songs: SongSuggestion[] = [];
+      try {
+        const parsed = JSON.parse(response);
+        songs = parsed.songs || [];
+      } catch {
+        return new Response(
+          JSON.stringify({ error: "Failed to generate songs", raw: response }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (songs.length < 2) {
+        return new Response(
+          JSON.stringify({ error: "Not enough songs generated" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Save new challenge
+      const { data: newChallenge, error: insertError } = await supabase
+        .from("round_challenges")
+        .insert({
+          round_id,
+          group_id,
+          song1_title: songs[0].title,
+          song1_artist: songs[0].artist,
+          song1_spotify_url: songs[0].spotify_url,
+          song1_youtube_url: songs[0].youtube_url,
+          song1_correct_theme: songs[0].theme,
+          song2_title: songs[1].title,
+          song2_artist: songs[1].artist,
+          song2_spotify_url: songs[1].spotify_url,
+          song2_youtube_url: songs[1].youtube_url,
+          song2_correct_theme: songs[1].theme,
+          active: true,
+        })
+        .select("id")
+        .single();
+
+      if (insertError) {
+        console.error("Failed to save challenge:", insertError);
+      }
+
+      return new Response(
+        JSON.stringify({
+          challenge_id: newChallenge?.id ?? null,
+          songs,
+          themes: SEASON_1_THEMES,
+          regenerated: true,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

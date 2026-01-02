@@ -162,6 +162,14 @@
   margin-top: 16px;
 }
 
+.invite-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
 .invite-row {
   display: flex;
   justify-content: space-between;
