@@ -80,6 +80,17 @@ export default function SeasonRecapCard({
 
       {/* Scrollable content area */}
       <div className="card-content">
+        {/* Season Narrative */}
+        {data.seasonNarrative && (
+          <div className="recap-narrative">
+            <h3 className="section-label">
+              <span className="label-icon" aria-hidden="true">📖</span>
+              Season Story
+            </h3>
+            <p className="narrative-text">{data.seasonNarrative}</p>
+          </div>
+        )}
+
         {/* Season stats grid */}
         <div className="recap-stats-grid" role="group" aria-label="Season statistics">
           <div className="recap-stat-box">

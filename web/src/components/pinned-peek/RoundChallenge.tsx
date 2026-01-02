@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../contexts/AuthContext";
 import { useYouTubeSidebar, extractYouTubeId } from "../youtube-sidebar";
 
 type ChallengeSong = {
@@ -10,42 +11,60 @@ type ChallengeSong = {
   youtube_url: string;
 };
 
-type RoundChallengeProps = {
-  roundId: string | null;
-  currentTheme: string | null;
+type SavedGuess = {
+  song_number: number;
+  guessed_theme: string;
+  is_correct: boolean;
 };
 
-const SEASON_1_THEMES = [
-  "Dance IF nobody's watching",
-  "Movie Stars",
-  "Hit then quit it",
-  "Finding Emos",
-  "I like big butts and a can of limes",
-  "Turn that Sh!# down!",
-  "Most likely to...",
-  "Nada de ingles",
-  "Eh for effort",
+type RoundChallengeProps = {
+  roundId: string | null;
+  groupId: string | null;
+  currentTheme: string | null;
+  previousRoundChallenge?: {
+    song1: { title: string; artist: string; theme: string } | null;
+    song2: { title: string; artist: string; theme: string } | null;
+  } | null;
+};
+
+const SEASON_1_THEMES: { name: string; description: string }[] = [
+  { name: "Dance IF nobody's watching", description: "Dance music - but only songs you'd only dance to when alone" },
+  { name: "Movie Stars", description: "Songs by artists who have also acted in movies" },
+  { name: "Hit then quit it", description: "One-hit wonders - artists known for just one popular song" },
+  { name: "Finding Emos", description: "Emo, emotional, or angsty music" },
+  { name: "I like big butts and a can of limes", description: "Songs that reference body parts or food/drinks" },
+  { name: "Turn that Sh!# down!", description: "Loud, aggressive, or intense music" },
+  { name: "Most likely to...", description: "Songs that could complete the phrase 'most likely to...'" },
+  { name: "Nada de ingles", description: "Songs not in English" },
+  { name: "Eh for effort", description: "Songs where the artist tried something different or took a risk" },
 ];
 
-export default function RoundChallenge({ roundId, currentTheme }: RoundChallengeProps) {
+export default function RoundChallenge({ roundId, groupId, currentTheme, previousRoundChallenge }: RoundChallengeProps) {
+  const { session } = useAuth();
+  const userId = session?.user?.id ?? null;
   const { openSidebar } = useYouTubeSidebar();
   const [loading, setLoading] = useState(false);
   const [songs, setSongs] = useState<ChallengeSong[]>([]);
   const [guesses, setGuesses] = useState<{ [key: number]: string }>({});
   const [results, setResults] = useState<{ [key: number]: boolean | null }>({});
   const [error, setError] = useState<string | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [submitting, setSubmitting] = useState<{ [key: number]: boolean }>({});
 
-  // Load challenge songs
+  // Load challenge and user's previous guesses
   const loadChallenge = useCallback(async () => {
-    if (!roundId) return;
+    if (!roundId || !groupId) return;
 
     setLoading(true);
     setError(null);
 
     try {
+      // Get or generate challenge
       const { data, error: fetchError } = await supabase.functions.invoke("round-challenge", {
         body: {
-          mode: "generate",
+          mode: "get_or_generate",
+          round_id: roundId,
+          group_id: groupId,
           current_theme: currentTheme || "",
         },
       });
@@ -53,10 +72,37 @@ export default function RoundChallenge({ roundId, currentTheme }: RoundChallenge
       if (fetchError) throw fetchError;
       if (data?.songs && data.songs.length > 0) {
         setSongs(data.songs);
-        setGuesses({});
-        setResults({});
+
+        // Load user's previous guesses if logged in
+        if (userId) {
+          const { data: guessData } = await supabase.functions.invoke("round-challenge", {
+            body: {
+              mode: "get_guesses",
+              round_id: roundId,
+              group_id: groupId,
+              user_id: userId,
+            },
+          });
+
+          if (guessData?.guesses && guessData.guesses.length > 0) {
+            const savedGuesses: { [key: number]: string } = {};
+            const savedResults: { [key: number]: boolean | null } = {};
+
+            guessData.guesses.forEach((g: SavedGuess) => {
+              const idx = g.song_number - 1;
+              savedGuesses[idx] = g.guessed_theme;
+              savedResults[idx] = g.is_correct;
+            });
+
+            setGuesses(savedGuesses);
+            setResults(savedResults);
+          }
+        }
+        setHasLoaded(true);
+      } else if (data?.error) {
+        setError(data.error);
       } else {
-        setError("Unable to generate challenge songs.");
+        setError("Unable to load challenge songs.");
       }
     } catch (err) {
       console.error("Error loading challenge:", err);
@@ -64,25 +110,56 @@ export default function RoundChallenge({ roundId, currentTheme }: RoundChallenge
     } finally {
       setLoading(false);
     }
-  }, [roundId, currentTheme]);
+  }, [roundId, groupId, currentTheme, userId]);
 
   useEffect(() => {
-    if (roundId && songs.length === 0) {
+    if (roundId && groupId && !hasLoaded) {
       loadChallenge();
     }
-  }, [roundId, loadChallenge, songs.length]);
+  }, [roundId, groupId, loadChallenge, hasLoaded]);
 
   const handleGuessChange = (songIndex: number, theme: string) => {
     setGuesses((prev) => ({ ...prev, [songIndex]: theme }));
   };
 
-  const handleSubmitGuess = (songIndex: number) => {
+  const handleSubmitGuess = async (songIndex: number) => {
     const song = songs[songIndex];
     const guess = guesses[songIndex];
-    if (!song || !guess) return;
+    if (!song || !guess || !roundId || !groupId || !userId) return;
 
-    const isCorrect = guess.toLowerCase().trim() === song.theme.toLowerCase().trim();
-    setResults((prev) => ({ ...prev, [songIndex]: isCorrect }));
+    setSubmitting((prev) => ({ ...prev, [songIndex]: true }));
+
+    try {
+      const { data, error: submitError } = await supabase.functions.invoke("round-challenge", {
+        body: {
+          mode: "save_guess",
+          round_id: roundId,
+          group_id: groupId,
+          user_id: userId,
+          song_number: songIndex + 1,
+          guessed_theme: guess,
+        },
+      });
+
+      if (submitError) throw submitError;
+
+      if (data?.already_guessed) {
+        // User already guessed this song - load their previous guess
+        setResults((prev) => ({
+          ...prev,
+          [songIndex]: guess.toLowerCase().trim() === song.theme.toLowerCase().trim(),
+        }));
+      } else {
+        setResults((prev) => ({ ...prev, [songIndex]: data?.is_correct ?? false }));
+      }
+    } catch (err) {
+      console.error("Error submitting guess:", err);
+      // Fallback to local validation
+      const isCorrect = guess.toLowerCase().trim() === song.theme.toLowerCase().trim();
+      setResults((prev) => ({ ...prev, [songIndex]: isCorrect }));
+    } finally {
+      setSubmitting((prev) => ({ ...prev, [songIndex]: false }));
+    }
   };
 
   const handleYouTubeClick = (song: ChallengeSong) => {
@@ -95,7 +172,7 @@ export default function RoundChallenge({ roundId, currentTheme }: RoundChallenge
   const correctCount = Object.values(results).filter((r) => r === true).length;
   const totalGuessed = Object.values(results).filter((r) => r !== null).length;
 
-  if (!roundId) return null;
+  if (!roundId || !groupId) return null;
 
   return (
     <div className="round-challenge-section">
@@ -108,6 +185,10 @@ export default function RoundChallenge({ roundId, currentTheme }: RoundChallenge
         )}
       </div>
 
+      <p className="round-challenge-intro">
+        Guess which Season 1 theme each song belonged to!
+      </p>
+
       {loading ? (
         <div className="ai-assistant-loading">
           <div className="spinner" />
@@ -117,7 +198,10 @@ export default function RoundChallenge({ roundId, currentTheme }: RoundChallenge
         <div style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
           {error}
           <button
-            onClick={loadChallenge}
+            onClick={() => {
+              setHasLoaded(false);
+              loadChallenge();
+            }}
             style={{
               marginLeft: 8,
               padding: "4px 8px",
@@ -166,20 +250,21 @@ export default function RoundChallenge({ roundId, currentTheme }: RoundChallenge
                   <select
                     value={guesses[index] || ""}
                     onChange={(e) => handleGuessChange(index, e.target.value)}
+                    disabled={submitting[index]}
                   >
                     <option value="">Select a theme...</option>
                     {SEASON_1_THEMES.map((theme) => (
-                      <option key={theme} value={theme}>
-                        {theme}
+                      <option key={theme.name} value={theme.name} title={theme.description}>
+                        {theme.name}
                       </option>
                     ))}
                   </select>
                   <button
                     type="button"
                     onClick={() => handleSubmitGuess(index)}
-                    disabled={!guesses[index]}
+                    disabled={!guesses[index] || submitting[index]}
                   >
-                    Guess
+                    {submitting[index] ? "..." : "Guess"}
                   </button>
                 </div>
               ) : (
@@ -195,20 +280,28 @@ export default function RoundChallenge({ roundId, currentTheme }: RoundChallenge
           ))}
         </div>
       ) : (
-        <button
-          onClick={loadChallenge}
-          style={{
-            padding: "10px 16px",
-            background: "var(--navy)",
-            color: "#fff",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontSize: "0.9rem",
-          }}
-        >
-          Start Challenge
-        </button>
+        <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+          Challenge not available yet.
+        </p>
+      )}
+
+      {/* Previous round answers */}
+      {previousRoundChallenge && (previousRoundChallenge.song1 || previousRoundChallenge.song2) && (
+        <div className="previous-challenge-answers">
+          <h4>Last Round's Answers</h4>
+          {previousRoundChallenge.song1 && (
+            <p className="previous-answer">
+              <strong>{previousRoundChallenge.song1.title}</strong> - {previousRoundChallenge.song1.artist}
+              <span className="answer-theme">{previousRoundChallenge.song1.theme}</span>
+            </p>
+          )}
+          {previousRoundChallenge.song2 && (
+            <p className="previous-answer">
+              <strong>{previousRoundChallenge.song2.title}</strong> - {previousRoundChallenge.song2.artist}
+              <span className="answer-theme">{previousRoundChallenge.song2.theme}</span>
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

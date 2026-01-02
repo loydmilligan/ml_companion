@@ -618,6 +618,26 @@
   opacity: 0.9;
 }
 
+/* Season narrative */
+.recap-narrative {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(17, 193, 236, 0.08) 0%, rgba(24, 224, 168, 0.08) 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(17, 193, 236, 0.15);
+}
+
+.recap-narrative .section-label {
+  margin-bottom: 12px;
+}
+
+.recap-narrative .narrative-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--cs-text-primary, #1a1a1a);
+  margin: 0;
+}
+
 /* Season recap stats grid */
 .recap-stats-grid {
   display: grid;

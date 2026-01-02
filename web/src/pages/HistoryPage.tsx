@@ -34,6 +34,7 @@ type LeagueRow = {
   id: string;
   name: string;
   season_number: number | null;
+  narrative: string | null;
 };
 
 type RoundRow = {
@@ -133,7 +134,7 @@ export default function HistoryPage() {
     const loadLeagues = async () => {
       const { data } = await supabase
         .from("leagues")
-        .select("id,name,season_number")
+        .select("id,name,season_number,narrative")
         .eq("group_id", group.id)
         .order("season_number", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
@@ -904,6 +905,8 @@ export default function HistoryPage() {
       // Add season recap card first (for all seasons with data)
       const seasonStats = pastSeasonStats.find((s) => s.seasonNumber === seasonNum);
       if (seasonStats) {
+          // Find the league to get the narrative
+          const league = leagues.find((l) => l.id === seasonStats.leagueId);
           const recapCard: SeasonRecapCardData = {
             id: `season-${seasonStats.leagueId}`,
             type: "season-recap",
@@ -919,6 +922,7 @@ export default function HistoryPage() {
             votingPatterns: seasonStats.votingPatterns,
             genreDistribution: seasonStats.genreDistribution,
             decadeDistribution: seasonStats.decadeDistribution,
+            seasonNarrative: league?.narrative ?? null,
           };
           cards.push(recapCard);
       }
@@ -930,7 +934,7 @@ export default function HistoryPage() {
     });
 
     return cards;
-  }, [allRounds, allSubmissions, allVotes, allAwards, pastSeasonStats]);
+  }, [allRounds, allSubmissions, allVotes, allAwards, pastSeasonStats, leagues]);
 
   /* ========================================
      Event Handlers

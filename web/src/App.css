@@ -1504,6 +1504,17 @@
   box-shadow: none;
 }
 
+/* AI Gen button status colors */
+.button-has-content {
+  background: #22c55e !important;
+  color: white !important;
+}
+
+.button-no-content {
+  background: #9ca3af !important;
+  color: #374151 !important;
+}
+
 .status-pill {
   padding: 6px 12px;
   border-radius: 999px;
@@ -3138,6 +3149,8 @@
 
 .award-card-info {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .award-card-name {
@@ -3145,12 +3158,23 @@
   font-size: 0.85rem;
   color: var(--text-primary);
   margin: 0 0 2px 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .award-card-winner {
   font-size: 0.8rem;
   color: var(--blue);
   margin: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.award-card-song {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 2px 0 0 0;
+  font-style: italic;
 }
 
 .award-card-tooltip {
@@ -4162,12 +4186,19 @@
 .challenge-guess-form select {
   flex: 1;
   padding: 8px 12px;
-  border: 1px solid rgba(10, 26, 47, 0.15);
+  border: 1px solid rgba(10, 26, 47, 0.2);
   border-radius: 8px;
   font-size: 0.85rem;
-  background: var(--surface);
-  color: var(--text-primary);
+  background: #fff;
+  color: #1a1a1a;
   cursor: pointer;
+  font-weight: 500;
+}
+
+.challenge-guess-form select option {
+  padding: 8px;
+  color: #1a1a1a;
+  background: #fff;
 }
 
 .challenge-guess-form button {
@@ -4207,6 +4238,49 @@
 .challenge-result.incorrect {
   background: rgba(231, 76, 60, 0.15);
   color: #c0392b;
+}
+
+.round-challenge-intro {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0 0 12px 0;
+}
+
+/* Previous round answers */
+.previous-challenge-answers {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(17, 193, 236, 0.08);
+  border-radius: 10px;
+  border: 1px solid rgba(17, 193, 236, 0.15);
+}
+
+.previous-challenge-answers h4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.previous-answer {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin: 0 0 6px 0;
+  line-height: 1.4;
+}
+
+.previous-answer:last-child {
+  margin-bottom: 0;
+}
+
+.answer-theme {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: rgba(24, 224, 168, 0.2);
+  border-radius: 12px;
+  font-size: 0.75rem;
+  color: var(--navy);
 }
 
 /* Dark mode for AI and Challenge sections */

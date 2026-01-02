@@ -36,6 +36,10 @@ alter table rounds add column if not exists playlist_url text;
 alter table rounds add column if not exists theme_image_url text;
 alter table rounds add column if not exists winners_image_url text;
 alter table rounds add column if not exists winners_image_visible boolean default true;
+alter table rounds add column if not exists narrative text;
+
+-- Leagues columns
+alter table leagues add column if not exists narrative text;
 
 -- Round awards table
 create table if not exists round_awards (

@@ -159,6 +159,8 @@ export interface SeasonRecapCardData {
   genreDistribution?: DistributionItem[];
   /** Decade distribution */
   decadeDistribution?: DistributionItem[];
+  /** AI-generated season narrative */
+  seasonNarrative?: string | null;
 }
 
 /**

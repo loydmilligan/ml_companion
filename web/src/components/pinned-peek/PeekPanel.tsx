@@ -41,24 +41,31 @@ type PeekPanelProps = {
   isOpen: boolean;
   onClose: () => void;
   round: RoundSummary | null;
+  groupId: string | null;
   submissions: SubmissionRow[];
   votes: VoteRow[];
   awards: RoundAwardRow[];
   isVotingComplete: boolean;
   onQuoteSong: (song: SubmissionRow) => void;
   narrative?: string | null;
+  previousRoundChallenge?: {
+    song1: { title: string; artist: string; theme: string } | null;
+    song2: { title: string; artist: string; theme: string } | null;
+  } | null;
 };
 
 export default function PeekPanel({
   isOpen,
   onClose,
   round,
+  groupId,
   submissions,
   votes,
   awards,
   isVotingComplete,
   onQuoteSong,
   narrative,
+  previousRoundChallenge,
 }: PeekPanelProps) {
   // Prevent body scroll when panel is open
   useEffect(() => {
@@ -166,7 +173,12 @@ export default function PeekPanel({
 
               {/* Round Challenge (only during open phase) */}
               {round.status === "open" && (
-                <RoundChallenge roundId={round.id} currentTheme={round.theme} />
+                <RoundChallenge
+                  roundId={round.id}
+                  groupId={groupId}
+                  currentTheme={round.theme}
+                  previousRoundChallenge={previousRoundChallenge}
+                />
               )}
 
               {/* Top 3 Results (if voting complete) */}

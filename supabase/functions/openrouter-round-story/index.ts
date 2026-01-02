@@ -181,6 +181,10 @@ Use the provided season statistics and the season awards catalog to select 3-5 a
 - Only select awards whose criteria appear satisfied by the data.
 - Each award should go to the most deserving player based on the data.
 
+For winner_name format:
+- If award is for a specific song: "Song Title - Artist (by SubmitterName)"
+- If award is for a person's overall performance: "PersonName"
+
 Return JSON ONLY in this format:
 {"awards":[{"award_id":101,"award_name":"...","winner_name":"...","reason":"..."}]}
 
@@ -292,6 +296,10 @@ Use the provided round data and the awards catalog to select 2-5 awards that bes
 - Only select awards whose criteria appear satisfied by the data.
 - Avoid awards that appear in the recent_awards list.
 - Prefer the most deserving awards; if several are tied, pick any.
+
+For winner_name format:
+- If award is for a specific song: "Song Title - Artist (by SubmitterName)"
+- If award is for a person's overall performance: "PersonName"
 
 Return JSON ONLY in this format:
 {"awards":[{"award_id":1,"award_name":"...","winner_name":"...","reason":"..."}]}

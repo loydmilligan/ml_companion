@@ -158,11 +158,13 @@ export default function TopBar() {
         isOpen={isPeekOpen}
         onClose={closePanel}
         round={round}
+        groupId={group?.id ?? null}
         submissions={submissions}
         votes={votes}
         awards={awards}
         isVotingComplete={isVotingComplete}
         onQuoteSong={handleQuoteSong}
+        previousRoundChallenge={null}
       />
     </>
   );

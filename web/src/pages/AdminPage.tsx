@@ -187,6 +187,8 @@ export default function AdminPage() {
   } | null>(null);
   const [bonusPoints, setBonusPoints] = useState<BonusPointEntry[]>([]);
   const [bonusPointsDraft, setBonusPointsDraft] = useState<Record<string, { points: string; reason: string }>>({});
+  const [roundAwardCounts, setRoundAwardCounts] = useState<Record<string, number>>({});
+  const [seasonAwardCounts, setSeasonAwardCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!selectedLeagueId) return;
@@ -252,7 +254,44 @@ export default function AdminPage() {
         .order("season_number", { ascending: false, nullsFirst: false })
         .order("round_number", { ascending: true, nullsFirst: false });
 
-      setRounds((roundData as RoundSummary[]) ?? []);
+      const roundList = (roundData as RoundSummary[]) ?? [];
+      setRounds(roundList);
+
+      // Fetch award counts per round
+      if (roundList.length > 0) {
+        const roundIds = roundList.map((r) => r.id);
+        const { data: awardData } = await supabase
+          .from("round_awards")
+          .select("round_id")
+          .in("round_id", roundIds);
+
+        const counts: Record<string, number> = {};
+        (awardData ?? []).forEach((a) => {
+          if (a.round_id) {
+            counts[a.round_id] = (counts[a.round_id] || 0) + 1;
+          }
+        });
+        setRoundAwardCounts(counts);
+
+        // Fetch season award counts (awards without round_id, grouped by league)
+        const { data: seasonAwardData } = await supabase
+          .from("round_awards")
+          .select("round_id,award_name")
+          .is("round_id", null);
+
+        // Season awards go to first round of each league for tracking
+        const seasonCounts: Record<string, number> = {};
+        leagueList.forEach((league) => {
+          const leagueRounds = roundList.filter((r) => r.league_id === league.id);
+          const hasSeasonAwards = (seasonAwardData ?? []).length > 0 && leagueRounds.length > 0;
+          if (hasSeasonAwards) {
+            // Check if this league's first round has season awards stored
+            const firstRound = leagueRounds[leagueRounds.length - 1]; // Get earliest round
+            seasonCounts[league.id] = counts[firstRound?.id] || 0;
+          }
+        });
+        setSeasonAwardCounts(seasonCounts);
+      }
       } else {
         setRounds([]);
       }
@@ -1940,6 +1979,11 @@ export default function AdminPage() {
                         <Button
                           type="button"
                           variant="secondary"
+                          className={(() => {
+                            const leagueRounds = rounds.filter((r) => r.league_id === league.id);
+                            const allHaveAwards = leagueRounds.length > 0 && leagueRounds.every((r) => (roundAwardCounts[r.id] ?? 0) > 0);
+                            return allHaveAwards ? "button-has-content" : "button-no-content";
+                          })()}
                           onClick={() => generateLeagueAwards(league)}
                           disabled={leagueAwardsLoadingId === league.id}
                         >
@@ -1948,6 +1992,7 @@ export default function AdminPage() {
                         <Button
                           type="button"
                           variant="secondary"
+                          className={(seasonAwardCounts[league.id] ?? 0) > 0 ? "button-has-content" : "button-no-content"}
                           onClick={() => generateSeasonOnlyAwards(league)}
                           disabled={seasonAwardsLoadingId === league.id}
                         >
@@ -1956,6 +2001,7 @@ export default function AdminPage() {
                         <Button
                           type="button"
                           variant="secondary"
+                          className={league.narrative ? "button-has-content" : "button-no-content"}
                           onClick={() => generateSeasonNarrative(league)}
                           disabled={seasonNarrativeLoadingId === league.id}
                         >
@@ -1970,9 +2016,6 @@ export default function AdminPage() {
                       ) : null}
                       {seasonNarrativeStatus[league.id] ? (
                         <span className="muted">{seasonNarrativeStatus[league.id]}</span>
-                      ) : null}
-                      {league.narrative ? (
-                        <span className="muted">Narrative</span>
                       ) : null}
                     </>
                   )}
@@ -2202,23 +2245,36 @@ export default function AdminPage() {
                           <Button type="button" variant="secondary" onClick={() => startEditRound(round)}>
                             Edit
                           </Button>
-                          <Button type="button" variant="secondary" onClick={() => generateThemeBanner(round)} disabled={bannerLoadingId === round.id}>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className={round.theme_image_url ? "button-has-content" : "button-no-content"}
+                            onClick={() => generateThemeBanner(round)}
+                            disabled={bannerLoadingId === round.id}
+                          >
                             {bannerLoadingId === round.id ? "Generating..." : "Banner"}
                           </Button>
-                          <Button type="button" variant="secondary" onClick={() => generateRoundStory(round)} disabled={storyLoadingId === round.id}>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className={round.narrative ? "button-has-content" : "button-no-content"}
+                            onClick={() => generateRoundStory(round)}
+                            disabled={storyLoadingId === round.id}
+                          >
                             {storyLoadingId === round.id ? "Generating..." : "Story"}
                           </Button>
-                          <Button type="button" variant="secondary" onClick={() => generateRoundAwards(round)} disabled={awardsLoadingId === round.id}>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className={(roundAwardCounts[round.id] ?? 0) > 0 ? "button-has-content" : "button-no-content"}
+                            onClick={() => generateRoundAwards(round)}
+                            disabled={awardsLoadingId === round.id}
+                          >
                             {awardsLoadingId === round.id ? "Generating..." : "Awards"}
                           </Button>
                           <Button type="button" variant="secondary" onClick={() => deleteRound(round.id)}>
                             Delete
                           </Button>
-                        </div>
-                        <div className="admin-row-status">
-                          {round.theme_image_url ? <span className="muted">Banner</span> : null}
-                          {round.narrative ? <span className="muted">Story</span> : null}
-                          {round.winners_image_url ? <span className="muted">Art</span> : null}
                         </div>
                         {bannerStatusByRound[round.id] ? (
                           <span className="muted">{bannerStatusByRound[round.id]}</span>
