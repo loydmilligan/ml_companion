@@ -1,9 +1,18 @@
-import { corsHeaders } from "../_shared/cors.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+};
 
 const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
 const OPENROUTER_MODEL = Deno.env.get("OPENROUTER_MODEL") ?? "anthropic/claude-3.5-sonnet";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 type RoundInfo = {
+  id?: string;
   theme: string;
   theme_description?: string | null;
   theme_author?: string | null;
@@ -20,46 +29,51 @@ type ChatMessage = {
 };
 
 type RequestBody = {
-  mode: "explain_theme" | "validate_song" | "generate_hint" | "chat_response";
+  mode: "explain_theme" | "validate_song" | "generate_hint" | "chat_response" | "get_settings";
   round?: RoundInfo;
+  group_id?: string;
+  user_id?: string;
   user_query?: string;
   song_info?: SongInfo;
   recent_messages?: ChatMessage[];
 };
 
 const buildExplainPrompt = (round: RoundInfo) => {
-  return `You are a helpful assistant for a family music league game.
-
-Explain the following theme clearly, including:
-1. What the theme means
-2. What types of songs would qualify
-3. Edge cases to consider
-4. A few example songs that would fit
+  return `You are a friendly helper for a family music league game. A player is asking about the current theme.
 
 Theme: "${round.theme}"
 ${round.theme_description ? `Description: ${round.theme_description}` : ""}
 ${round.theme_author ? `Theme by: ${round.theme_author}` : ""}
 
-Keep your response friendly, helpful, and under 200 words.`;
+Please share your thoughts on this theme:
+1. What the theme seems to be asking for
+2. Some general directions songs might take
+3. A few possible interpretations or angles to consider
+
+IMPORTANT: You are NOT the official rules judge. The theme creator and group have the final say on what fits. Your role is just to help brainstorm and share ideas - not to define strict rules. Be encouraging and suggest that players discuss edge cases with their group!
+
+Keep your response friendly, encouraging, and under 200 words. Use phrases like "I think..." or "It seems like..." rather than definitive statements.`;
 };
 
 const buildValidatePrompt = (round: RoundInfo, song: SongInfo) => {
-  return `You are a rules judge for a family music league game.
+  return `You are a helpful assistant for a family music league game. A player wants your opinion on whether a song might fit the theme.
 
 Theme: "${round.theme}"
 ${round.theme_description ? `Theme description: ${round.theme_description}` : ""}
 
-Song to validate: "${song.title}" by ${song.artist || "Unknown artist"}
+Song: "${song.title}" by ${song.artist || "Unknown artist"}
 
-Determine if this song fits the theme. Consider:
-1. Does it literally match the theme requirements?
-2. Are there any edge cases or ambiguities?
-3. What's your confidence level?
+Share your thoughts on whether this might fit. Consider:
+1. How it might connect to the theme
+2. Potential arguments for and against
+3. Your overall impression
+
+IMPORTANT: This is just your opinion to help the player think it through. The theme creator and group have the final say! Encourage them to discuss with their group if unsure.
 
 Respond in this JSON format:
-{"valid": true/false, "confidence": "high"/"medium"/"low", "reason": "brief explanation"}
+{"valid": true/false/null, "confidence": "high"/"medium"/"low", "reason": "your friendly thoughts"}
 
-Return ONLY the JSON, no other text.`;
+Use null for valid if it's truly ambiguous. Return ONLY the JSON.`;
 };
 
 const buildHintPrompt = (round: RoundInfo, existingQuery?: string) => {
@@ -97,12 +111,12 @@ User's question to you: ${query}
 
 Respond helpfully and briefly (under 100 words). Be friendly and fun!
 You can help with:
-- Explaining the theme
+- Sharing thoughts on the theme (but you're not the official judge!)
 - Suggesting song ideas (without giving away your picks)
 - Answering music trivia
 - General league questions
 
-Don't reveal other players' submissions or votes.`;
+Don't reveal other players' submissions or votes. Remind them that the group has the final say on rules!`;
 };
 
 const callOpenRouter = async (prompt: string, temperature = 0.7, maxTokens = 300) => {
@@ -134,16 +148,58 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  if (!OPENROUTER_API_KEY) {
-    return new Response(
-      JSON.stringify({ error: "Missing OPENROUTER_API_KEY" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
     const body: RequestBody = await req.json().catch(() => ({})) as RequestBody;
-    const { mode, round, user_query, song_info, recent_messages } = body;
+    const { mode, round, group_id, user_id, user_query, song_info, recent_messages } = body;
+
+    // Mode: get_settings - return AI settings for the group
+    if (mode === "get_settings") {
+      if (!group_id) {
+        return new Response(
+          JSON.stringify({ error: "Missing group_id" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: settings } = await supabase
+        .from("group_settings")
+        .select("ai_explain_enabled, ai_validate_enabled, ai_hint_enabled, ai_assistant_enabled, ai_validate_daily_limit")
+        .eq("group_id", group_id)
+        .maybeSingle();
+
+      // Get user's daily usage for validate
+      let usageToday = 0;
+      if (user_id) {
+        const today = new Date().toISOString().split("T")[0];
+        const { data: usage } = await supabase
+          .from("user_ai_usage")
+          .select("count")
+          .eq("user_id", user_id)
+          .eq("group_id", group_id)
+          .eq("usage_type", "validate_song")
+          .eq("usage_date", today)
+          .maybeSingle();
+        usageToday = usage?.count ?? 0;
+      }
+
+      return new Response(
+        JSON.stringify({
+          settings: {
+            ai_explain_enabled: settings?.ai_explain_enabled ?? true,
+            ai_validate_enabled: settings?.ai_validate_enabled ?? true,
+            ai_hint_enabled: settings?.ai_hint_enabled ?? true,
+            ai_assistant_enabled: settings?.ai_assistant_enabled ?? true,
+            ai_validate_daily_limit: settings?.ai_validate_daily_limit ?? 5,
+          },
+          usage: {
+            validate_today: usageToday,
+          },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!round) {
       return new Response(
@@ -152,12 +208,113 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (!OPENROUTER_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "Missing OPENROUTER_API_KEY" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if AI assistant is enabled for this group
+    if (group_id) {
+      const { data: settings } = await supabase
+        .from("group_settings")
+        .select("ai_explain_enabled, ai_validate_enabled, ai_hint_enabled, ai_assistant_enabled, ai_validate_daily_limit")
+        .eq("group_id", group_id)
+        .maybeSingle();
+
+      const aiEnabled = settings?.ai_assistant_enabled ?? true;
+      if (!aiEnabled) {
+        return new Response(
+          JSON.stringify({ error: "AI Assistant is disabled for this group" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check specific feature toggles
+      if (mode === "explain_theme" && !(settings?.ai_explain_enabled ?? true)) {
+        return new Response(
+          JSON.stringify({ error: "Theme explanation is disabled for this group" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (mode === "validate_song" && !(settings?.ai_validate_enabled ?? true)) {
+        return new Response(
+          JSON.stringify({ error: "Song validation is disabled for this group" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (mode === "generate_hint" && !(settings?.ai_hint_enabled ?? true)) {
+        return new Response(
+          JSON.stringify({ error: "Hint generation is disabled for this group" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check daily limit for validate_song
+      if (mode === "validate_song" && user_id) {
+        const dailyLimit = settings?.ai_validate_daily_limit ?? 5;
+        const today = new Date().toISOString().split("T")[0];
+
+        const { data: usage } = await supabase
+          .from("user_ai_usage")
+          .select("count")
+          .eq("user_id", user_id)
+          .eq("group_id", group_id)
+          .eq("usage_type", "validate_song")
+          .eq("usage_date", today)
+          .maybeSingle();
+
+        const usageCount = usage?.count ?? 0;
+        if (usageCount >= dailyLimit) {
+          return new Response(
+            JSON.stringify({
+              error: "Daily limit reached",
+              message: `You've used all ${dailyLimit} song checks for today. Try again tomorrow!`,
+              limit: dailyLimit,
+              used: usageCount,
+            }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+    }
+
     let result: Record<string, unknown> = {};
 
     switch (mode) {
       case "explain_theme": {
+        // Check cache first
+        if (round.id && group_id) {
+          const { data: cached } = await supabase
+            .from("round_ai_cache")
+            .select("content")
+            .eq("round_id", round.id)
+            .eq("group_id", group_id)
+            .eq("cache_type", "explain")
+            .maybeSingle();
+
+          if (cached?.content) {
+            result = { explanation: cached.content, cached: true };
+            break;
+          }
+        }
+
         const prompt = buildExplainPrompt(round);
         const explanation = await callOpenRouter(prompt, 0.7, 400);
+
+        // Cache the result
+        if (round.id && group_id) {
+          await supabase
+            .from("round_ai_cache")
+            .upsert({
+              round_id: round.id,
+              group_id,
+              cache_type: "explain",
+              content: explanation,
+            }, { onConflict: "round_id,group_id,cache_type" });
+        }
+
         result = { explanation };
         break;
       }
@@ -169,8 +326,44 @@ Deno.serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+
         const prompt = buildValidatePrompt(round, song_info);
         const response = await callOpenRouter(prompt, 0.3, 200);
+
+        // Track usage
+        if (user_id && group_id) {
+          const today = new Date().toISOString().split("T")[0];
+          await supabase.rpc("increment_ai_usage", {
+            p_user_id: user_id,
+            p_group_id: group_id,
+            p_usage_type: "validate_song",
+            p_usage_date: today,
+          }).catch(() => {
+            // Fallback: upsert manually
+            supabase
+              .from("user_ai_usage")
+              .upsert({
+                user_id,
+                group_id,
+                usage_type: "validate_song",
+                usage_date: today,
+                count: 1,
+              }, { onConflict: "user_id,group_id,usage_type,usage_date" })
+              .then(({ error }) => {
+                if (error) {
+                  // If upsert fails, try incrementing
+                  supabase
+                    .from("user_ai_usage")
+                    .update({ count: supabase.rpc("increment", { x: 1 }) })
+                    .eq("user_id", user_id)
+                    .eq("group_id", group_id)
+                    .eq("usage_type", "validate_song")
+                    .eq("usage_date", today);
+                }
+              });
+          });
+        }
+
         try {
           const parsed = JSON.parse(response);
           result = { validation: parsed };
@@ -181,8 +374,37 @@ Deno.serve(async (req) => {
       }
 
       case "generate_hint": {
+        // Check cache first
+        if (round.id && group_id) {
+          const { data: cached } = await supabase
+            .from("round_ai_cache")
+            .select("content")
+            .eq("round_id", round.id)
+            .eq("group_id", group_id)
+            .eq("cache_type", "hint")
+            .maybeSingle();
+
+          if (cached?.content) {
+            result = { hint: cached.content, cached: true };
+            break;
+          }
+        }
+
         const prompt = buildHintPrompt(round, user_query);
         const hint = await callOpenRouter(prompt, 0.9, 200);
+
+        // Cache the result
+        if (round.id && group_id) {
+          await supabase
+            .from("round_ai_cache")
+            .upsert({
+              round_id: round.id,
+              group_id,
+              cache_type: "hint",
+              content: hint,
+            }, { onConflict: "round_id,group_id,cache_type" });
+        }
+
         result = { hint };
         break;
       }

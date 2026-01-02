@@ -318,3 +318,55 @@ begin
       add constraint challenge_guesses_unique unique (challenge_id, user_id, song_number);
   end if;
 end $$;
+
+-- AI Assistant feature toggles in group_settings
+alter table group_settings add column if not exists ai_explain_enabled boolean default true;
+alter table group_settings add column if not exists ai_validate_enabled boolean default true;
+alter table group_settings add column if not exists ai_hint_enabled boolean default true;
+alter table group_settings add column if not exists ai_assistant_enabled boolean default true;
+alter table group_settings add column if not exists ai_validate_daily_limit integer default 5;
+
+-- Round AI cache for explain/hints (generated once per round, shared by all)
+create table if not exists round_ai_cache (
+  id uuid primary key default gen_random_uuid(),
+  round_id uuid references rounds(id) on delete cascade,
+  group_id uuid references family_groups(id) on delete cascade,
+  cache_type text not null check (cache_type in ('explain', 'hint')),
+  content text not null,
+  created_at timestamptz default now()
+);
+
+DO $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'round_ai_cache_unique'
+  ) then
+    alter table round_ai_cache
+      add constraint round_ai_cache_unique unique (round_id, group_id, cache_type);
+  end if;
+end $$;
+
+-- User AI usage tracking for daily limits
+create table if not exists user_ai_usage (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  group_id uuid references family_groups(id) on delete cascade,
+  usage_type text not null,
+  usage_date date not null default current_date,
+  count integer default 1,
+  created_at timestamptz default now()
+);
+
+DO $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_ai_usage_unique'
+  ) then
+    alter table user_ai_usage
+      add constraint user_ai_usage_unique unique (user_id, group_id, usage_type, usage_date);
+  end if;
+end $$;

@@ -324,7 +324,7 @@ export default function AdminPage() {
       const { data: settingsData } = await supabase
         .from("group_settings")
         .select(
-          "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette"
+          "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit"
         )
         .eq("group_id", group.id)
         .maybeSingle();
@@ -337,6 +337,11 @@ export default function AdminPage() {
         awards_model_key: settingsData?.awards_model_key ?? "OPENROUTER_MODEL",
         trophy_image_model_key: settingsData?.trophy_image_model_key ?? "OPENROUTER_MID_MODEL",
         logo_palette: settingsData?.logo_palette ?? "ocean-coral",
+        ai_assistant_enabled: settingsData?.ai_assistant_enabled ?? true,
+        ai_explain_enabled: settingsData?.ai_explain_enabled ?? true,
+        ai_validate_enabled: settingsData?.ai_validate_enabled ?? true,
+        ai_hint_enabled: settingsData?.ai_hint_enabled ?? true,
+        ai_validate_daily_limit: settingsData?.ai_validate_daily_limit ?? 5,
       };
       setGroupSettings(fallback);
       setSettingsDraft(fallback);
@@ -644,12 +649,17 @@ export default function AdminPage() {
       awards_model_key: settingsDraft.awards_model_key,
       trophy_image_model_key: settingsDraft.trophy_image_model_key,
       logo_palette: settingsDraft.logo_palette,
+      ai_assistant_enabled: settingsDraft.ai_assistant_enabled,
+      ai_explain_enabled: settingsDraft.ai_explain_enabled,
+      ai_validate_enabled: settingsDraft.ai_validate_enabled,
+      ai_hint_enabled: settingsDraft.ai_hint_enabled,
+      ai_validate_daily_limit: settingsDraft.ai_validate_daily_limit,
     };
     const { data, error } = await supabase
       .from("group_settings")
       .upsert(payload, { onConflict: "group_id" })
       .select(
-        "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette"
+        "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit"
       )
       .maybeSingle();
     if (!error && data) {
@@ -2496,7 +2506,118 @@ python scripts/build_track_metadata.py`}
       {activeTab === "ai-settings" ? (
         <Card className="dashboard-card">
           <h2>AI Settings</h2>
-          <p className="muted">Choose which model variable to use for each AI call.</p>
+          <p className="muted">Configure AI features and model settings.</p>
+
+          {/* AI Assistant Feature Toggles */}
+          <div className="admin-form" style={{ marginBottom: 24 }}>
+            <h3 style={{ margin: "0 0 12px 0", fontSize: "1rem" }}>Peek Panel AI Features</h3>
+            <p className="muted" style={{ fontSize: "0.85rem", marginBottom: 12 }}>
+              Control which AI features are available in the peek panel. The AI provides suggestions only - theme creators have the final say on rules.
+            </p>
+
+            <label className="field" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <input
+                type="checkbox"
+                checked={settingsDraft?.ai_assistant_enabled ?? true}
+                onChange={(e) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, ai_assistant_enabled: e.target.checked } : prev
+                  )
+                }
+                style={{ width: 18, height: 18 }}
+              />
+              <div>
+                <span className="field-label" style={{ margin: 0 }}>AI Assistant (master toggle)</span>
+                <span className="field-helper" style={{ display: "block", marginTop: 2 }}>
+                  Disable to hide all AI features in the peek panel
+                </span>
+              </div>
+            </label>
+
+            <label className="field" style={{ display: "flex", alignItems: "center", gap: 12, opacity: settingsDraft?.ai_assistant_enabled ? 1 : 0.5 }}>
+              <input
+                type="checkbox"
+                checked={settingsDraft?.ai_explain_enabled ?? true}
+                onChange={(e) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, ai_explain_enabled: e.target.checked } : prev
+                  )
+                }
+                disabled={!settingsDraft?.ai_assistant_enabled}
+                style={{ width: 18, height: 18 }}
+              />
+              <div>
+                <span className="field-label" style={{ margin: 0 }}>Explain Theme</span>
+                <span className="field-helper" style={{ display: "block", marginTop: 2 }}>
+                  AI shares thoughts on the theme (generated once per round, shared by all)
+                </span>
+              </div>
+            </label>
+
+            <label className="field" style={{ display: "flex", alignItems: "center", gap: 12, opacity: settingsDraft?.ai_assistant_enabled ? 1 : 0.5 }}>
+              <input
+                type="checkbox"
+                checked={settingsDraft?.ai_hint_enabled ?? true}
+                onChange={(e) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, ai_hint_enabled: e.target.checked } : prev
+                  )
+                }
+                disabled={!settingsDraft?.ai_assistant_enabled}
+                style={{ width: 18, height: 18 }}
+              />
+              <div>
+                <span className="field-label" style={{ margin: 0 }}>Get Hint</span>
+                <span className="field-helper" style={{ display: "block", marginTop: 2 }}>
+                  AI provides song-finding hints (generated once per round, shared by all)
+                </span>
+              </div>
+            </label>
+
+            <label className="field" style={{ display: "flex", alignItems: "center", gap: 12, opacity: settingsDraft?.ai_assistant_enabled ? 1 : 0.5 }}>
+              <input
+                type="checkbox"
+                checked={settingsDraft?.ai_validate_enabled ?? true}
+                onChange={(e) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, ai_validate_enabled: e.target.checked } : prev
+                  )
+                }
+                disabled={!settingsDraft?.ai_assistant_enabled}
+                style={{ width: 18, height: 18 }}
+              />
+              <div>
+                <span className="field-label" style={{ margin: 0 }}>Check Song</span>
+                <span className="field-helper" style={{ display: "block", marginTop: 2 }}>
+                  AI gives opinion on whether a song might fit the theme
+                </span>
+              </div>
+            </label>
+
+            <label className="field" style={{ marginLeft: 30, opacity: (settingsDraft?.ai_assistant_enabled && settingsDraft?.ai_validate_enabled) ? 1 : 0.5 }}>
+              <span className="field-label">Daily Check Limit (per user)</span>
+              <input
+                type="number"
+                className="field-input"
+                min="1"
+                max="50"
+                value={settingsDraft?.ai_validate_daily_limit ?? 5}
+                onChange={(e) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, ai_validate_daily_limit: parseInt(e.target.value) || 5 } : prev
+                  )
+                }
+                disabled={!settingsDraft?.ai_assistant_enabled || !settingsDraft?.ai_validate_enabled}
+                style={{ width: 80 }}
+              />
+              <span className="field-helper">
+                Limit how many songs each user can check per day (prevents API overuse)
+              </span>
+            </label>
+          </div>
+
+          <h3 style={{ margin: "0 0 12px 0", fontSize: "1rem" }}>Model Settings</h3>
+          <p className="muted" style={{ marginBottom: 12 }}>Choose which model variable to use for each AI call.</p>
           <div className="admin-form">
             <label className="field">
               <span className="field-label">Round summary (text)</span>
@@ -2734,6 +2855,12 @@ type GroupSettings = {
   awards_model_key: string | null;
   trophy_image_model_key: string | null;
   logo_palette: string | null;
+  // AI Assistant feature toggles
+  ai_assistant_enabled: boolean;
+  ai_explain_enabled: boolean;
+  ai_validate_enabled: boolean;
+  ai_hint_enabled: boolean;
+  ai_validate_daily_limit: number;
 };
 
 const MODEL_OPTIONS = [
