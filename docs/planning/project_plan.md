@@ -116,6 +116,34 @@ This document outlines the high-level project plan for the Music League Family C
     * Create a dedicated storage bucket for award trophy images.
     * Implement a batch trophy generation script from award prompts.
 
+### 2.9. Round Challenge Bonus Game
+* **US: Play Round Challenge:**
+    * Display 2 AI-selected songs from past Season 1 rounds.
+    * Users guess which Season 1 theme each song belonged to.
+    * One guess per song per user (persistent).
+    * Show correct/incorrect feedback and score.
+* **US: Challenge Persistence:**
+    * Store challenge songs in `round_challenges` table per round.
+    * Store user guesses in `challenge_guesses` table.
+    * Same challenge for all users in a group.
+* **US: Previous Round Answers:**
+    * After round closes, show previous round's correct answers.
+    * Admin can award bonus points via `challenge_bonus_points` table.
+
+### 2.10. AI-Powered Peek Panel Features
+* **US: Theme Explainer:**
+    * AI explains the current theme rules and edge cases.
+    * Helps users understand what qualifies.
+* **US: Rule Validator:**
+    * Users can check if a specific song fits the theme.
+    * AI provides yes/no with explanation.
+* **US: Hint Generator:**
+    * AI provides creative hints for finding songs.
+    * Without revealing specific song titles.
+* **US: Round Narratives:**
+    * Store `narrative` on `rounds` table for AI-generated round stories.
+    * Store `narrative` on `leagues` table for season-level recaps.
+
 ## Atomic Tasks List
 
 ### Foundational Elements & Backend Implementation
