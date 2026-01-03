@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { verifyAuth, unauthorizedResponse } from "../_shared/auth.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer/mod.ts";
 
 const corsHeaders = {
@@ -27,6 +28,12 @@ type RequestBody = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // Verify JWT authentication
+  const { user, error: authError } = await verifyAuth(req);
+  if (authError) {
+    return unauthorizedResponse(authError, corsHeaders);
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);

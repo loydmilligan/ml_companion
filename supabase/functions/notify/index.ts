@@ -1,4 +1,5 @@
 import { corsHeaders } from "../_shared/cors.ts";
+import { verifyAuth, unauthorizedResponse } from "../_shared/auth.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer/mod.ts";
 
 const NTFY_SERVER_URL = Deno.env.get("NTFY_SERVER_URL");
@@ -16,6 +17,12 @@ const SMTP_PORT = Number(Deno.env.get("SMTP_PORT") ?? "587");
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // Verify JWT authentication
+  const { user, error: authError } = await verifyAuth(req);
+  if (authError) {
+    return unauthorizedResponse(authError, corsHeaders);
   }
 
   const body = await req.json().catch(() => ({}));

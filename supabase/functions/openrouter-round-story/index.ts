@@ -1,4 +1,5 @@
 import { corsHeaders } from "../_shared/cors.ts";
+import { verifyAuth, unauthorizedResponse } from "../_shared/auth.ts";
 
 const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
 const OPENROUTER_MODEL = Deno.env.get("OPENROUTER_MODEL") ?? "anthropic/claude-3.5-sonnet";
@@ -122,6 +123,12 @@ const generateImage = async (prompt: string, modelOverride?: string | null, xTit
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // Verify JWT authentication
+  const { user, error: authError } = await verifyAuth(req);
+  if (authError) {
+    return unauthorizedResponse(authError, corsHeaders);
   }
 
   if (!OPENROUTER_API_KEY) {

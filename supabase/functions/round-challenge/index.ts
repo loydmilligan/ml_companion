@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { verifyAuth, unauthorizedResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -130,11 +131,19 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // Verify JWT authentication
+  const { user, error: authError } = await verifyAuth(req);
+  if (authError) {
+    return unauthorizedResponse(authError, corsHeaders);
+  }
+
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
     const body: RequestBody = await req.json().catch(() => ({})) as RequestBody;
-    const { mode, round_id, group_id, user_id, current_theme } = body;
+    // Use authenticated user ID instead of trusting client-provided user_id
+    const { mode, round_id, group_id, current_theme } = body;
+    const user_id = user.id;
 
     // Get or generate challenge for a round
     if (mode === "get_or_generate") {

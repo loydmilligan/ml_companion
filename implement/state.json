@@ -1,0 +1,21 @@
+{
+  "started_at": "2026-01-02T12:00:00Z",
+  "feature": "jwt-edge-functions",
+  "branch": "feature/jwt-edge-functions",
+  "checkpoint": "creating_shared_auth",
+  "completed_tasks": [
+    "create_tracking_files"
+  ],
+  "pending_tasks": [
+    "create_shared_auth",
+    "update_notify",
+    "update_openrouter_round_story",
+    "update_openrouter_compare",
+    "update_ai_assistant",
+    "update_round_challenge",
+    "update_send_invite_email",
+    "deploy_docker",
+    "deploy_edge_functions",
+    "test_all"
+  ]
+}
