@@ -27,17 +27,34 @@
 - [x] Update ai-assistant with JWT auth (also uses verified user.id)
 - [x] Update round-challenge with JWT auth (also uses verified user.id)
 - [x] Update send-invite-email with JWT auth
-- [ ] Commit and push changes
-- [ ] Deploy edge functions via Supabase MCP
-- [ ] Deploy to Pi (docker)
-- [ ] Test all functions
+- [x] Commit and push changes (commit e340a50)
+- [x] Deploy edge functions via Supabase MCP
+- [x] Deploy to Pi (docker)
+- [x] Test all functions
 
 ## Validation Checklist
-- [ ] All 6 functions have JWT verification
-- [ ] Functions return 401 for missing/invalid tokens
-- [ ] Functions work correctly when authenticated
-- [ ] Frontend continues to work (already sends JWT)
-- [ ] No regressions in functionality
+- [x] All 6 functions have JWT verification
+- [x] Functions return 401 for missing/invalid tokens
+- [x] Functions work correctly when authenticated
+- [x] Frontend continues to work (already sends JWT)
+- [x] No regressions in functionality
+
+## Final Status: COMPLETE
+All tasks completed. JWT authentication deployed and verified on 2026-01-02.
+
+## Deployment Summary
+| Function | Version | Status |
+|----------|---------|--------|
+| notify | v14 | ACTIVE |
+| openrouter-compare | v14 | ACTIVE |
+| send-invite-email | v4 | ACTIVE |
+| ai-assistant | v4 | ACTIVE |
+| round-challenge | v7 | ACTIVE |
+| openrouter-round-story | v16 | ACTIVE |
+
+Deployed: 2026-01-02
+Branch: feature/jwt-edge-functions
+Commit: e340a50
 
 ## Key Implementation Details
 
