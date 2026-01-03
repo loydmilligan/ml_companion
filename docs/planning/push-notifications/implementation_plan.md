@@ -5,6 +5,7 @@
 **Estimated Duration:** 2-3 weeks (15-20 days)  
 **Linear Issues:** [LOYD-129](https://linear.app/loydmilligan/issue/LOYD-129) (Android), [LOYD-130](https://linear.app/loydmilligan/issue/LOYD-130) (iOS)  
 **Created:** 2026-01-03  
+**Updated:** 2026-01-03 (migrated to FCM v1 API)  
 **Status:** Planning
 
 ---
@@ -20,25 +21,33 @@ Add native push notifications to TML app to improve user engagement and real-tim
 
 **Current State:** Using ntfy server for basic notifications (edge function: `notify`)  
 **Target State:** Native iOS (APNs) and Android (FCM) push notifications with user preferences  
-**Approach:** Firebase Cloud Messaging (unified solution for both platforms)
+**Approach:** Firebase Cloud Messaging v1 API with service account authentication (modern, secure)
 
 ---
 
-## Why Firebase Cloud Messaging?
+## Why Firebase Cloud Messaging v1 API?
 
 **Pros:**
 - ✅ Single SDK for both iOS and Android
 - ✅ Free tier supports millions of messages (10M/month)
 - ✅ Battle-tested reliability
 - ✅ Built-in analytics
-- ✅ Topic-based messaging (useful for group/round notifications)
+- ✅ OAuth2 authentication (more secure than legacy server key)
 - ✅ No Apple Developer account required for web-based notifications
 - ✅ Automatic APNs conversion for iOS Safari
+- ✅ Future-proof (legacy API being deprecated)
 
 **Cons:**
 - ⚠️ Vendor lock-in to Google
 - ⚠️ Adds Firebase dependency (~50KB gzipped)
 - ⚠️ Requires service worker (potential conflicts)
+- ⚠️ No batch sending in v1 API (must send individually)
+
+**Why v1 API over Legacy:**
+- Legacy server key is deprecated (Google ending support)
+- OAuth2 tokens expire (1-hour TTL = better security)
+- Better error handling and debugging
+- Platform-specific customization
 
 ---
 
@@ -55,7 +64,9 @@ Supabase (push_tokens table)
     ↓
 Edge Function: send-push-notification
     ↓
-Firebase Cloud Messaging API
+    [Generates OAuth2 token from service account]
+    ↓
+Firebase Cloud Messaging v1 API
     ↓
     [Routes to appropriate platform]
     ↓
@@ -76,11 +87,11 @@ User Device (receives notification)
 - [ ] Enable Cloud Messaging API
 - [ ] Add web app to Firebase project
 - [ ] Generate VAPID key for web push
-- [ ] Get Firebase config credentials
+- [ ] **Generate service account JSON** (Project Settings → Service Accounts → Generate New Private Key)
 
 **Environment Variables:**
 ```bash
-# Add to .env
+# Client-side (.env)
 VITE_FIREBASE_API_KEY=...
 VITE_FIREBASE_AUTH_DOMAIN=...
 VITE_FIREBASE_PROJECT_ID=...
@@ -88,9 +99,32 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
 VITE_FIREBASE_VAPID_KEY=...
 
-# Add to Supabase Edge Function secrets
-FIREBASE_SERVER_KEY=...
+# Server-side (Supabase Edge Function secrets)
+# Extract from downloaded service account JSON file
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com
 ```
+
+**Setting Supabase Secrets:**
+```bash
+# Option 1: Manual (preserving newlines)
+supabase secrets set FIREBASE_PROJECT_ID="your-project-id"
+supabase secrets set FIREBASE_CLIENT_EMAIL="firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com"
+supabase secrets set FIREBASE_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...
+-----END PRIVATE KEY-----'
+
+# Option 2: Extract from JSON using jq
+supabase secrets set FIREBASE_PROJECT_ID="$(cat service-account.json | jq -r .project_id)"
+supabase secrets set FIREBASE_CLIENT_EMAIL="$(cat service-account.json | jq -r .client_email)"
+supabase secrets set FIREBASE_PRIVATE_KEY="$(cat service-account.json | jq -r .private_key)"
+```
+
+**⚠️ CRITICAL SECURITY:**
+- Never commit service account JSON to git
+- Store securely (1Password, environment variables only)
+- Only edge function should access these credentials
 
 #### 1.2 Install Dependencies
 ```bash
@@ -110,26 +144,23 @@ npm install firebase
 #### 1.3 Service Worker Setup
 **File:** `web/public/firebase-messaging-sw.js`
 
-**⚠️ CRITICAL:** Service worker must be at root of public directory, cannot be bundled.
-
 ```javascript
-// web/public/firebase-messaging-sw.js
+// ⚠️ CRITICAL: Must be at root of public directory, cannot be bundled
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: "...",
-  authDomain: "...",
-  projectId: "...",
-  messagingSenderId: "...",
-  appId: "..."
+  apiKey: "YOUR_API_KEY",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project-id",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abc123"
 });
 
 const messaging = firebase.messaging();
 
-// Handle background messages (when app is not in focus)
 messaging.onBackgroundMessage((payload) => {
-  console.log('Background message received:', payload);
+  console.log('Background message:', payload);
   
   const notificationTitle = payload.notification?.title || 'Talking Music League';
   const notificationOptions = {
@@ -143,19 +174,12 @@ messaging.onBackgroundMessage((payload) => {
   return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  
   const clickAction = event.notification.data?.click_action || '/app';
-  
-  event.waitUntil(
-    clients.openWindow(clickAction)
-  );
+  event.waitUntil(clients.openWindow(clickAction));
 });
 ```
-
-**Risk Mitigation:** Test with existing PWA/caching to ensure no conflicts.
 
 #### 1.4 Initialize Firebase in App
 **File:** `web/src/lib/firebase.ts`
@@ -175,10 +199,9 @@ const firebaseConfig = {
 export const firebaseApp = initializeApp(firebaseConfig);
 export const messaging = getMessaging(firebaseApp);
 
-// Listen for foreground messages (when app is in focus)
 export const onForegroundMessage = (callback: (payload: any) => void) => {
   return onMessage(messaging, (payload) => {
-    console.log('Foreground message received:', payload);
+    console.log('Foreground message:', payload);
     callback(payload);
   });
 };
@@ -189,8 +212,6 @@ export const onForegroundMessage = (callback: (payload: any) => void) => {
 ### Phase 2: Token Registration (2-3 days)
 
 #### 2.1 Database Schema
-**File:** `supabase/schema.sql`
-
 ```sql
 -- Push notification tokens
 create table push_tokens (
@@ -198,7 +219,7 @@ create table push_tokens (
   user_id uuid references profiles(id) on delete cascade,
   token text not null unique,
   platform text check (platform in ('web', 'ios', 'android')),
-  device_info jsonb, -- {device_name, os_version, browser, user_agent}
+  device_info jsonb,
   created_at timestamptz default now(),
   last_used_at timestamptz default now(),
   unique (user_id, token)
@@ -207,32 +228,24 @@ create table push_tokens (
 create index push_tokens_user_id_idx on push_tokens(user_id);
 create index push_tokens_token_idx on push_tokens(token);
 create index push_tokens_last_used_idx on push_tokens(last_used_at);
-```
 
-#### 2.2 RLS Policies
-**File:** `supabase/rls.sql`
-
-```sql
+-- RLS policies
 alter table push_tokens enable row level security;
 
-drop policy if exists "Users can view own tokens" on push_tokens;
 create policy "Users can view own tokens" on push_tokens
   for select using (user_id = auth.uid());
 
-drop policy if exists "Users can insert own tokens" on push_tokens;
 create policy "Users can insert own tokens" on push_tokens
   for insert with check (user_id = auth.uid());
 
-drop policy if exists "Users can update own tokens" on push_tokens;
 create policy "Users can update own tokens" on push_tokens
   for update using (user_id = auth.uid());
 
-drop policy if exists "Users can delete own tokens" on push_tokens;
 create policy "Users can delete own tokens" on push_tokens
   for delete using (user_id = auth.uid());
 ```
 
-#### 2.3 Token Registration Hook
+#### 2.2 Token Registration Hook
 **File:** `web/src/hooks/usePushNotifications.ts`
 
 ```typescript
@@ -253,7 +266,6 @@ export const usePushNotifications = () => {
     setError(null);
 
     try {
-      // 1. Request browser permission
       const permission = await Notification.requestPermission();
       
       if (permission !== 'granted') {
@@ -262,7 +274,6 @@ export const usePushNotifications = () => {
         return false;
       }
 
-      // 2. Get FCM token
       const token = await getToken(messaging, {
         vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
       });
@@ -273,10 +284,8 @@ export const usePushNotifications = () => {
         return false;
       }
 
-      // 3. Detect platform
       const platform = detectPlatform();
 
-      // 4. Save to Supabase
       const { error: dbError } = await supabase
         .from('push_tokens')
         .upsert({
@@ -318,7 +327,6 @@ export const usePushNotifications = () => {
     return 'web';
   };
 
-  // Check current permission status on mount
   useEffect(() => {
     if ('Notification' in window) {
       setIsEnabled(Notification.permission === 'granted');
@@ -334,7 +342,7 @@ export const usePushNotifications = () => {
 };
 ```
 
-#### 2.4 Settings UI Component
+#### 2.3 Settings UI
 **File:** `web/src/components/settings/PushNotificationToggle.tsx`
 
 ```typescript
@@ -368,10 +376,7 @@ export const PushNotificationToggle = () => {
         {isEnabled ? (
           <span className="text-sm text-green-600">✓ Enabled</span>
         ) : (
-          <Button 
-            onClick={requestPermission} 
-            disabled={isLoading}
-          >
+          <Button onClick={requestPermission} disabled={isLoading}>
             {isLoading ? 'Enabling...' : 'Enable Notifications'}
           </Button>
         )}
@@ -389,9 +394,9 @@ export const PushNotificationToggle = () => {
 
 ---
 
-### Phase 3: Notification Sending (3-4 days)
+### Phase 3: Notification Sending with FCM v1 API (3-4 days)
 
-#### 3.1 Edge Function: send-push-notification
+#### 3.1 Edge Function (UPDATED FOR v1 API)
 **File:** `supabase/functions/send-push-notification/index.ts`
 
 ```typescript
@@ -403,7 +408,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const FIREBASE_SERVER_KEY = Deno.env.get("FIREBASE_SERVER_KEY");
+const FIREBASE_PROJECT_ID = Deno.env.get("FIREBASE_PROJECT_ID");
+const FIREBASE_PRIVATE_KEY = Deno.env.get("FIREBASE_PRIVATE_KEY");
+const FIREBASE_CLIENT_EMAIL = Deno.env.get("FIREBASE_CLIENT_EMAIL");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -415,8 +422,136 @@ type NotificationRequest = {
   body: string;
   data?: Record<string, string>;
   click_action?: string;
-  notification_type?: string; // For preference checking
+  notification_type?: string;
 };
+
+// Generate OAuth2 access token for FCM v1 API
+async function getAccessToken(): Promise<string> {
+  const SCOPES = ["https://www.googleapis.com/auth/firebase.messaging"];
+  
+  const header = { alg: "RS256", typ: "JWT" };
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: FIREBASE_CLIENT_EMAIL,
+    scope: SCOPES.join(" "),
+    aud: "https://oauth2.googleapis.com/token",
+    exp: now + 3600,
+    iat: now,
+  };
+
+  const encodedHeader = btoa(JSON.stringify(header));
+  const encodedPayload = btoa(JSON.stringify(payload));
+  const unsignedToken = `${encodedHeader}.${encodedPayload}`;
+
+  const privateKey = FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n");
+  const encoder = new TextEncoder();
+  const data = encoder.encode(unsignedToken);
+  
+  const key = await crypto.subtle.importKey(
+    "pkcs8",
+    pemToArrayBuffer(privateKey),
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, data);
+  const encodedSignature = arrayBufferToBase64(signature);
+  const jwt = `${unsignedToken}.${encodedSignature}`;
+
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get access token: ${await response.text()}`);
+  }
+
+  const { access_token } = await response.json();
+  return access_token;
+}
+
+function pemToArrayBuffer(pem: string): ArrayBuffer {
+  const b64 = pem
+    .replace(/-----BEGIN PRIVATE KEY-----/, "")
+    .replace(/-----END PRIVATE KEY-----/, "")
+    .replace(/\s/g, "");
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function sendFCMNotification(
+  token: string,
+  title: string,
+  body: string,
+  data: Record<string, string>,
+  clickAction: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const accessToken = await getAccessToken();
+    
+    const message = {
+      message: {
+        token,
+        notification: { title, body },
+        data,
+        webpush: {
+          fcm_options: { link: clickAction },
+          notification: {
+            icon: "/logo-192.png",
+            badge: "/badge-72.png",
+          },
+        },
+      },
+    };
+
+    const response = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/messages:send`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(message),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("FCM error:", errorText);
+      
+      if (errorText.includes("NOT_FOUND") || errorText.includes("INVALID_ARGUMENT")) {
+        return { success: false, error: "INVALID_TOKEN" };
+      }
+      
+      return { success: false, error: errorText };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("FCM send error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -437,7 +572,6 @@ Deno.serve(async (req) => {
       notification_type,
     }: NotificationRequest = await req.json();
 
-    // 1. Determine target users
     let targetUserIds: string[] = user_ids || [];
 
     if (group_id) {
@@ -470,7 +604,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Check user preferences
     if (notification_type) {
       const { data: allowedUsers } = await supabase
         .from("notification_preferences")
@@ -481,7 +614,6 @@ Deno.serve(async (req) => {
       targetUserIds = allowedUsers?.map((u) => u.user_id) || [];
     }
 
-    // 3. Get FCM tokens
     const { data: tokens } = await supabase
       .from("push_tokens")
       .select("token, user_id")
@@ -494,50 +626,43 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 4. Send to FCM
-    const fcmPayload = {
-      registration_ids: tokens.map((t) => t.token),
-      notification: {
+    // Send to each token (FCM v1 doesn't support batch)
+    let successCount = 0;
+    let failureCount = 0;
+    const invalidTokens: string[] = [];
+
+    for (const { token, user_id } of tokens) {
+      const result = await sendFCMNotification(
+        token,
         title,
         body,
-        click_action: click_action || "/app",
-      },
-      data: data || {},
-    };
+        data || {},
+        click_action || "/app"
+      );
 
-    const response = await fetch("https://fcm.googleapis.com/fcm/send", {
-      method: "POST",
-      headers: {
-        Authorization: `key=${FIREBASE_SERVER_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(fcmPayload),
-    });
-
-    if (!response.ok) {
-      throw new Error(`FCM request failed: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-
-    // 5. Handle invalid tokens
-    if (result.results) {
-      for (let i = 0; i < result.results.length; i++) {
-        const error = result.results[i].error;
-        if (error === "NotRegistered" || error === "InvalidRegistration") {
-          await supabase
-            .from("push_tokens")
-            .delete()
-            .eq("token", tokens[i].token);
+      if (result.success) {
+        successCount++;
+      } else {
+        failureCount++;
+        if (result.error === "INVALID_TOKEN") {
+          invalidTokens.push(token);
         }
       }
+    }
+
+    if (invalidTokens.length > 0) {
+      await supabase
+        .from("push_tokens")
+        .delete()
+        .in("token", invalidTokens);
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        sent: result.success || 0,
-        failed: result.failure || 0,
+        sent: successCount,
+        failed: failureCount,
+        invalid_tokens_removed: invalidTokens.length,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
@@ -554,7 +679,7 @@ Deno.serve(async (req) => {
 
 #### 3.2 Notification Triggers
 
-**A. New Round Created**
+**New Round:**
 ```typescript
 await supabase.functions.invoke('send-push-notification', {
   body: {
@@ -568,7 +693,7 @@ await supabase.functions.invoke('send-push-notification', {
 });
 ```
 
-**B. Deadline Reminder**
+**Deadline Reminder:**
 ```typescript
 await supabase.functions.invoke('send-push-notification', {
   body: {
@@ -582,7 +707,7 @@ await supabase.functions.invoke('send-push-notification', {
 });
 ```
 
-**C. Results Revealed**
+**Results Revealed:**
 ```typescript
 await supabase.functions.invoke('send-push-notification', {
   body: {
@@ -596,39 +721,10 @@ await supabase.functions.invoke('send-push-notification', {
 });
 ```
 
-**D. New Comment**
-```typescript
-await supabase.functions.invoke('send-push-notification', {
-  body: {
-    user_ids: [submission.submitter_id],
-    title: `💬 New comment from ${commenterName}`,
-    body: `On "${submission.title}" by ${submission.artist}`,
-    data: { type: 'new_comment', submission_id: submissionId },
-    click_action: `/app/submissions/${submissionId}`,
-    notification_type: 'comments_on_submissions',
-  },
-});
-```
-
-**E. Chat Message**
-```typescript
-await supabase.functions.invoke('send-push-notification', {
-  body: {
-    round_id: roundId,
-    title: `${authorName} in round chat`,
-    body: messagePreview,
-    data: { type: 'chat_message', round_id: roundId },
-    click_action: `/app/rounds/${roundId}?tab=chat`,
-    notification_type: 'chat_messages',
-  },
-});
-```
-
 ---
 
 ### Phase 4: User Preferences (2 days)
 
-#### 4.1 Schema
 ```sql
 create table notification_preferences (
   id uuid primary key default gen_random_uuid(),
@@ -654,132 +750,11 @@ create policy "Users can update own preferences" on notification_preferences
   for update using (user_id = auth.uid());
 ```
 
-#### 4.2 Preferences UI
-**File:** `web/src/components/settings/NotificationPreferences.tsx`
-
-```typescript
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/hooks/useAuth';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-
-export const NotificationPreferences = () => {
-  const { user } = useAuth();
-  const [prefs, setPrefs] = useState({
-    new_rounds: true,
-    deadline_reminders: true,
-    results_revealed: true,
-    comments_on_submissions: true,
-    chat_messages: false,
-  });
-
-  useEffect(() => {
-    loadPreferences();
-  }, [user]);
-
-  const loadPreferences = async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from('notification_preferences')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-
-    if (data) setPrefs(data);
-  };
-
-  const updatePref = async (key: string, value: boolean) => {
-    setPrefs({ ...prefs, [key]: value });
-    await supabase
-      .from('notification_preferences')
-      .upsert({
-        user_id: user?.id,
-        [key]: value,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' });
-  };
-
-  return (
-    <div className="space-y-4">
-      <h3 className="font-semibold">Notification Types</h3>
-      
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Label>New Rounds</Label>
-          <Switch
-            checked={prefs.new_rounds}
-            onCheckedChange={(v) => updatePref('new_rounds', v)}
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <Label>Deadline Reminders</Label>
-          <Switch
-            checked={prefs.deadline_reminders}
-            onCheckedChange={(v) => updatePref('deadline_reminders', v)}
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <Label>Results Revealed</Label>
-          <Switch
-            checked={prefs.results_revealed}
-            onCheckedChange={(v) => updatePref('results_revealed', v)}
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <Label>Comments on My Songs</Label>
-          <Switch
-            checked={prefs.comments_on_submissions}
-            onCheckedChange={(v) => updatePref('comments_on_submissions', v)}
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <Label>Chat Messages</Label>
-          <Switch
-            checked={prefs.chat_messages}
-            onCheckedChange={(v) => updatePref('chat_messages', v)}
-          />
-        </div>
-      </div>
-    </div>
-  );
-};
-```
-
 ---
 
-### Phase 5: Testing & QA (3-4 days)
+### Phase 5: Testing (3-4 days)
 
-#### Testing Checklist
-
-**Permission Flow:**
-- [ ] Permission dialog appears
-- [ ] Allow grants and registers token
-- [ ] Block handles gracefully
-- [ ] No repeated spam
-
-**Token Management:**
-- [ ] Token saves correctly
-- [ ] Token updates on refresh
-- [ ] Multiple devices work
-- [ ] Expired tokens cleaned up
-
-**Foreground Notifications:**
-- [ ] Toast when app is open
-- [ ] No duplicate native notification
-- [ ] Click navigates correctly
-
-**Background Notifications:**
-- [ ] Native notification when closed
-- [ ] Icon/badge display
-- [ ] Click opens to correct page
-
-**Cross-Platform:**
+**Cross-Platform Checklist:**
 - [ ] Android Chrome
 - [ ] Android Firefox
 - [ ] iOS Safari
@@ -787,76 +762,73 @@ export const NotificationPreferences = () => {
 - [ ] Desktop Chrome
 - [ ] Desktop Firefox
 
-**Preferences:**
-- [ ] Disabled types don't send
-- [ ] Test notification works
-- [ ] Preferences persist
+**Functionality:**
+- [ ] Permission flow
+- [ ] Token registration
+- [ ] Foreground notifications
+- [ ] Background notifications
+- [ ] Preferences respected
+- [ ] Invalid token cleanup
 
 ---
 
-## Risk Mitigation
+## FCM v1 vs Legacy API Comparison
 
-### Service Worker Conflicts (MEDIUM)
-- Audit current service worker
-- Use separate cache names
-- Test all offline features
-- Document architecture
-
-### iOS Safari Quirks (MEDIUM)
-- Test on real iOS devices
-- Follow Apple guidelines
-- Ensure HTTPS
-
-### Token Management (LOW-MEDIUM)
-- 60-day TTL cleanup
-- Handle FCM errors
-- User device management
+| Feature | Legacy API | FCM v1 API |
+|---------|-----------|------------|
+| **Auth** | Static server key | OAuth2 access token (1-hour TTL) |
+| **Endpoint** | `/fcm/send` | `/v1/projects/{id}/messages:send` |
+| **Batch** | ✅ Yes | ❌ No (send individually) |
+| **Security** | Static key (can leak) | Time-limited tokens |
+| **Error Codes** | Basic | Detailed |
+| **Platform Options** | Limited | Web/iOS/Android specific |
+| **Future** | Deprecated | Supported |
 
 ---
 
 ## Timeline
 
-| Phase | Duration |
-|-------|----------|
-| Foundation | 3-4 days |
-| Token Registration | 2-3 days |
-| Notification Sending | 3-4 days |
-| User Preferences | 2 days |
-| Testing & QA | 3-4 days |
-| **Total** | **15-20 days** |
+| Phase | Duration | Key Deliverables |
+|-------|----------|------------------|
+| Foundation | 3-4 days | Firebase setup, service worker, client SDK |
+| Token Registration | 2-3 days | Database, hooks, settings UI |
+| Notification Sending | 3-4 days | Edge function (v1 API), 5 triggers |
+| User Preferences | 2 days | Preferences schema, UI |
+| Testing & QA | 3-4 days | Cross-platform testing |
+| **Total** | **15-20 days** | |
 
 ---
 
 ## Success Metrics
 
-### Technical
+**Technical:**
 - Token registration > 95%
 - Message delivery > 90%
 - Latency < 5 seconds
-- Zero conflicts
+- Zero service worker conflicts
 
-### User
+**User:**
 - 70%+ enable notifications
-- 50%+ click-through
-- < 10% unsubscribe
+- 50%+ click-through rate
+- < 10% unsubscribe in first month
 
 ---
 
 ## Definition of Done
 
-- [ ] Firebase project configured
-- [ ] Database schema deployed
-- [ ] Service worker tested
-- [ ] Token registration working
-- [ ] Edge function deployed
-- [ ] All 5 triggers implemented
-- [ ] Preferences UI complete
-- [ ] Cross-platform testing done
+- [ ] Firebase project created with service account
+- [ ] Database schema deployed with RLS
+- [ ] Service worker tested (no conflicts)
+- [ ] Token registration working (all platforms)
+- [ ] Edge function deployed with v1 API
+- [ ] All 5 notification triggers implemented
+- [ ] User preferences UI complete
+- [ ] Cross-platform testing complete
 - [ ] Zero critical bugs
 - [ ] Documentation updated
-- [ ] 70%+ adoption
+- [ ] 70%+ user adoption
 
 ---
 
 **Status:** Ready for implementation  
-**Next Action:** Create Firebase project
+**Next Action:** Generate service account JSON from Firebase Console
