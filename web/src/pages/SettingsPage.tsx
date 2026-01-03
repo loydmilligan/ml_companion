@@ -4,13 +4,17 @@ import Button from "../components/Button";
 import PushNotificationToggle from "../components/PushNotificationToggle";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import { usePushNotifications } from "../hooks/usePushNotifications";
 
 const defaultEmojiOptions = ["👍", "❤️", "🔥", "😂", "👏", "🎵", "✨", "🙌"];
 
 export default function SettingsPage() {
-  const { profile } = useAuth();
+  const { profile, group } = useAuth();
+  const isLead = group?.role === "lead";
+  const { isEnabled: pushEnabled } = usePushNotifications();
   const [message, setMessage] = useState("Test notification from Talking Music League.");
   const [status, setStatus] = useState<string | null>(null);
+  const [adminStatus, setAdminStatus] = useState<string | null>(null);
   const [chatNotifyEnabled, setChatNotifyEnabled] = useState(profile?.chat_notify_enabled ?? true);
   const [emailNotifyEnabled, setEmailNotifyEnabled] = useState(profile?.email_notify_enabled ?? true);
   const [reactionNotifyEnabled, setReactionNotifyEnabled] = useState(profile?.reaction_notify_enabled ?? true);
@@ -58,6 +62,9 @@ export default function SettingsPage() {
 
   const sendTest = async () => {
     setStatus("Sending...");
+    const results: string[] = [];
+
+    // Send email/ntfy notification
     const { data, error } = await supabase.functions.invoke("notify", {
       body: {
         title: "Talking Music League",
@@ -66,10 +73,82 @@ export default function SettingsPage() {
       },
     });
     if (error) {
-      setStatus(error.message);
+      results.push(`Email: ${error.message}`);
+    } else {
+      results.push(`Email: ${data?.results?.email ?? "sent"}`);
+    }
+
+    // Send push notification if enabled
+    if (pushEnabled) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: pushData, error: pushError } = await supabase.functions.invoke("send-push-notification", {
+          body: {
+            notification_type: "chat_message",
+            title: "Test Push Notification",
+            body: message,
+            user_ids: [user.id],
+          },
+        });
+        if (pushError) {
+          results.push(`Push: ${pushError.message}`);
+        } else {
+          results.push(`Push: sent ${pushData?.sent ?? 0}`);
+        }
+      }
+    } else {
+      results.push("Push: disabled");
+    }
+
+    setStatus(results.join(" | "));
+  };
+
+  const sendAdminTest = async () => {
+    if (!isLead) return;
+    setAdminStatus("Sending to admin only...");
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setAdminStatus("Not authenticated");
       return;
     }
-    setStatus(data?.results ? JSON.stringify(data.results) : "Sent");
+
+    const results: string[] = [];
+
+    // Send email only to admin (current user)
+    const { data, error } = await supabase.functions.invoke("notify", {
+      body: {
+        title: "Admin Test - Talking Music League",
+        message: `[Admin Only] ${message}`,
+        recipients: profile?.email ? [profile.email] : [],
+      },
+    });
+    if (error) {
+      results.push(`Email: ${error.message}`);
+    } else {
+      results.push(`Email: ${data?.results?.email ?? "sent"}`);
+    }
+
+    // Send push to admin only
+    if (pushEnabled) {
+      const { data: pushData, error: pushError } = await supabase.functions.invoke("send-push-notification", {
+        body: {
+          notification_type: "chat_message",
+          title: "Admin Test Push",
+          body: `[Admin Only] ${message}`,
+          user_ids: [user.id],
+        },
+      });
+      if (pushError) {
+        results.push(`Push: ${pushError.message}`);
+      } else {
+        results.push(`Push: sent ${pushData?.sent ?? 0}`);
+      }
+    } else {
+      results.push("Push: disabled");
+    }
+
+    setAdminStatus(results.join(" | "));
   };
 
   return (
@@ -152,11 +231,20 @@ export default function SettingsPage() {
             className="field-input"
             value={message}
             onChange={(event) => setMessage(event.target.value)}
+            placeholder="Test notification message..."
           />
-          <Button type="button" variant="secondary" onClick={sendTest}>
-            Send Test Notification
-          </Button>
+          <div className="notification-test-buttons">
+            <Button type="button" variant="secondary" onClick={sendTest}>
+              Test All
+            </Button>
+            {isLead && (
+              <Button type="button" variant="secondary" onClick={sendAdminTest}>
+                Admin Only
+              </Button>
+            )}
+          </div>
           {status ? <p className="muted">{status}</p> : null}
+          {adminStatus ? <p className="muted">{adminStatus}</p> : null}
         </div>
       </Card>
     </div>

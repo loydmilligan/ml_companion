@@ -1854,6 +1854,12 @@
   gap: 10px;
 }
 
+.notification-test-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 /* Push notification toggle styles */
 .push-notification-toggle {
   margin-bottom: 8px;
