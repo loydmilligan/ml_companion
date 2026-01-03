@@ -104,10 +104,8 @@ export function usePushNotifications(): UsePushNotificationsReturn {
         return false;
       }
 
-      // Register service worker if not already registered
-      const registration = await navigator.serviceWorker.register(
-        "/firebase-messaging-sw.js"
-      );
+      // Wait for the service worker (registered by vite-plugin-pwa)
+      const registration = await navigator.serviceWorker.ready;
 
       // Get FCM token
       const token = await getToken(messaging, {

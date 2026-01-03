@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
+import PushNotificationToggle from "../components/PushNotificationToggle";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -114,6 +115,8 @@ export default function SettingsPage() {
       <Card>
         <h2>Notification preferences</h2>
         <p className="muted">These settings control chat and email alerts.</p>
+        <PushNotificationToggle />
+        <div className="notification-divider" />
         <label className="checkbox-row">
           <input
             type="checkbox"

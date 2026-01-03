@@ -1854,6 +1854,81 @@
   gap: 10px;
 }
 
+/* Push notification toggle styles */
+.push-notification-toggle {
+  margin-bottom: 8px;
+}
+
+.push-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(10, 26, 47, 0.04);
+}
+
+.push-status-unsupported,
+.push-status-denied {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--text);
+}
+
+.push-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.push-status-unsupported .push-icon,
+.push-status-denied .push-icon {
+  color: #ef4444;
+}
+
+.push-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.push-hint {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.push-hint-success {
+  color: #10b981;
+  margin-top: 6px;
+  margin-left: 26px;
+}
+
+.push-hint-error {
+  color: #ef4444;
+  margin-top: 6px;
+}
+
+.notification-divider {
+  height: 1px;
+  background: rgba(10, 26, 47, 0.08);
+  margin: 8px 0;
+}
+
+[data-mode="dark"] .push-status {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-mode="dark"] .push-status-unsupported,
+[data-mode="dark"] .push-status-denied {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+[data-mode="dark"] .notification-divider {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .connection-body {
   display: grid;
   gap: 12px;
