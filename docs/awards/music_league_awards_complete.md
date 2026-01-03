@@ -77,8 +77,8 @@ A collection of 53 weekly awards for Music League, with objective measurement cr
 
 ---
 
-### 5. The Shutout
-**Description:** Track that received points from every single voter. Universal appeal.
+### 5. Universal Appeal
+**Description:** Track that received points from every single voter. Everyone found something to love.
 
 | Criteria | Details |
 |----------|---------|
@@ -113,7 +113,7 @@ A collection of 53 weekly awards for Music League, with objective measurement cr
 
 ---
 
-### 23. Consistent Mediocrity
+### 23. Stuck in the Middle With...Me
 **Description:** Finished in the exact middle of the pack.
 
 | Criteria | Details |
@@ -137,8 +137,8 @@ A collection of 53 weekly awards for Music League, with objective measurement cr
 
 ---
 
-### 25. Unanimous Bottom
-**Description:** Every voter ranked this track dead last in their personal voting.
+### 25. The Anchor
+**Description:** Every voter gave this track their lowest points. Sinking peacefully to the bottom.
 
 | Criteria | Details |
 |----------|---------|

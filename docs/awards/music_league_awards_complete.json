@@ -50,8 +50,8 @@
     },
     {
       "id": 5,
-      "name": "The Shutout",
-      "description": "Track that received points from every single voter. Universal appeal.",
+      "name": "Universal Appeal",
+      "description": "Track that received points from every single voter. Everyone found something to love.",
       "category": "performance",
       "measurement": {
         "qualifies": "Every voter who voted in this round gave this track > 0 points",
@@ -273,7 +273,7 @@
     },
     {
       "id": 23,
-      "name": "Consistent Mediocrity",
+      "name": "Stuck in the Middle With...Me",
       "description": "Finished in the exact middle of the pack.",
       "category": "performance",
       "measurement": {
@@ -297,8 +297,8 @@
     },
     {
       "id": 25,
-      "name": "Unanimous Bottom",
-      "description": "Every voter ranked this track dead last in their personal voting.",
+      "name": "The Anchor",
+      "description": "Every voter gave this track their lowest points. Sinking peacefully to the bottom.",
       "category": "performance",
       "measurement": {
         "qualifies": "For each voter who voted on this track, points_assigned equals their min points given this round",
