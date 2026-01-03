@@ -41,7 +41,7 @@
 | Add VITE_FIREBASE_VAPID_KEY to `.env` | User | [ ] | From web push certificates |
 | Set FIREBASE_PROJECT_ID in Supabase secrets | User | [ ] | `supabase secrets set` |
 | Set FIREBASE_CLIENT_EMAIL in Supabase secrets | User | [ ] | `supabase secrets set` |
-| Set FIREBASE_PRIVATE_KEY in Supabase secrets | User | [ ] | Preserve newlines! |
+| Set FIREBASE_PRIVATE_KEY in Supabase secrets | User | [ ] | Use `jq -r` - see notes below |
 
 ### 1.3 Install Dependencies
 | Task | Owner | Status | Notes |
