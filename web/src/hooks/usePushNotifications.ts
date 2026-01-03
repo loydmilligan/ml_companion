@@ -148,7 +148,14 @@ export function usePushNotifications(): UsePushNotificationsReturn {
 
       if (upsertError) {
         console.error("Failed to save push token:", upsertError);
-        // Don't throw - the token is still valid locally
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          isEnabled: false,
+          permission: "granted",
+          error: `Failed to save token: ${upsertError.message}`,
+        }));
+        return false;
       }
 
       setState((prev) => ({
@@ -159,7 +166,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
         error: null,
       }));
 
-      console.log("[FCM] Push notifications enabled, token saved");
+      console.log("[FCM] Push notifications enabled, token:", token.substring(0, 20) + "...");
       return true;
     } catch (error) {
       console.error("[FCM] Error enabling push notifications:", error);
