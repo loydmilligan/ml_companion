@@ -90,8 +90,12 @@ export function usePushNotifications(): UsePushNotificationsReturn {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
+      console.log("[FCM] Starting push notification setup...");
+      console.log("[FCM] vapidKey present:", !!vapidKey);
+
       // Request permission
       const permission = await Notification.requestPermission();
+      console.log("[FCM] Permission result:", permission);
 
       if (permission !== "granted") {
         setState((prev) => ({
@@ -105,25 +109,42 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       }
 
       // Wait for the service worker (registered by vite-plugin-pwa)
+      console.log("[FCM] Waiting for service worker...");
       const registration = await navigator.serviceWorker.ready;
+      console.log("[FCM] Service worker ready, scope:", registration.scope);
 
-      // Get FCM token
-      const token = await getToken(messaging, {
+      // Get FCM token with timeout
+      console.log("[FCM] Getting FCM token...");
+      const tokenPromise = getToken(messaging, {
         vapidKey,
         serviceWorkerRegistration: registration,
       });
 
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("FCM token request timed out after 30s")), 30000)
+      );
+
+      const token = await Promise.race([tokenPromise, timeoutPromise]);
+      console.log("[FCM] Got token:", token ? token.substring(0, 20) + "..." : "null");
+
       if (!token) {
-        throw new Error("Failed to get FCM token");
+        throw new Error("Failed to get FCM token - token was empty");
       }
 
       // Save token to Supabase
-      const { data: { user } } = await supabase.auth.getUser();
+      console.log("[FCM] Getting authenticated user...");
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        throw new Error(`Auth error: ${userError.message}`);
+      }
       if (!user) {
         throw new Error("User not authenticated");
       }
+      console.log("[FCM] User ID:", user.id);
 
       const platform = getPlatform();
+      console.log("[FCM] Platform detected:", platform);
+
       const deviceInfo = {
         userAgent: navigator.userAgent,
         language: navigator.language,
@@ -131,7 +152,8 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       };
 
       // Upsert token (update if exists, insert if new)
-      const { error: upsertError } = await supabase
+      console.log("[FCM] Saving token to database...");
+      const { data: upsertData, error: upsertError } = await supabase
         .from("push_tokens")
         .upsert(
           {
@@ -144,7 +166,10 @@ export function usePushNotifications(): UsePushNotificationsReturn {
           {
             onConflict: "user_id,token",
           }
-        );
+        )
+        .select();
+
+      console.log("[FCM] Upsert result:", { data: upsertData, error: upsertError });
 
       if (upsertError) {
         console.error("Failed to save push token:", upsertError);
