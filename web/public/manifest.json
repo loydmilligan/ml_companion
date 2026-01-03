@@ -1,0 +1,38 @@
+{
+  "name": "Talking Music League",
+  "short_name": "TML",
+  "description": "Family companion app for Music League",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a1a2f",
+  "theme_color": "#0a1a2f",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["entertainment", "music"],
+  "shortcuts": [
+    {
+      "name": "Current Round",
+      "url": "/",
+      "description": "View the current round"
+    }
+  ]
+}
