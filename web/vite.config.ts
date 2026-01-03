@@ -1,96 +1,69 @@
-import { defineConfig, Plugin } from "vite";
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { writeFileSync, mkdirSync } from "fs";
-import { resolve } from "path";
-
-// Plugin to generate Firebase service worker with injected config
-function firebaseServiceWorkerPlugin(): Plugin {
-  return {
-    name: "firebase-service-worker",
-    writeBundle(options) {
-      const outDir = options.dir || "dist";
-      const swContent = `// Firebase Cloud Messaging Service Worker
-// Generated at build time with Firebase config
-
-importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
-
-const firebaseConfig = {
-  apiKey: "${process.env.VITE_FIREBASE_API_KEY || ''}",
-  authDomain: "${process.env.VITE_FIREBASE_AUTH_DOMAIN || ''}",
-  projectId: "${process.env.VITE_FIREBASE_PROJECT_ID || ''}",
-  messagingSenderId: "${process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || ''}",
-  appId: "${process.env.VITE_FIREBASE_APP_ID || ''}"
-};
-
-// Only initialize if config is present
-if (firebaseConfig.apiKey && firebaseConfig.projectId) {
-  firebase.initializeApp(firebaseConfig);
-  const messaging = firebase.messaging();
-
-  // Handle background messages
-  messaging.onBackgroundMessage((payload) => {
-    console.log('[SW] Background message received:', payload);
-
-    const notificationTitle = payload.notification?.title || 'New Notification';
-    const notificationOptions = {
-      body: payload.notification?.body || '',
-      icon: '/favicon.png',
-      badge: '/favicon.png',
-      data: payload.data || {},
-      tag: payload.data?.tag || 'default',
-      renotify: true
-    };
-
-    self.registration.showNotification(notificationTitle, notificationOptions);
-  });
-}
-
-// Handle notification click
-self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification clicked:', event);
-  event.notification.close();
-
-  const urlToOpen = event.notification.data?.url || '/';
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // If a window is already open, focus it
-      for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.focus();
-          if (event.notification.data?.url) {
-            client.navigate(urlToOpen);
-          }
-          return;
-        }
-      }
-      // Otherwise open a new window
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
-    })
-  );
-});
-`;
-
-      mkdirSync(outDir, { recursive: true });
-      writeFileSync(resolve(outDir, "firebase-messaging-sw.js"), swContent);
-      console.log("✓ Generated firebase-messaging-sw.js");
-    },
-  };
-}
+import { VitePWA } from "vite-plugin-pwa";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), firebaseServiceWorkerPlugin()],
+  plugins: [
+    react(),
+    VitePWA({
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
+      registerType: "autoUpdate",
+      injectRegister: "auto",
+      manifest: {
+        name: "Talking Music League",
+        short_name: "TML",
+        description: "Family companion app for Music League",
+        start_url: "/",
+        display: "standalone",
+        background_color: "#0a1a2f",
+        theme_color: "#0a1a2f",
+        orientation: "portrait-primary",
+        icons: [
+          {
+            src: "/favicon.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/favicon.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
+          },
+          {
+            src: "/favicon-1024.png",
+            sizes: "1024x1024",
+            type: "image/png",
+            purpose: "any",
+          },
+        ],
+        categories: ["entertainment", "music"],
+      },
+      injectManifest: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
+      },
+      devOptions: {
+        enabled: false, // Disable in dev to avoid issues
+      },
+    }),
+  ],
+  define: {
+    __FIREBASE_CONFIG__: JSON.stringify({
+      apiKey: process.env.VITE_FIREBASE_API_KEY || "",
+      authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+      projectId: process.env.VITE_FIREBASE_PROJECT_ID || "",
+      messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+      appId: process.env.VITE_FIREBASE_APP_ID || "",
+    }),
+  },
   server: {
     host: true,
     port: 5173,
     cors: true,
-    allowedHosts: [
-      "talking.mattmariani.com",
-      "192.168.4.217",
-    ],
+    allowedHosts: ["talking.mattmariani.com", "192.168.4.217"],
   },
 });
