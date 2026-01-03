@@ -8,6 +8,7 @@ interface PushNotificationState {
   isLoading: boolean;
   error: string | null;
   permission: NotificationPermission | "unsupported";
+  debugStatus: string | null;
 }
 
 interface UsePushNotificationsReturn extends PushNotificationState {
@@ -41,6 +42,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
     isLoading: true,
     error: null,
     permission: "unsupported",
+    debugStatus: null,
   });
 
   // Initialize state
@@ -87,12 +89,13 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       return false;
     }
 
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+    setState((prev) => ({ ...prev, isLoading: true, error: null, debugStatus: "Starting..." }));
 
     try {
       console.log("[FCM] Starting push notification setup...");
       console.log("[FCM] vapidKey present:", !!vapidKey);
 
+      setState((prev) => ({ ...prev, debugStatus: "Requesting permission..." }));
       // Request permission
       const permission = await Notification.requestPermission();
       console.log("[FCM] Permission result:", permission);
@@ -109,11 +112,13 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       }
 
       // Wait for the service worker (registered by vite-plugin-pwa)
+      setState((prev) => ({ ...prev, debugStatus: "Waiting for service worker..." }));
       console.log("[FCM] Waiting for service worker...");
       const registration = await navigator.serviceWorker.ready;
       console.log("[FCM] Service worker ready, scope:", registration.scope);
 
       // Get FCM token with timeout
+      setState((prev) => ({ ...prev, debugStatus: "Getting FCM token..." }));
       console.log("[FCM] Getting FCM token...");
       const tokenPromise = getToken(messaging, {
         vapidKey,
@@ -132,6 +137,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       }
 
       // Save token to Supabase
+      setState((prev) => ({ ...prev, debugStatus: "Got token, authenticating..." }));
       console.log("[FCM] Getting authenticated user...");
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError) {
@@ -152,6 +158,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       };
 
       // Upsert token (update if exists, insert if new)
+      setState((prev) => ({ ...prev, debugStatus: "Saving to database..." }));
       console.log("[FCM] Saving token to database...");
       const { data: upsertData, error: upsertError } = await supabase
         .from("push_tokens")
@@ -189,6 +196,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
         isEnabled: true,
         permission: "granted",
         error: null,
+        debugStatus: "Success! Token saved.",
       }));
 
       console.log("[FCM] Push notifications enabled, token:", token.substring(0, 20) + "...");

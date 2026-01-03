@@ -1,7 +1,7 @@
 import { usePushNotifications } from "../hooks/usePushNotifications";
 
 export default function PushNotificationToggle() {
-  const { isSupported, isEnabled, isLoading, error, permission, requestPermission, unregister } =
+  const { isSupported, isEnabled, isLoading, error, permission, debugStatus, requestPermission, unregister } =
     usePushNotifications();
 
   if (!isSupported) {
@@ -61,6 +61,9 @@ export default function PushNotificationToggle() {
           {isLoading ? "Setting up..." : "Enable push notifications"}
         </span>
       </label>
+      {isLoading && debugStatus && (
+        <span className="push-hint push-hint-debug">{debugStatus}</span>
+      )}
       {isEnabled && (
         <span className="push-hint push-hint-success">
           You'll receive notifications even when the app is closed

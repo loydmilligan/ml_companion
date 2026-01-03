@@ -1916,6 +1916,12 @@
   margin-top: 6px;
 }
 
+.push-hint-debug {
+  color: #f59e0b;
+  margin-top: 6px;
+  font-style: italic;
+}
+
 .notification-divider {
   height: 1px;
   background: rgba(10, 26, 47, 0.08);
