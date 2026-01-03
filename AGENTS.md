@@ -22,3 +22,35 @@ Use this sequence for each change:
 - Keep documentation consistent and cross-linked.
 - Prefer small, reviewable edits over sweeping rewrites.
 - Ask a concise question if a decision is blocked or ambiguous.
+
+## Linear Integration
+
+**Project ID:** `4dfa7418-9bf3-4442-96fc-83d0e05e5ce8`
+**Project Name:** Talking Music League
+**Team:** Loydmilligan
+
+### Keeping issues.md in Sync with Linear
+
+The local `docs/issues.md` file is the canonical source for roadmap items. Linear is used for sprint planning. Keep them synchronized:
+
+#### Adding New Issues
+1. Add to `docs/issues.md` first with local ID (e.g., `PN-003`)
+2. Create in Linear with `mcp__linear-server__create_issue`
+3. Update issues.md with the Linear ID (`LOYD-XXX`)
+
+#### Completing Issues
+1. Update Linear status to "Done" via `mcp__linear-server__update_issue`
+2. Update issues.md status to `Complete`
+
+#### Verifying Sync
+```
+mcp__linear-server__list_issues with project: "4dfa7418-9bf3-4442-96fc-83d0e05e5ce8"
+```
+
+#### ID Mapping
+- `PN-XXX` → Push Notifications
+- `INT-XXX` → Integrations
+- `ML-XXX` → Media Links
+- `SEC-XXX` / `EF-XXX` → Security / Edge Functions
+- `STG-XXX` → Storage
+- `AWD-XXX` → Awards

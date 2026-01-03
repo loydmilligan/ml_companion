@@ -93,3 +93,54 @@ If deployment fails:
 ```bash
 ssh pi "cd ml_companion && git checkout HEAD~1 && docker compose down && docker compose build && docker compose up -d"
 ```
+
+## Linear Integration
+
+**Project ID:** `4dfa7418-9bf3-4442-96fc-83d0e05e5ce8`
+**Project Name:** Talking Music League
+**Team:** Loydmilligan
+
+### Keeping issues.md in Sync with Linear
+
+The local `docs/issues.md` file serves as the canonical source for roadmap items and issues. Linear is used for sprint planning and tracking. Follow this workflow to keep them synchronized:
+
+#### When Adding New Issues
+
+1. **Add to issues.md first** with a local ID (e.g., `PN-003`)
+2. **Create in Linear** using `mcp__linear-server__create_issue`:
+   ```
+   team: "Loydmilligan"
+   project: "Talking Music League"
+   title: "PN-003: [Feature Name]"
+   description: [Copy from issues.md]
+   ```
+3. **Update issues.md** with the Linear ID (e.g., `LOYD-XXX`)
+
+#### When Completing Issues
+
+1. **Update Linear status** using `mcp__linear-server__update_issue`:
+   ```
+   id: "LOYD-XXX"
+   state: "Done"
+   ```
+2. **Update issues.md** to mark status as `Complete`
+
+#### Syncing Status
+
+To verify sync between Linear and issues.md:
+```
+mcp__linear-server__list_issues with project: "4dfa7418-9bf3-4442-96fc-83d0e05e5ce8"
+```
+
+Compare statuses and update any discrepancies in both places.
+
+#### Issue ID Mapping Convention
+
+Linear issues use format `LOYD-XXX`. Local IDs in issues.md use category prefixes:
+- `PN-XXX` → Push Notifications
+- `INT-XXX` → Integrations
+- `ML-XXX` → Media Links
+- `SEC-XXX` → Security
+- `EF-XXX` → Edge Functions
+- `STG-XXX` → Storage
+- `AWD-XXX` → Awards
