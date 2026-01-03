@@ -39,32 +39,32 @@
 | Update `.env.example` with Firebase vars | Claude | [x] | Already done |
 | Add VITE_FIREBASE_* vars to local `.env` | User | [ ] | Frontend config |
 | Add VITE_FIREBASE_VAPID_KEY to `.env` | User | [ ] | From web push certificates |
-| Set FIREBASE_PROJECT_ID in Supabase secrets | User | [ ] | `supabase secrets set` |
-| Set FIREBASE_CLIENT_EMAIL in Supabase secrets | User | [ ] | `supabase secrets set` |
-| Set FIREBASE_PRIVATE_KEY in Supabase secrets | User | [ ] | Use `jq -r` - see notes below |
+| Set FIREBASE_PROJECT_ID in Supabase secrets | User | [x] | `supabase secrets set` |
+| Set FIREBASE_CLIENT_EMAIL in Supabase secrets | User | [x] | `supabase secrets set` |
+| Set FIREBASE_PRIVATE_KEY in Supabase secrets | User | [x] | Use `jq -r` - see notes below |
 
 ### 1.3 Install Dependencies
 | Task | Owner | Status | Notes |
 |------|-------|--------|-------|
-| Install firebase npm package | Claude | [ ] | `npm install firebase` |
-| Verify package.json updated | Claude | [ ] | firebase ^10.7.1 |
+| Install firebase npm package | Claude | [x] | `npm install firebase` |
+| Verify package.json updated | Claude | [x] | firebase ^10.7.1 |
 
 ### 1.4 Service Worker Setup
 | Task | Owner | Status | Notes |
 |------|-------|--------|-------|
-| Create `firebase-messaging-sw.js` | Claude | [ ] | In `web/public/` |
-| Add Firebase config to service worker | Claude | [ ] | Must be hardcoded (no env vars in SW) |
-| Add background message handler | Claude | [ ] | `onBackgroundMessage` |
-| Add notification click handler | Claude | [ ] | Deep link to correct page |
+| Create `firebase-messaging-sw.js` | Claude | [x] | Via Vite plugin (generated at build time) |
+| Add Firebase config to service worker | Claude | [x] | Injected by Vite plugin from env vars |
+| Add background message handler | Claude | [x] | `onBackgroundMessage` |
+| Add notification click handler | Claude | [x] | Deep link to correct page |
 | Test for conflicts with existing SW | Claude | [ ] | Check PWA/caching |
 
 ### 1.5 Firebase Client Initialization
 | Task | Owner | Status | Notes |
 |------|-------|--------|-------|
-| Create `web/src/lib/firebase.ts` | Claude | [ ] | Firebase config & init |
-| Export messaging instance | Claude | [ ] | |
-| Add foreground message listener | Claude | [ ] | `onMessage` handler |
-| Handle missing env vars gracefully | Claude | [ ] | Don't crash if Firebase not configured |
+| Create `web/src/lib/firebase.ts` | Claude | [x] | Firebase config & init |
+| Export messaging instance | Claude | [x] | |
+| Add foreground message listener | Claude | [x] | `onMessage` handler |
+| Handle missing env vars gracefully | Claude | [x] | Don't crash if Firebase not configured |
 
 ---
 
@@ -73,21 +73,21 @@
 ### 2.1 Database Schema
 | Task | Owner | Status | Notes |
 |------|-------|--------|-------|
-| Create `push_tokens` table migration | Claude | [ ] | |
-| Add indexes for user_id, token, last_used_at | Claude | [ ] | |
-| Add RLS policies for push_tokens | Claude | [ ] | Users can only access own tokens |
-| Apply migration to Supabase | Claude | [ ] | Via MCP |
+| Create `push_tokens` table migration | Claude | [x] | |
+| Add indexes for user_id, token, last_used_at | Claude | [x] | |
+| Add RLS policies for push_tokens | Claude | [x] | Users can only access own tokens |
+| Apply migration to Supabase | Claude | [x] | Via MCP |
 
 ### 2.2 Token Registration Hook
 | Task | Owner | Status | Notes |
 |------|-------|--------|-------|
-| Create `usePushNotifications.ts` hook | Claude | [ ] | |
-| Implement `requestPermission()` | Claude | [ ] | Browser permission flow |
-| Implement FCM token retrieval | Claude | [ ] | Using VAPID key |
-| Implement platform detection | Claude | [ ] | web/ios/android |
-| Implement token save to Supabase | Claude | [ ] | Upsert to push_tokens |
-| Handle permission denied gracefully | Claude | [ ] | |
-| Handle unsupported browsers | Claude | [ ] | Safari desktop, older browsers |
+| Create `usePushNotifications.ts` hook | Claude | [x] | |
+| Implement `requestPermission()` | Claude | [x] | Browser permission flow |
+| Implement FCM token retrieval | Claude | [x] | Using VAPID key |
+| Implement platform detection | Claude | [x] | web/ios/android |
+| Implement token save to Supabase | Claude | [x] | Upsert to push_tokens |
+| Handle permission denied gracefully | Claude | [x] | |
+| Handle unsupported browsers | Claude | [x] | Safari desktop, older browsers |
 
 ### 2.3 Settings UI
 | Task | Owner | Status | Notes |
@@ -104,15 +104,15 @@
 ### 3.1 Edge Function
 | Task | Owner | Status | Notes |
 |------|-------|--------|-------|
-| Create `send-push-notification` function dir | Claude | [ ] | |
-| Implement OAuth2 token generation | Claude | [ ] | JWT signing with private key |
-| Implement `pemToArrayBuffer` helper | Claude | [ ] | Parse PEM private key |
-| Implement `sendFCMNotification` function | Claude | [ ] | FCM v1 API call |
-| Add JWT auth verification | Claude | [ ] | Reuse _shared/auth.ts |
-| Implement user targeting (user_ids, group_id, round_id) | Claude | [ ] | |
-| Implement preference checking | Claude | [ ] | Filter by notification_type |
-| Handle invalid token cleanup | Claude | [ ] | Remove stale tokens on NOT_FOUND |
-| Deploy edge function | Claude | [ ] | Via Supabase MCP |
+| Create `send-push-notification` function dir | Claude | [x] | |
+| Implement OAuth2 token generation | Claude | [x] | JWT signing with private key |
+| Implement `pemToArrayBuffer` helper | Claude | [x] | Parse PEM private key |
+| Implement `sendFCMNotification` function | Claude | [x] | FCM v1 API call |
+| Add JWT auth verification | Claude | [x] | Inlined (can't use _shared in MCP deploy) |
+| Implement user targeting (user_ids, group_id, round_id) | Claude | [x] | |
+| Implement preference checking | Claude | [x] | Filter by notification_type |
+| Handle invalid token cleanup | Claude | [x] | Remove stale tokens on NOT_FOUND |
+| Deploy edge function | Claude | [x] | Via Supabase MCP |
 
 ### 3.2 Notification Triggers
 | Task | Owner | Status | Notes |
@@ -137,9 +137,9 @@
 ### 4.1 Database Schema
 | Task | Owner | Status | Notes |
 |------|-------|--------|-------|
-| Create `notification_preferences` table migration | Claude | [ ] | |
-| Add RLS policies | Claude | [ ] | |
-| Apply migration | Claude | [ ] | Via MCP |
+| Create `notification_preferences` table migration | Claude | [x] | |
+| Add RLS policies | Claude | [x] | |
+| Apply migration | Claude | [x] | Via MCP |
 
 ### 4.2 Preferences UI
 | Task | Owner | Status | Notes |
@@ -216,24 +216,25 @@
 
 ## Current Focus
 
-**Blocked on User:**
-- Firebase project creation
-- Service account generation
-- Supabase secrets configuration
+**Completed:**
+- ✅ Firebase SDK installed
+- ✅ Service worker (Vite plugin generates at build time)
+- ✅ firebase.ts client initialization
+- ✅ usePushNotifications hook
+- ✅ push_tokens table + RLS
+- ✅ notification_preferences table + RLS
+- ✅ send-push-notification edge function (FCM v1 API)
 
-**Next User Actions:**
-1. Create Firebase project
-2. Add web app & get config
-3. Generate VAPID key
-4. Generate service account JSON
-5. Set Supabase secrets (3 values)
+**User Tasks Remaining (1.1, 1.2):**
+1. Add VITE_FIREBASE_* vars to local `.env`
+2. Add VITE_FIREBASE_VAPID_KEY to `.env`
+3. (Already done) Set Supabase secrets
 
-**Once unblocked, Claude can:**
-- Install Firebase SDK
-- Create service worker
-- Create firebase.ts initialization
-- Create database migrations
-- Create edge function
+**Next Claude Tasks:**
+- 2.3: Settings UI (PushNotificationToggle)
+- 3.2: Notification triggers
+- 3.3: Foreground toast handling
+- 4.2: Preferences UI
 
 ---
 
