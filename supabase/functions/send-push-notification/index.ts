@@ -326,11 +326,10 @@ Deno.serve(async (req) => {
     (preferences || []).map((p) => [p.user_id, p[preferenceColumn[notification_type]]])
   );
 
-  // Users without preferences get defaults (all enabled except chat_messages)
-  const defaultEnabled = notification_type !== "chat_message";
+  // Users without preferences get defaults (all enabled)
   const enabledUserIds = targetUserIds.filter((userId) => {
     const pref = prefsMap.get(userId);
-    return pref === undefined ? defaultEnabled : pref;
+    return pref === undefined ? true : pref;
   });
 
   if (!enabledUserIds.length) {
