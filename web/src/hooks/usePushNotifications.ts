@@ -37,60 +37,46 @@ function checkSupport(): boolean {
 
 // Wait for service worker to become active
 async function waitForActiveServiceWorker(timeoutMs: number = 10000): Promise<ServiceWorkerRegistration> {
-  const startTime = Date.now();
+  console.log("[FCM] Waiting for active service worker...");
+  console.log("[FCM] Current controller:", !!navigator.serviceWorker.controller);
 
-  // First, try to get existing registration
-  let registration = await navigator.serviceWorker.getRegistration("/");
-  console.log("[FCM] Initial registration:", registration?.scope, "active:", !!registration?.active);
-
-  // If no registration, register the SW
-  if (!registration) {
-    console.log("[FCM] No registration, registering /sw.js...");
-    registration = await navigator.serviceWorker.register("/sw.js");
-    console.log("[FCM] Registered:", registration.scope);
-  }
-
-  // If there's an active worker, we're good
-  if (registration.active) {
-    console.log("[FCM] Already have active worker");
+  // If there's already a controller, the page is controlled by an active SW
+  // Just wait for ready() which should resolve immediately
+  if (navigator.serviceWorker.controller) {
+    console.log("[FCM] Page has controller, waiting for ready...");
+    const registration = await navigator.serviceWorker.ready;
+    console.log("[FCM] Ready resolved, scope:", registration.scope);
     return registration;
   }
 
-  // Wait for the worker to become active
-  const worker = registration.installing || registration.waiting;
-  if (!worker) {
-    // No worker at all - this shouldn't happen after register()
-    throw new Error("No service worker found after registration");
+  // No controller yet - either first visit or SW was just installed
+  // Try to get the registration
+  let registration = await navigator.serviceWorker.getRegistration("/");
+  console.log("[FCM] Registration:", registration?.scope, "active:", !!registration?.active);
+
+  // If no registration exists, register the SW
+  if (!registration) {
+    console.log("[FCM] No registration, registering /sw.js...");
+    registration = await navigator.serviceWorker.register("/sw.js");
+    console.log("[FCM] Registered, scope:", registration.scope);
   }
 
-  console.log("[FCM] Waiting for worker state:", worker.state);
+  // If there's an active worker in the registration, use it
+  if (registration.active) {
+    console.log("[FCM] Registration has active worker");
+    return registration;
+  }
 
-  return new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
-      reject(new Error(`Service worker stuck in '${worker.state}' state after ${timeoutMs}ms`));
-    }, timeoutMs);
+  // Otherwise wait for ready() with timeout
+  // ready() resolves when there's an active SW, even if page isn't controlled yet
+  console.log("[FCM] Waiting for ready() with timeout...");
 
-    const checkState = () => {
-      const elapsed = Date.now() - startTime;
-      console.log("[FCM] Worker state check:", worker.state, `(${elapsed}ms elapsed)`);
+  const readyPromise = navigator.serviceWorker.ready;
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error("Service worker activation timed out")), timeoutMs)
+  );
 
-      if (worker.state === "activated") {
-        clearTimeout(timeoutId);
-        resolve(registration!);
-      } else if (worker.state === "redundant") {
-        clearTimeout(timeoutId);
-        reject(new Error("Service worker became redundant"));
-      }
-    };
-
-    worker.addEventListener("statechange", checkState);
-
-    // Also check immediately in case it's already activated
-    if (worker.state === "activated") {
-      clearTimeout(timeoutId);
-      resolve(registration);
-    }
-  });
+  return Promise.race([readyPromise, timeoutPromise]);
 }
 
 export function usePushNotifications(): UsePushNotificationsReturn {
