@@ -45,29 +45,49 @@ export function usePushNotifications(): UsePushNotificationsReturn {
     debugStatus: null,
   });
 
-  // Initialize state
+  // Initialize state - check if we have a token saved, not just permission
   useEffect(() => {
-    const isSupported = checkSupport();
-    const permission = isSupported ? Notification.permission : "unsupported";
+    const init = async () => {
+      const isSupported = checkSupport();
+      const permission = isSupported ? Notification.permission : "unsupported";
 
-    setState((prev) => ({
-      ...prev,
-      isSupported,
-      permission,
-      isEnabled: permission === "granted",
-      isLoading: false,
-    }));
+      // Don't assume enabled just because permission is granted
+      // We need to verify a token exists in the database
+      let hasToken = false;
+      if (permission === "granted") {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: tokens } = await supabase
+              .from("push_tokens")
+              .select("id")
+              .eq("user_id", user.id)
+              .limit(1);
+            hasToken = (tokens?.length ?? 0) > 0;
+          }
+        } catch (e) {
+          console.error("[FCM] Error checking token:", e);
+        }
+      }
+
+      setState((prev) => ({
+        ...prev,
+        isSupported,
+        permission,
+        isEnabled: hasToken,
+        isLoading: false,
+      }));
+    };
+
+    init();
 
     // Set up foreground message listener
-    if (isSupported && messaging) {
+    if (checkSupport() && messaging) {
       const unsubscribe = onMessage(messaging, (payload) => {
         console.log("[FCM] Foreground message received:", payload);
 
         // Show a toast or in-app notification
-        // You can integrate with your existing toast system here
         if (payload.notification) {
-          // For now, we'll show a native notification even in foreground
-          // In production, you might want to show an in-app toast instead
           new Notification(payload.notification.title || "New Notification", {
             body: payload.notification.body,
             icon: "/favicon.png",
@@ -111,10 +131,40 @@ export function usePushNotifications(): UsePushNotificationsReturn {
         return false;
       }
 
-      // Wait for the service worker (registered by vite-plugin-pwa)
+      // Wait for the service worker with timeout
       setState((prev) => ({ ...prev, debugStatus: "Waiting for service worker..." }));
       console.log("[FCM] Waiting for service worker...");
-      const registration = await navigator.serviceWorker.ready;
+
+      // Check if there's already a service worker
+      let registration = await navigator.serviceWorker.getRegistration();
+      console.log("[FCM] Existing registration:", registration?.scope);
+
+      if (!registration) {
+        // Try to register it ourselves
+        console.log("[FCM] No registration found, registering sw.js...");
+        setState((prev) => ({ ...prev, debugStatus: "Registering service worker..." }));
+        try {
+          registration = await navigator.serviceWorker.register("/sw.js");
+          console.log("[FCM] Registered, waiting for active...");
+        } catch (regError) {
+          console.error("[FCM] Registration failed:", regError);
+          throw new Error(`Service worker registration failed: ${regError}`);
+        }
+      }
+
+      // Wait for it to be ready with timeout
+      const swReadyPromise = navigator.serviceWorker.ready;
+      const swTimeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Service worker ready timed out after 10s")), 10000)
+      );
+
+      try {
+        registration = await Promise.race([swReadyPromise, swTimeoutPromise]);
+      } catch (e) {
+        console.error("[FCM] Service worker ready timeout:", e);
+        throw new Error("Service worker not ready - try refreshing the page");
+      }
+
       console.log("[FCM] Service worker ready, scope:", registration.scope);
 
       // Get FCM token with timeout
