@@ -35,6 +35,64 @@ function checkSupport(): boolean {
   );
 }
 
+// Wait for service worker to become active
+async function waitForActiveServiceWorker(timeoutMs: number = 10000): Promise<ServiceWorkerRegistration> {
+  const startTime = Date.now();
+
+  // First, try to get existing registration
+  let registration = await navigator.serviceWorker.getRegistration("/");
+  console.log("[FCM] Initial registration:", registration?.scope, "active:", !!registration?.active);
+
+  // If no registration, register the SW
+  if (!registration) {
+    console.log("[FCM] No registration, registering /sw.js...");
+    registration = await navigator.serviceWorker.register("/sw.js");
+    console.log("[FCM] Registered:", registration.scope);
+  }
+
+  // If there's an active worker, we're good
+  if (registration.active) {
+    console.log("[FCM] Already have active worker");
+    return registration;
+  }
+
+  // Wait for the worker to become active
+  const worker = registration.installing || registration.waiting;
+  if (!worker) {
+    // No worker at all - this shouldn't happen after register()
+    throw new Error("No service worker found after registration");
+  }
+
+  console.log("[FCM] Waiting for worker state:", worker.state);
+
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`Service worker stuck in '${worker.state}' state after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    const checkState = () => {
+      const elapsed = Date.now() - startTime;
+      console.log("[FCM] Worker state check:", worker.state, `(${elapsed}ms elapsed)`);
+
+      if (worker.state === "activated") {
+        clearTimeout(timeoutId);
+        resolve(registration!);
+      } else if (worker.state === "redundant") {
+        clearTimeout(timeoutId);
+        reject(new Error("Service worker became redundant"));
+      }
+    };
+
+    worker.addEventListener("statechange", checkState);
+
+    // Also check immediately in case it's already activated
+    if (worker.state === "activated") {
+      clearTimeout(timeoutId);
+      resolve(registration);
+    }
+  });
+}
+
 export function usePushNotifications(): UsePushNotificationsReturn {
   const [state, setState] = useState<PushNotificationState>({
     isSupported: false,
@@ -135,34 +193,12 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       setState((prev) => ({ ...prev, debugStatus: "Waiting for service worker..." }));
       console.log("[FCM] Waiting for service worker...");
 
-      // Check if there's already a service worker
-      let registration = await navigator.serviceWorker.getRegistration();
-      console.log("[FCM] Existing registration:", registration?.scope);
-
-      if (!registration) {
-        // Try to register it ourselves
-        console.log("[FCM] No registration found, registering sw.js...");
-        setState((prev) => ({ ...prev, debugStatus: "Registering service worker..." }));
-        try {
-          registration = await navigator.serviceWorker.register("/sw.js");
-          console.log("[FCM] Registered, waiting for active...");
-        } catch (regError) {
-          console.error("[FCM] Registration failed:", regError);
-          throw new Error(`Service worker registration failed: ${regError}`);
-        }
-      }
-
-      // Wait for it to be ready with timeout
-      const swReadyPromise = navigator.serviceWorker.ready;
-      const swTimeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Service worker ready timed out after 10s")), 10000)
-      );
-
+      let registration: ServiceWorkerRegistration;
       try {
-        registration = await Promise.race([swReadyPromise, swTimeoutPromise]);
+        registration = await waitForActiveServiceWorker(10000);
       } catch (e) {
-        console.error("[FCM] Service worker ready timeout:", e);
-        throw new Error("Service worker not ready - try refreshing the page");
+        console.error("[FCM] Service worker error:", e);
+        throw e instanceof Error ? e : new Error("Service worker not ready");
       }
 
       console.log("[FCM] Service worker ready, scope:", registration.scope);
