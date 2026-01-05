@@ -93,6 +93,7 @@ export default function PinnedBar({
           submittedCount={submittedCount}
           votedCount={votedCount}
           totalMembers={totalMembers}
+          roundStatus={round.status}
         />
       </div>
     </div>

@@ -11,6 +11,7 @@ type DualNeedleGaugeProps = {
   onClick?: () => void;
   className?: string;
   showExpandIndicator?: boolean;
+  roundStatus?: "open" | "voting" | "revealed" | "archived";
 };
 
 // Convert percentage (0-100) to angle within the gauge arc
@@ -45,10 +46,16 @@ export default function DualNeedleGauge({
   onClick,
   className,
   showExpandIndicator = false,
+  roundStatus = "open",
 }: DualNeedleGaugeProps) {
   const sizeValue = size === "sm" ? 44 : 56;
-  const isUrgent = submissionLevel === "urgent" || submissionLevel === "overdue" ||
-                   votingLevel === "urgent" || votingLevel === "overdue";
+  const isVotingPhase = roundStatus === "voting" || roundStatus === "revealed";
+  const isOpenPhase = roundStatus === "open";
+
+  // Only show urgency for current phase
+  const isUrgent = isOpenPhase
+    ? (submissionLevel === "urgent" || submissionLevel === "overdue")
+    : (votingLevel === "urgent" || votingLevel === "overdue");
 
   const submissionAngle = pctToAngle(submissionPct);
   const votingAngle = pctToAngle(votingPct);
@@ -131,78 +138,81 @@ export default function DualNeedleGauge({
         <circle cx={center} cy={center} r="8" fill="var(--surface-elevated, #1a2a3f)" />
         <circle cx={center} cy={center} r="5" fill="var(--navy, #0a1a2f)" />
 
-        {/* Submission needle - Music note icon style (thicker, with note head) */}
-        <g
-          transform={`rotate(${submissionAngle}, ${center}, ${center})`}
-          className="gauge-needle gauge-needle-submission"
-        >
-          {/* Needle stem */}
-          <line
-            x1={center}
-            y1={center - 4}
-            x2={center}
-            y2={center - radius + 6}
-            stroke={submissionColor}
-            strokeWidth="4"
-            strokeLinecap="round"
-          />
-          {/* Music note head (circle) */}
-          <circle
-            cx={center}
-            cy={center - radius + 6}
-            r="5"
-            fill={submissionColor}
-          />
-          {/* "S" label for Submit */}
-          <text
-            x={center}
-            y={center - radius + 9}
-            textAnchor="middle"
-            fontSize="7"
-            fontWeight="bold"
-            fill="#000"
+        {/* Submission needle - only show during open phase */}
+        {isOpenPhase && (
+          <g
+            transform={`rotate(${submissionAngle}, ${center}, ${center})`}
+            className="gauge-needle gauge-needle-submission"
           >
-            S
-          </text>
-        </g>
+            {/* Needle stem */}
+            <line
+              x1={center}
+              y1={center - 4}
+              x2={center}
+              y2={center - radius + 6}
+              stroke={submissionColor}
+              strokeWidth="4"
+              strokeLinecap="round"
+            />
+            {/* Music note head (circle) */}
+            <circle
+              cx={center}
+              cy={center - radius + 6}
+              r="5"
+              fill={submissionColor}
+            />
+            {/* "S" label for Submit */}
+            <text
+              x={center}
+              y={center - radius + 9}
+              textAnchor="middle"
+              fontSize="7"
+              fontWeight="bold"
+              fill="#000"
+            >
+              S
+            </text>
+          </g>
+        )}
 
-        {/* Voting needle - Checkmark style (thinner, dashed) */}
-        <g
-          transform={`rotate(${votingAngle}, ${center}, ${center})`}
-          className="gauge-needle gauge-needle-voting"
-        >
-          {/* Needle stem - dashed */}
-          <line
-            x1={center}
-            y1={center - 4}
-            x2={center}
-            y2={center - radius + 6}
-            stroke={votingColor}
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeDasharray="3 2"
-          />
-          {/* Checkmark box */}
-          <rect
-            x={center - 5}
-            y={center - radius + 1}
-            width="10"
-            height="10"
-            fill={votingColor}
-            rx="2"
-          />
-          {/* "V" label for Vote */}
-          <text
-            x={center}
-            y={center - radius + 9}
-            textAnchor="middle"
-            fontSize="7"
-            fontWeight="bold"
-            fill="#000"
+        {/* Voting needle - only show during voting/revealed phase */}
+        {isVotingPhase && (
+          <g
+            transform={`rotate(${votingAngle}, ${center}, ${center})`}
+            className="gauge-needle gauge-needle-voting"
           >
-            V
-          </text>
-        </g>
+            {/* Needle stem */}
+            <line
+              x1={center}
+              y1={center - 4}
+              x2={center}
+              y2={center - radius + 6}
+              stroke={votingColor}
+              strokeWidth="4"
+              strokeLinecap="round"
+            />
+            {/* Checkmark box */}
+            <rect
+              x={center - 5}
+              y={center - radius + 1}
+              width="10"
+              height="10"
+              fill={votingColor}
+              rx="2"
+            />
+            {/* "V" label for Vote */}
+            <text
+              x={center}
+              y={center - radius + 9}
+              textAnchor="middle"
+              fontSize="7"
+              fontWeight="bold"
+              fill="#000"
+            >
+              V
+            </text>
+          </g>
+        )}
       </svg>
     </div>
   );

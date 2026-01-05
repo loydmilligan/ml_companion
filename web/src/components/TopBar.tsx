@@ -116,6 +116,7 @@ export default function TopBar() {
               size="md"
               onClick={openPinnedBar}
               showExpandIndicator
+              roundStatus={round.status}
             />
           )}
 
