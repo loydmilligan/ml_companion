@@ -65,7 +65,6 @@ type PeekPanelProps = {
   awards: RoundAwardRow[];
   activity: ActivityRecord[];
   competitors: Competitor[];
-  totalMembers: number;
   isVotingComplete: boolean;
   onQuoteSong: (song: SubmissionRow) => void;
   narrative?: string | null;
@@ -87,7 +86,6 @@ export default function PeekPanel({
   awards,
   activity,
   competitors,
-  totalMembers,
   isVotingComplete,
   onQuoteSong,
   narrative,

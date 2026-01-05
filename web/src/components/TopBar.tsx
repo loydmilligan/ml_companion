@@ -170,7 +170,6 @@ export default function TopBar() {
         awards={awards}
         activity={activity}
         competitors={competitors}
-        totalMembers={totalMembers}
         isVotingComplete={isVotingComplete}
         onQuoteSong={handleQuoteSong}
         previousRoundChallenge={null}
