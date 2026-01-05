@@ -3102,22 +3102,28 @@
 
 .song-card-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   margin-top: 8px;
 }
 
 .song-card-action {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 0.8rem;
   font-weight: 600;
   border: none;
   cursor: pointer;
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  text-decoration: none;
 }
 
 .song-card-action:hover {
-  transform: scale(1.02);
+  transform: scale(1.1);
+  opacity: 0.9;
 }
 
 .song-card-action.spotify {
@@ -3125,9 +3131,14 @@
   color: #fff;
 }
 
+.song-card-action.youtube {
+  background: #ff0000;
+  color: #fff;
+}
+
 .song-card-action.quote {
-  background: rgba(10, 26, 47, 0.08);
-  color: var(--navy);
+  background: var(--blue);
+  color: #fff;
 }
 
 /* Ranked Song Cards */
