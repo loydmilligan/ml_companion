@@ -56,31 +56,59 @@ function extractYouTubeId(text: string) {
   return null;
 }
 
-function renderMessageBody(text: string) {
-  const parts: Array<{ text: string; href?: string }> = [];
-  const regex = /@\[(.+?)\]\((https?:\/\/[^)]+)\)/g;
+function renderMessageBody(text: string, onPeekClick?: () => void) {
+  const parts: Array<{ text: string; href?: string; isPeekBtn?: boolean }> = [];
+  // Match both @[label](url) links and <peek_btn> tags
+  const regex = /(@\[(.+?)\]\((https?:\/\/[^)]+)\)|<peek_btn>)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = regex.exec(text)) !== null) {
-    const [full, label, href] = match;
+    const fullMatch = match[0];
     if (match.index > lastIndex) {
       parts.push({ text: text.slice(lastIndex, match.index) });
     }
-    parts.push({ text: label, href });
-    lastIndex = match.index + full.length;
+    if (fullMatch === "<peek_btn>") {
+      parts.push({ text: "", isPeekBtn: true });
+    } else {
+      // It's a link match: @[label](url)
+      const label = match[2];
+      const href = match[3];
+      parts.push({ text: label, href });
+    }
+    lastIndex = match.index + fullMatch.length;
   }
   if (lastIndex < text.length) {
     parts.push({ text: text.slice(lastIndex) });
   }
-  return parts.map((part, index) =>
-    part.href ? (
-      <a key={`${part.href}-${index}`} className="mention-link" href={part.href} target="_blank" rel="noreferrer">
-        {part.text}
-      </a>
-    ) : (
-      <Fragment key={`text-${index}`}>{part.text}</Fragment>
-    )
-  );
+  return parts.map((part, index) => {
+    if (part.isPeekBtn) {
+      return (
+        <button
+          key={`peek-btn-${index}`}
+          type="button"
+          className="inline-peek-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPeekClick?.();
+          }}
+          title="Open round details"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M9 9h6M9 12h6M9 15h4" />
+          </svg>
+        </button>
+      );
+    }
+    if (part.href) {
+      return (
+        <a key={`${part.href}-${index}`} className="mention-link" href={part.href} target="_blank" rel="noreferrer">
+          {part.text}
+        </a>
+      );
+    }
+    return <Fragment key={`text-${index}`}>{part.text}</Fragment>;
+  });
 }
 
 const allEmojis = [
@@ -576,7 +604,7 @@ export default function ChatPage() {
               </div>
               <span className="chat-author">{item.profiles?.display_name ?? "Family"}</span>
             </div>
-            <p>{renderMessageBody(item.body)}</p>
+            <p>{renderMessageBody(item.body, openPanel)}</p>
             {(() => {
               const videoId = extractYouTubeId(item.body);
               if (!videoId) return null;
