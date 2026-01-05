@@ -25,6 +25,7 @@ export type GuessState = {
   guessedCompetitorId: string | null;
   result: boolean | null;
   isSaving: boolean;
+  isOwnSong: boolean;
 };
 
 export type LeaderboardEntry = {
@@ -41,6 +42,7 @@ type UseSubmitterGuessReturn = {
   loading: boolean;
   correctCount: number;
   totalGuessed: number;
+  maxPossibleGuesses: number;
   handleGuessChange: (submissionId: string, competitorId: string) => void;
   handleSaveGuess: (submissionId: string) => Promise<void>;
 };
@@ -60,6 +62,7 @@ export function useSubmitterGuess(
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [userCompetitorName, setUserCompetitorName] = useState<string | null>(null);
 
   // Load competitors and user's saved guesses
   const loadData = useCallback(async () => {
@@ -77,7 +80,12 @@ export function useSubmitterGuess(
       .eq("group_id", groupId)
       .order("name");
 
-    setCompetitors((competitorData as Competitor[]) ?? []);
+    const competitorsList = (competitorData as Competitor[]) ?? [];
+    setCompetitors(competitorsList);
+
+    // Find the current user's competitor name (to identify their own song)
+    const userCompetitor = competitorsList.find((c) => c.profile_id === userId);
+    setUserCompetitorName(userCompetitor?.name ?? null);
 
     // Fetch user's saved guesses for this round
     const { data: guessData } = await supabase
@@ -230,16 +238,26 @@ export function useSubmitterGuess(
 
   // Build guess states object for each submission
   const guessStates: Record<string, GuessState> = {};
+  let ownSongCount = 0;
   submissions.forEach((sub) => {
+    // Check if this is the user's own song (case-insensitive match)
+    const isOwnSong = userCompetitorName
+      ? sub.submitter_name?.toLowerCase().trim() === userCompetitorName.toLowerCase().trim()
+      : false;
+    if (isOwnSong) ownSongCount++;
+
     guessStates[sub.id] = {
       guessedCompetitorId: guesses[sub.id] || null,
       result: results[sub.id] ?? null,
       isSaving: saving[sub.id] || false,
+      isOwnSong,
     };
   });
 
   const correctCount = Object.values(results).filter((r) => r === true).length;
   const totalGuessed = Object.values(guesses).filter(Boolean).length;
+  // Max possible guesses is total submissions minus user's own song(s)
+  const maxPossibleGuesses = submissions.length - ownSongCount;
 
   return {
     competitors,
@@ -248,6 +266,7 @@ export function useSubmitterGuess(
     loading,
     correctCount,
     totalGuessed,
+    maxPossibleGuesses,
     handleGuessChange,
     handleSaveGuess,
   };

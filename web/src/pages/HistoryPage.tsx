@@ -37,6 +37,11 @@ type LeagueRow = {
   season_number: number | null;
   narrative: string | null;
   playlist_url: string | null;
+  current_story_intro: string | null;
+  current_round_riff: string | null;
+  current_minigame_summary: string | null;
+  current_story_updated_at: string | null;
+  current_story_round_id: string | null;
 };
 
 type RoundRow = {
@@ -145,7 +150,7 @@ export default function HistoryPage() {
     const loadLeagues = async () => {
       const { data } = await supabase
         .from("leagues")
-        .select("id,name,season_number,narrative,playlist_url")
+        .select("id,name,season_number,narrative,playlist_url,current_story_intro,current_round_riff,current_minigame_summary,current_story_updated_at,current_story_round_id")
         .eq("group_id", group.id)
         .order("season_number", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
@@ -987,21 +992,24 @@ export default function HistoryPage() {
       seasonRounds.sort((a, b) => (b.round_number ?? 0) - (a.round_number ?? 0));
 
       if (isCurrentSeason && seasonRounds.length > 0) {
+        const seasonIntro =
+          currentLeague?.current_story_intro ??
+          "Season storylines will appear after the latest round results are in.";
+        const roundTwoRiff =
+          currentLeague?.current_round_riff ??
+          "Round commentary will update once the newest round closes.";
+        const minigameSummary =
+          currentLeague?.current_minigame_summary ??
+          "Minigame results will show here once guesses are scored.";
+
         const currentSeasonCard: CurrentSeasonCardData = {
           id: `current-season-${seasonNum}`,
           type: "current-season",
           seasonNumber: seasonNum,
           leagueName: currentLeague?.name ?? `Season ${seasonNum}`,
-          seasonIntro:
-            `Season ${seasonNum} got off to an exciting start when a surprise winner came out of the pack with a nontraditional pick. ` +
-            `Strong showings from Bleck and Bleck kept the board tight, while the early birds locked in submissions before the procrastinator scramble hit. ` +
-            `There is a little extra edge this year for anyone looking to rewrite last season's ending.`,
-          roundTwoRiff:
-            `Round 2 keeps the momentum with a wink to Sasha's Season 1 theme, flipping that original spark into a sharper Season ${seasonNum} sequel. ` +
-            `It is equal parts nostalgia and dare, the kind of prompt that rewards a left turn but still tips its hat to the old lanes.`,
-          minigameSummary:
-            `Minigame recap: Matt and Lori were dialed in, while a few of us whiffed the tougher curveballs. ` +
-            `Most guesses piled onto Sasha, but Bleck's submission stayed the hardest to pin down.`,
+          seasonIntro,
+          roundTwoRiff,
+          minigameSummary,
         };
         cards.push(currentSeasonCard);
       }

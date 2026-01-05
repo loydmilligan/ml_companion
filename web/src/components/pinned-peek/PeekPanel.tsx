@@ -111,6 +111,7 @@ export default function PeekPanel({
     leaderboard,
     correctCount,
     totalGuessed,
+    maxPossibleGuesses,
     handleGuessChange,
     handleSaveGuess,
   } = useSubmitterGuess(
@@ -259,9 +260,11 @@ export default function PeekPanel({
                 <div className="peek-panel-section submitter-guess-header-section">
                   <div className="submitter-guess-header">
                     <h3>Guess the Submitter</h3>
-                    {totalGuessed > 0 && (
+                    {maxPossibleGuesses > 0 && (
                       <span className="submitter-guess-score">
-                        {isRevealed ? `${correctCount}/${totalGuessed} correct` : `${totalGuessed} guessed`}
+                        {isRevealed
+                          ? `${correctCount}/${maxPossibleGuesses} correct`
+                          : `${totalGuessed}/${maxPossibleGuesses} guessed`}
                       </span>
                     )}
                   </div>

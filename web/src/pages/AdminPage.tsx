@@ -53,6 +53,7 @@ type RoundSummary = {
   external_round_id: string | null;
   playlist_url: string | null;
   youtube_playlist_url: string | null;
+  comment_required: boolean;
   status: "open" | "voting" | "revealed" | "archived";
   submission_deadline: string | null;
   voting_deadline: string | null;
@@ -190,6 +191,7 @@ export default function AdminPage() {
     round_number: string;
     playlist_url: string;
     youtube_playlist_url: string;
+    comment_required: boolean;
     status: RoundSummary["status"];
     submission_deadline: string;
     voting_deadline: string;
@@ -283,7 +285,7 @@ export default function AdminPage() {
       if (leagueIds.length) {
       const { data: roundData } = await supabase
         .from("rounds")
-        .select("id,league_id,theme,theme_description,theme_author,season_number,round_number,external_round_id,playlist_url,youtube_playlist_url,status,submission_deadline,voting_deadline,theme_image_url,winners_image_url,narrative,created_at")
+        .select("id,league_id,theme,theme_description,theme_author,season_number,round_number,external_round_id,playlist_url,youtube_playlist_url,comment_required,status,submission_deadline,voting_deadline,theme_image_url,winners_image_url,narrative,created_at")
         .in("league_id", leagueIds)
         .order("season_number", { ascending: false, nullsFirst: false })
         .order("round_number", { ascending: true, nullsFirst: false });
@@ -1797,6 +1799,7 @@ export default function AdminPage() {
       round_number: round.round_number ? String(round.round_number) : "",
       playlist_url: round.playlist_url ?? "",
       youtube_playlist_url: round.youtube_playlist_url ?? "",
+      comment_required: round.comment_required ?? false,
       status: round.status,
       submission_deadline: round.submission_deadline ? round.submission_deadline.slice(0, 16) : "",
       voting_deadline: round.voting_deadline ? round.voting_deadline.slice(0, 16) : "",
@@ -1815,6 +1818,7 @@ export default function AdminPage() {
         round_number: editingRound.round_number ? Number(editingRound.round_number) : null,
         playlist_url: editingRound.playlist_url.trim() || null,
         youtube_playlist_url: editingRound.youtube_playlist_url.trim() || null,
+        comment_required: editingRound.comment_required,
         status: editingRound.status,
         submission_deadline: editingRound.submission_deadline || null,
         voting_deadline: editingRound.voting_deadline || null,
@@ -1833,6 +1837,7 @@ export default function AdminPage() {
               round_number: editingRound.round_number ? Number(editingRound.round_number) : null,
               playlist_url: editingRound.playlist_url.trim() || null,
               youtube_playlist_url: editingRound.youtube_playlist_url.trim() || null,
+              comment_required: editingRound.comment_required,
               status: editingRound.status,
               submission_deadline: editingRound.submission_deadline || null,
               voting_deadline: editingRound.voting_deadline || null,
@@ -2546,6 +2551,18 @@ export default function AdminPage() {
                           }
                           placeholder="YouTube Playlist URL"
                         />
+                        <label className="admin-checkbox-row">
+                          <input
+                            type="checkbox"
+                            checked={editingRound.comment_required}
+                            onChange={(event) =>
+                              setEditingRound((prev) =>
+                                prev ? { ...prev, comment_required: event.target.checked } : prev
+                              )
+                            }
+                          />
+                          <span>Comment Required</span>
+                        </label>
                         <select
                           className="field-input"
                           value={editingRound.status}

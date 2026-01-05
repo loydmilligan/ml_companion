@@ -147,33 +147,39 @@ export default function SongCard({
 
         {/* Submitter guess UI - only during voting phase when enabled */}
         {guessEnabled && !isRevealed && onGuessChange && onSaveGuess && (
-          <div className="song-card-guess">
-            <select
-              value={guessState?.guessedCompetitorId || ""}
-              onChange={(e) => onGuessChange(e.target.value)}
-              disabled={guessState?.isSaving}
-              className="song-card-guess-select"
-            >
-              <option value="">Who submitted this?</option>
-              {competitors.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={onSaveGuess}
-              disabled={!guessState?.guessedCompetitorId || guessState?.isSaving}
-              className="song-card-guess-save"
-            >
-              {guessState?.isSaving ? "..." : "Save"}
-            </button>
-          </div>
+          guessState?.isOwnSong ? (
+            <div className="song-card-guess-own">
+              Your song
+            </div>
+          ) : (
+            <div className="song-card-guess">
+              <select
+                value={guessState?.guessedCompetitorId || ""}
+                onChange={(e) => onGuessChange(e.target.value)}
+                disabled={guessState?.isSaving}
+                className="song-card-guess-select"
+              >
+                <option value="">Who submitted this?</option>
+                {competitors.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={onSaveGuess}
+                disabled={!guessState?.guessedCompetitorId || guessState?.isSaving}
+                className="song-card-guess-save"
+              >
+                {guessState?.isSaving ? "..." : "Save"}
+              </button>
+            </div>
+          )
         )}
 
         {/* Guess result - shown after reveal */}
-        {guessEnabled && isRevealed && guessState && (
+        {guessEnabled && isRevealed && guessState && !guessState.isOwnSong && (
           <div
             className={clsx(
               "song-card-guess-result",

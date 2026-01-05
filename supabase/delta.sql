@@ -40,6 +40,11 @@ alter table rounds add column if not exists narrative text;
 
 -- Leagues columns
 alter table leagues add column if not exists narrative text;
+alter table leagues add column if not exists current_story_intro text;
+alter table leagues add column if not exists current_round_riff text;
+alter table leagues add column if not exists current_minigame_summary text;
+alter table leagues add column if not exists current_story_updated_at timestamptz;
+alter table leagues add column if not exists current_story_round_id uuid references rounds(id);
 
 -- Round awards table
 create table if not exists round_awards (
