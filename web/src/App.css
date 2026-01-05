@@ -3159,19 +3159,37 @@
   color: var(--blue);
 }
 
+.song-card-comment-wrapper {
+  margin: 6px 0;
+}
+
+.song-card-comment-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 2px;
+}
+
 .song-card-comment {
   font-size: 0.8rem;
   font-style: italic;
   color: var(--text-muted);
-  margin: 6px 0;
+  margin: 0;
   line-height: 1.4;
   word-wrap: break-word;
 }
 
 .song-card-guess {
   display: flex;
+  align-items: center;
   gap: 6px;
   margin: 8px 0;
+}
+
+.song-card-guess-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .song-card-guess-select {

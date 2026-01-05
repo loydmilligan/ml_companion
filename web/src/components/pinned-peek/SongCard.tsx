@@ -154,13 +154,14 @@ export default function SongCard({
             </div>
           ) : (
             <div className="song-card-guess">
+              <span className="song-card-guess-label">Your guess:</span>
               <select
                 value={guessState?.guessedCompetitorId || ""}
                 onChange={(e) => onGuessChange(e.target.value)}
                 disabled={guessState?.isSaving}
                 className="song-card-guess-select"
               >
-                <option value="">Who submitted this?</option>
+                <option value="">Select...</option>
                 {competitors.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -203,7 +204,10 @@ export default function SongCard({
         )}
 
         {song.submitter_comment && (
-          <p className="song-card-comment">"{song.submitter_comment}"</p>
+          <div className="song-card-comment-wrapper">
+            <span className="song-card-comment-label">Submitter's comment:</span>
+            <p className="song-card-comment">"{song.submitter_comment}"</p>
+          </div>
         )}
 
         <div className="song-card-actions">
