@@ -2990,6 +2990,35 @@
   letter-spacing: 0.5px;
 }
 
+/* Playlist Link */
+.playlist-link-section {
+  margin-bottom: 16px;
+}
+
+.playlist-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #1DB954 0%, #1ed760 100%);
+  color: white;
+  border-radius: 20px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px rgba(29, 185, 84, 0.3);
+}
+
+.playlist-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.4);
+}
+
+.playlist-link svg {
+  flex-shrink: 0;
+}
+
 /* Peek Button */
 /* Peek Button - Floating variant (default) */
 .peek-button-floating {

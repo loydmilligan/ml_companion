@@ -215,7 +215,7 @@ export default function AdminPage() {
   // Song Links state (for Submitter Guess minigame)
   const [songLinksRoundId, setSongLinksRoundId] = useState<string | null>(null);
   const [songLinksSubmissions, setSongLinksSubmissions] = useState<
-    { id: string; title: string; artist: string | null; youtube_url: string | null; spotify_url: string | null }[]
+    { id: string; title: string; artist: string | null; link: string | null; youtube_url: string | null; spotify_url: string | null }[]
   >([]);
   const [songLinksEditing, setSongLinksEditing] = useState<Record<string, { youtube_url: string; spotify_url: string }>>({});
   const [songLinksLoading, setSongLinksLoading] = useState(false);
@@ -776,19 +776,21 @@ export default function AdminPage() {
     try {
       const { data } = await supabase
         .from("submissions")
-        .select("id,title,artist,youtube_url,spotify_url")
+        .select("id,title,artist,link,youtube_url,spotify_url")
         .eq("round_id", roundId)
         .order("created_at", { ascending: true });
 
       const submissions = data ?? [];
       setSongLinksSubmissions(submissions);
 
-      // Initialize editing state
+      // Initialize editing state - pre-populate spotify_url from link if empty
       const editing: Record<string, { youtube_url: string; spotify_url: string }> = {};
       submissions.forEach((sub) => {
+        // Use spotify_url if set, otherwise check if link is a Spotify URL
+        const spotifyUrl = sub.spotify_url ?? (sub.link?.includes("spotify") ? sub.link : "");
         editing[sub.id] = {
           youtube_url: sub.youtube_url ?? "",
-          spotify_url: sub.spotify_url ?? "",
+          spotify_url: spotifyUrl ?? "",
         };
       });
       setSongLinksEditing(editing);
