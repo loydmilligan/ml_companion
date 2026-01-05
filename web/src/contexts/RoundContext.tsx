@@ -151,9 +151,9 @@ export function RoundProvider({ children }: { children: ReactNode }) {
               .eq("visible", true)
               .limit(3)
           : Promise.resolve({ data: null }),
-        // Get member count
+        // Get competitor count (from season_competitors - the source of truth for league members)
         supabase
-          .from("group_members")
+          .from("season_competitors")
           .select("*", { count: "exact", head: true })
           .eq("group_id", group.id),
         // Get activity from email events (during open/voting phases)
@@ -192,9 +192,9 @@ export function RoundProvider({ children }: { children: ReactNode }) {
       setVotes([]);
       setAwards([]);
       setActivity([]);
-      // Still get member count even without a round
+      // Still get competitor count even without a round
       const { count } = await supabase
-        .from("group_members")
+        .from("season_competitors")
         .select("*", { count: "exact", head: true })
         .eq("group_id", group.id);
       setTotalMembers(count ?? 0);
@@ -271,8 +271,9 @@ export function RoundProvider({ children }: { children: ReactNode }) {
   const submissionUrgency = computeUrgency(submissionMs);
   const votingUrgency = computeUrgency(votingMs);
 
-  const submittedCount = new Set(submissions.map((s) => s.id)).size;
-  const votedCount = new Set(votes.map((v) => v.voter_id)).size;
+  // Use activity data from email events for accurate counts
+  const submittedCount = activity.filter((a) => a.activity_type === "submitted").length;
+  const votedCount = activity.filter((a) => a.activity_type === "voted").length;
   const isVotingComplete = round?.status === "revealed" || round?.status === "archived";
 
   return (

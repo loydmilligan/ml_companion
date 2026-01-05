@@ -62,6 +62,7 @@ type PeekPanelProps = {
     song1: { title: string; artist: string; theme: string } | null;
     song2: { title: string; artist: string; theme: string } | null;
   } | null;
+  roundChallengeEnabled?: boolean;
 };
 
 export default function PeekPanel({
@@ -78,6 +79,7 @@ export default function PeekPanel({
   onQuoteSong,
   narrative,
   previousRoundChallenge,
+  roundChallengeEnabled = true,
 }: PeekPanelProps) {
   // Prevent body scroll when panel is open
   useEffect(() => {
@@ -201,8 +203,8 @@ export default function PeekPanel({
                 <AIAssistant round={round} />
               )}
 
-              {/* Round Challenge (only during open phase) */}
-              {round.status === "open" && (
+              {/* Round Challenge (only during open phase, if enabled) */}
+              {round.status === "open" && roundChallengeEnabled && (
                 <RoundChallenge
                   roundId={round.id}
                   groupId={groupId}

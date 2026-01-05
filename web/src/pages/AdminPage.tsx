@@ -360,7 +360,7 @@ export default function AdminPage() {
       const { data: settingsData } = await supabase
         .from("group_settings")
         .select(
-          "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled"
+          "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled"
         )
         .eq("group_id", group.id)
         .maybeSingle();
@@ -379,6 +379,7 @@ export default function AdminPage() {
         ai_hint_enabled: settingsData?.ai_hint_enabled ?? true,
         ai_validate_daily_limit: settingsData?.ai_validate_daily_limit ?? 5,
         ai_chat_enabled: settingsData?.ai_chat_enabled ?? true,
+        round_challenge_enabled: settingsData?.round_challenge_enabled ?? true,
       };
       setGroupSettings(fallback);
       setSettingsDraft(fallback);
@@ -881,12 +882,13 @@ export default function AdminPage() {
       ai_hint_enabled: settingsDraft.ai_hint_enabled,
       ai_validate_daily_limit: settingsDraft.ai_validate_daily_limit,
       ai_chat_enabled: settingsDraft.ai_chat_enabled,
+      round_challenge_enabled: settingsDraft.round_challenge_enabled,
     };
     const { data, error } = await supabase
       .from("group_settings")
       .upsert(payload, { onConflict: "group_id" })
       .select(
-        "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled"
+        "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled"
       )
       .maybeSingle();
     if (!error && data) {
@@ -2931,7 +2933,32 @@ python scripts/build_track_metadata.py`}
             </label>
           </div>
 
-          <h3 style={{ margin: "0 0 12px 0", fontSize: "1rem" }}>Model Settings</h3>
+          <h3 style={{ margin: "24px 0 12px 0", fontSize: "1rem" }}>Minigame Settings</h3>
+          <p className="muted" style={{ marginBottom: 12 }}>
+            Control which minigames appear in the peek panel during rounds.
+          </p>
+          <div className="admin-form">
+            <label className="field" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <input
+                type="checkbox"
+                checked={settingsDraft?.round_challenge_enabled ?? true}
+                onChange={(e) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, round_challenge_enabled: e.target.checked } : prev
+                  )
+                }
+                style={{ width: 18, height: 18 }}
+              />
+              <div>
+                <span className="field-label" style={{ margin: 0 }}>Round Challenge</span>
+                <span className="field-helper" style={{ display: "block", marginTop: 2 }}>
+                  Guess-the-theme minigame using songs from past seasons (shown during open phase)
+                </span>
+              </div>
+            </label>
+          </div>
+
+          <h3 style={{ margin: "24px 0 12px 0", fontSize: "1rem" }}>Model Settings</h3>
           <p className="muted" style={{ marginBottom: 12 }}>Choose which model variable to use for each AI call.</p>
           <div className="admin-form">
             <label className="field">
@@ -3267,6 +3294,8 @@ type GroupSettings = {
   ai_hint_enabled: boolean;
   ai_validate_daily_limit: number;
   ai_chat_enabled: boolean;
+  // Minigame toggles
+  round_challenge_enabled: boolean;
 };
 
 const MODEL_OPTIONS = [

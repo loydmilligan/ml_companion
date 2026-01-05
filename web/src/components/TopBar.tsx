@@ -31,6 +31,7 @@ export default function TopBar() {
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
   const [logoPalette, setLogoPalette] = useState("ocean-coral");
+  const [roundChallengeEnabled, setRoundChallengeEnabled] = useState(true);
 
   const displayName = profile?.display_name ?? "Family Lead";
 
@@ -63,16 +64,17 @@ export default function TopBar() {
     let active = true;
     supabase
       .from("group_settings")
-      .select("logo_palette")
+      .select("logo_palette,round_challenge_enabled")
       .eq("group_id", group.id)
       .maybeSingle()
       .then(({ data, error }) => {
         if (!active) return;
         if (error) {
-          console.error("Failed to load logo palette", error);
+          console.error("Failed to load group settings", error);
           return;
         }
         setLogoPalette(data?.logo_palette ?? "ocean-coral");
+        setRoundChallengeEnabled(data?.round_challenge_enabled ?? true);
       });
     return () => {
       active = false;
@@ -168,6 +170,7 @@ export default function TopBar() {
         isVotingComplete={isVotingComplete}
         onQuoteSong={handleQuoteSong}
         previousRoundChallenge={null}
+        roundChallengeEnabled={roundChallengeEnabled}
       />
     </>
   );
