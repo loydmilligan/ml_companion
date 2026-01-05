@@ -6,6 +6,7 @@ import RoundChallenge from "./RoundChallenge";
 import SubmitterGuess from "./SubmitterGuess";
 import ExpandableSection from "./ExpandableSection";
 import ActivityTracker from "./ActivityTracker";
+import { useYouTubeSidebar } from "../youtube-sidebar";
 
 type SubmissionRow = {
   id: string;
@@ -98,6 +99,8 @@ export default function PeekPanel({
   roundChallengeEnabled = true,
   submitterGuessEnabled = true,
 }: PeekPanelProps) {
+  const { openPlaylist } = useYouTubeSidebar();
+
   // Prevent body scroll when panel is open
   useEffect(() => {
     if (isOpen) {
@@ -259,17 +262,16 @@ export default function PeekPanel({
                     </a>
                   )}
                   {round.youtube_playlist_url && (
-                    <a
-                      href={round.youtube_playlist_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
                       className="playlist-link playlist-link-youtube"
+                      onClick={() => openPlaylist(round.youtube_playlist_url!, `${round.theme} Playlist`)}
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                       </svg>
                       <span>YouTube</span>
-                    </a>
+                    </button>
                   )}
                 </div>
               )}

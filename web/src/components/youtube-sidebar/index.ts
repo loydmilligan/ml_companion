@@ -3,4 +3,5 @@ export {
   YouTubeSidebarProvider,
   useYouTubeSidebar,
   extractYouTubeId,
+  extractPlaylistId,
 } from "./YouTubeSidebarContext";

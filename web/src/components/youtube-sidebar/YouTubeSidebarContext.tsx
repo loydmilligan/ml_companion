@@ -3,8 +3,10 @@ import { createContext, useContext, useState, useCallback, type ReactNode } from
 type YouTubeSidebarContextValue = {
   isOpen: boolean;
   videoId: string | null;
+  playlistId: string | null;
   videoTitle: string | null;
   openSidebar: (videoId: string, title?: string) => void;
+  openPlaylist: (playlistUrl: string, title?: string) => void;
   closeSidebar: () => void;
 };
 
@@ -35,24 +37,50 @@ export function extractYouTubeId(url: string): string | null {
   return null;
 }
 
+/**
+ * Extract YouTube playlist ID from various URL formats
+ */
+export function extractPlaylistId(url: string): string | null {
+  if (!url) return null;
+
+  // Handle youtube.com/playlist?list=
+  const playlistMatch = url.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+  if (playlistMatch) return playlistMatch[1];
+
+  return null;
+}
+
 export function YouTubeSidebarProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [videoId, setVideoId] = useState<string | null>(null);
+  const [playlistId, setPlaylistId] = useState<string | null>(null);
   const [videoTitle, setVideoTitle] = useState<string | null>(null);
 
   const openSidebar = useCallback((id: string, title?: string) => {
     // If given a URL, extract the ID
     const extractedId = extractYouTubeId(id) || id;
     setVideoId(extractedId);
+    setPlaylistId(null);
     setVideoTitle(title || null);
     setIsOpen(true);
   }, []);
 
+  const openPlaylist = useCallback((url: string, title?: string) => {
+    const extractedId = extractPlaylistId(url);
+    if (extractedId) {
+      setPlaylistId(extractedId);
+      setVideoId(null);
+      setVideoTitle(title || "Playlist");
+      setIsOpen(true);
+    }
+  }, []);
+
   const closeSidebar = useCallback(() => {
     setIsOpen(false);
-    // Keep the video ID so it doesn't flash when closing
+    // Keep the IDs so it doesn't flash when closing
     setTimeout(() => {
       setVideoId(null);
+      setPlaylistId(null);
       setVideoTitle(null);
     }, 300);
   }, []);
@@ -62,8 +90,10 @@ export function YouTubeSidebarProvider({ children }: { children: ReactNode }) {
       value={{
         isOpen,
         videoId,
+        playlistId,
         videoTitle,
         openSidebar,
+        openPlaylist,
         closeSidebar,
       }}
     >

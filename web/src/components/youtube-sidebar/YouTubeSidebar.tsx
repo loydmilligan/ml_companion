@@ -3,7 +3,7 @@ import clsx from "clsx";
 import { useYouTubeSidebar } from "./YouTubeSidebarContext";
 
 export default function YouTubeSidebar() {
-  const { isOpen, videoId, videoTitle, closeSidebar } = useYouTubeSidebar();
+  const { isOpen, videoId, playlistId, videoTitle, closeSidebar } = useYouTubeSidebar();
 
   // Prevent body scroll when sidebar is open
   useEffect(() => {
@@ -70,6 +70,16 @@ export default function YouTubeSidebar() {
               <iframe
                 src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
                 title={videoTitle || "YouTube video player"}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          )}
+          {playlistId && (
+            <div className="youtube-sidebar-player youtube-sidebar-playlist">
+              <iframe
+                src={`https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1`}
+                title={videoTitle || "YouTube playlist"}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
