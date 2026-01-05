@@ -2056,3 +2056,95 @@
     font-size: 13px;
   }
 }
+
+/* ========================================
+   Dark Mode Support
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+  /* Base card backgrounds */
+  .round-card,
+  .current-season-card,
+  .preseason-special-card,
+  .season-recap-card {
+    background: #1a1a2e;
+  }
+
+  /* Card content area */
+  .card-content {
+    background: #1a1a2e;
+  }
+
+  /* Current Season Card dark mode */
+  .current-season-block {
+    background: rgba(15, 61, 46, 0.2);
+    border-color: rgba(29, 107, 75, 0.3);
+  }
+
+  .current-season-text {
+    color: #e4e4e7;
+  }
+
+  /* Pre-Season Special Card dark mode */
+  .preseason-block {
+    background: rgba(255, 153, 20, 0.12);
+    border-color: rgba(255, 153, 20, 0.25);
+  }
+
+  .preseason-monologue {
+    background: rgba(255, 153, 20, 0.18);
+    border-color: rgba(255, 153, 20, 0.3);
+  }
+
+  .preseason-predictions {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: rgba(139, 92, 246, 0.25);
+  }
+
+  .preseason-rankings {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.25);
+  }
+
+  .preseason-text {
+    color: #e4e4e7;
+  }
+
+  /* Section labels */
+  .section-label {
+    color: #f4f4f5;
+  }
+
+  /* Season Recap Card dark mode */
+  .recap-section h3,
+  .recap-section-label {
+    color: #f4f4f5;
+  }
+
+  .recap-stat-item {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .recap-stat-value {
+    color: #f4f4f5;
+  }
+
+  .recap-stat-label {
+    color: #a1a1aa;
+  }
+
+  .top-track-item {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .theme-pill {
+    background: rgba(45, 70, 185, 0.2);
+    color: #93a8ff;
+  }
+
+  /* Narrative/story text */
+  .narrative-content,
+  .recap-narrative-text {
+    color: #d4d4d8;
+  }
+}
