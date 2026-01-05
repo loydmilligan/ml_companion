@@ -17,6 +17,7 @@ type SubmissionRow = {
   submitter_name?: string | null;
   youtube_url?: string | null;
   spotify_url?: string | null;
+  submitter_comment?: string | null;
 };
 
 type VoteRow = {

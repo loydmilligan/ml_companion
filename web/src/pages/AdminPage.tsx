@@ -217,9 +217,9 @@ export default function AdminPage() {
   // Song Links state (for Submitter Guess minigame)
   const [songLinksRoundId, setSongLinksRoundId] = useState<string | null>(null);
   const [songLinksSubmissions, setSongLinksSubmissions] = useState<
-    { id: string; title: string; artist: string | null; link: string | null; youtube_url: string | null; spotify_url: string | null }[]
+    { id: string; title: string; artist: string | null; link: string | null; youtube_url: string | null; spotify_url: string | null; submitter_comment: string | null }[]
   >([]);
-  const [songLinksEditing, setSongLinksEditing] = useState<Record<string, { youtube_url: string; spotify_url: string }>>({});
+  const [songLinksEditing, setSongLinksEditing] = useState<Record<string, { youtube_url: string; spotify_url: string; submitter_comment: string }>>({});
   const [songLinksLoading, setSongLinksLoading] = useState(false);
   const [songLinksSaving, setSongLinksSaving] = useState(false);
 
@@ -778,7 +778,7 @@ export default function AdminPage() {
     try {
       const { data } = await supabase
         .from("submissions")
-        .select("id,title,artist,link,youtube_url,spotify_url")
+        .select("id,title,artist,link,youtube_url,spotify_url,submitter_comment")
         .eq("round_id", roundId)
         .order("created_at", { ascending: true });
 
@@ -786,13 +786,14 @@ export default function AdminPage() {
       setSongLinksSubmissions(submissions);
 
       // Initialize editing state - pre-populate spotify_url from link if empty
-      const editing: Record<string, { youtube_url: string; spotify_url: string }> = {};
+      const editing: Record<string, { youtube_url: string; spotify_url: string; submitter_comment: string }> = {};
       submissions.forEach((sub) => {
         // Use spotify_url if set, otherwise check if link is a Spotify URL
         const spotifyUrl = sub.spotify_url ?? (sub.link?.includes("spotify") ? sub.link : "");
         editing[sub.id] = {
           youtube_url: sub.youtube_url ?? "",
           spotify_url: spotifyUrl ?? "",
+          submitter_comment: sub.submitter_comment ?? "",
         };
       });
       setSongLinksEditing(editing);
@@ -808,13 +809,14 @@ export default function AdminPage() {
     if (!group || !songLinksRoundId) return;
     setSongLinksSaving(true);
     try {
-      // Update each submission with its new URLs
-      const updates = Object.entries(songLinksEditing).map(([id, urls]) =>
+      // Update each submission with its new URLs and comment
+      const updates = Object.entries(songLinksEditing).map(([id, fields]) =>
         supabase
           .from("submissions")
           .update({
-            youtube_url: urls.youtube_url || null,
-            spotify_url: urls.spotify_url || null,
+            youtube_url: fields.youtube_url || null,
+            spotify_url: fields.spotify_url || null,
+            submitter_comment: fields.submitter_comment || null,
           })
           .eq("id", id)
       );
@@ -3433,11 +3435,25 @@ python scripts/build_track_metadata.py`}
                         />
                       </label>
                     </div>
+                    <label className="field" style={{ margin: "8px 0 0 0" }}>
+                      <span className="field-label" style={{ fontSize: "0.8rem" }}>Submitter Comment</span>
+                      <input
+                        className="field-input"
+                        value={songLinksEditing[sub.id]?.submitter_comment ?? ""}
+                        onChange={(e) =>
+                          setSongLinksEditing((prev) => ({
+                            ...prev,
+                            [sub.id]: { ...prev[sub.id], submitter_comment: e.target.value },
+                          }))
+                        }
+                        placeholder="e.g., From the show Breaking Bad"
+                      />
+                    </label>
                   </div>
                 ))}
 
                 <Button type="button" onClick={saveSongLinks} disabled={songLinksSaving}>
-                  {songLinksSaving ? "Saving..." : "Save All Links"}
+                  {songLinksSaving ? "Saving..." : "Save All"}
                 </Button>
               </div>
             )}

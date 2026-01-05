@@ -3143,6 +3143,15 @@
   color: var(--blue);
 }
 
+.song-card-comment {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--text-muted);
+  margin: 6px 0;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
 .song-card-actions {
   display: flex;
   gap: 6px;

@@ -18,6 +18,7 @@ type SongCardProps = {
     submitter_name?: string | null;
     youtube_url?: string | null;
     spotify_url?: string | null;
+    submitter_comment?: string | null;
   };
   votes?: VoteRow[];
   rank?: number; // 1, 2, 3 for top songs
@@ -111,6 +112,10 @@ export default function SongCard({
 
         {showSubmitter && song.submitter_name && (
           <p className="song-card-submitter">by {song.submitter_name}</p>
+        )}
+
+        {song.submitter_comment && (
+          <p className="song-card-comment">"{song.submitter_comment}"</p>
         )}
 
         <div className="song-card-actions">
