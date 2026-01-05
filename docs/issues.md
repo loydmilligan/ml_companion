@@ -45,6 +45,7 @@ Date: 2026-01-03
 | ML-001 | [LOYD-134](https://linear.app/loydmilligan/issue/LOYD-134) | Verify Spotify Links | Planned | Low | Medium | Low | Audit all Spotify song/playlist links |
 | ML-002 | [LOYD-135](https://linear.app/loydmilligan/issue/LOYD-135) | Verify YouTube Links | Planned | Low | Medium | Low | Audit all YouTube song/playlist links |
 | ML-003 | [LOYD-136](https://linear.app/loydmilligan/issue/LOYD-136) | Spotify Embed Player | Planned | Medium | Medium | Low | Look into embedded player vs external links |
+| ML-004 | [LOYD-152](https://linear.app/loydmilligan/issue/LOYD-152) | Song Link Preference Toggle (Spotify/YouTube/Both) | Planned | Low | Medium | Low | User setting to choose default song link provider |
 
 ### Security
 

@@ -15,6 +15,7 @@ import type {
   CardData,
   RoundCardData,
   SeasonRecapCardData,
+  CurrentSeasonCardData,
   SubmissionWithVotes,
   LeaderboardEntry,
   VotingPattern,
@@ -979,9 +980,31 @@ export default function HistoryPage() {
     // Build cards: for each season, add recap card first, then round cards
     seasonNumbers.forEach((seasonNum) => {
       const seasonRounds = roundsBySeason.get(seasonNum) ?? [];
+      const isCurrentSeason = seasonNum === seasonNumbers[0];
+      const currentLeague = leagues.find((l) => l.season_number === seasonNum);
 
       // Sort rounds by round_number descending within season
       seasonRounds.sort((a, b) => (b.round_number ?? 0) - (a.round_number ?? 0));
+
+      if (isCurrentSeason && seasonRounds.length > 0) {
+        const currentSeasonCard: CurrentSeasonCardData = {
+          id: `current-season-${seasonNum}`,
+          type: "current-season",
+          seasonNumber: seasonNum,
+          leagueName: currentLeague?.name ?? `Season ${seasonNum}`,
+          seasonIntro:
+            `Season ${seasonNum} got off to an exciting start when a surprise winner came out of the pack with a nontraditional pick. ` +
+            `Strong showings from Bleck and Bleck kept the board tight, while the early birds locked in submissions before the procrastinator scramble hit. ` +
+            `There is a little extra edge this year for anyone looking to rewrite last season's ending.`,
+          roundTwoRiff:
+            `Round 2 keeps the momentum with a wink to Sasha's Season 1 theme, flipping that original spark into a sharper Season ${seasonNum} sequel. ` +
+            `It is equal parts nostalgia and dare, the kind of prompt that rewards a left turn but still tips its hat to the old lanes.`,
+          minigameSummary:
+            `Minigame recap: Matt and Lori were dialed in, while a few of us whiffed the tougher curveballs. ` +
+            `Most guesses piled onto Sasha, but Bleck's submission stayed the hardest to pin down.`,
+        };
+        cards.push(currentSeasonCard);
+      }
 
       // Add season recap card first (for all seasons with data)
       const seasonStats = pastSeasonStats.find((s) => s.seasonNumber === seasonNum);

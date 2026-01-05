@@ -15,7 +15,7 @@ import type {
 /**
  * Card type discriminator
  */
-export type CardType = "round" | "season-recap";
+export type CardType = "round" | "season-recap" | "current-season";
 
 /**
  * Submission with calculated vote points
@@ -182,9 +182,29 @@ export interface SeasonRecapCardData {
 }
 
 /**
+ * Current season story card data
+ */
+export interface CurrentSeasonCardData {
+  /** Unique identifier */
+  id: string;
+  /** Card type discriminator */
+  type: "current-season";
+  /** Season number */
+  seasonNumber: number;
+  /** League/season name */
+  leagueName: string;
+  /** Season-opening narrative */
+  seasonIntro: string;
+  /** Round-two riff */
+  roundTwoRiff: string;
+  /** Minigame results summary */
+  minigameSummary: string;
+}
+
+/**
  * Union type for all card types
  */
-export type CardData = RoundCardData | SeasonRecapCardData;
+export type CardData = RoundCardData | SeasonRecapCardData | CurrentSeasonCardData;
 
 /**
  * Type guard for RoundCardData
@@ -198,6 +218,13 @@ export function isRoundCard(card: CardData): card is RoundCardData {
  */
 export function isSeasonRecapCard(card: CardData): card is SeasonRecapCardData {
   return card.type === "season-recap";
+}
+
+/**
+ * Type guard for CurrentSeasonCardData
+ */
+export function isCurrentSeasonCard(card: CardData): card is CurrentSeasonCardData {
+  return card.type === "current-season";
 }
 
 /**
@@ -310,6 +337,14 @@ export interface SeasonRecapCardProps extends CardComponentProps {
   data: SeasonRecapCardData;
   /** Callback when a theme pill is clicked */
   onThemeClick?: (theme: string) => void;
+}
+
+/**
+ * CurrentSeasonCard component props
+ */
+export interface CurrentSeasonCardProps extends CardComponentProps {
+  /** Current season story data */
+  data: CurrentSeasonCardData;
 }
 
 /**

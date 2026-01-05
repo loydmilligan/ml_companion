@@ -38,6 +38,7 @@ type UserRow = {
     can_toggle_reaction_notify: boolean | null;
     can_toggle_ntfy_notify: boolean | null;
     can_toggle_push_notify: boolean | null;
+    ntfy_topic: string | null;
   } | null;
 };
 
@@ -347,7 +348,7 @@ export default function AdminPage() {
       const { data: userData } = await supabase
         .from("group_members")
         .select(
-          "member_id, role, profiles(id,display_name,email,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify,reaction_notify_enabled,can_toggle_reaction_notify,can_toggle_ntfy_notify,can_toggle_push_notify)"
+          "member_id, role, profiles(id,display_name,email,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify,reaction_notify_enabled,can_toggle_reaction_notify,can_toggle_ntfy_notify,can_toggle_push_notify,ntfy_topic)"
         )
         .eq("group_id", group.id)
         .order("created_at", { ascending: true });
@@ -2163,9 +2164,14 @@ export default function AdminPage() {
                         <input
                           type="checkbox"
                           checked={user.profiles?.can_toggle_ntfy_notify ?? false}
-                          onChange={(event) =>
-                            updateUser(user.profiles?.id ?? "", { can_toggle_ntfy_notify: event.target.checked })
-                          }
+                          onChange={(event) => {
+                            const enabling = event.target.checked;
+                            // Clear ntfy_topic when enabling so users start fresh
+                            const updates = enabling
+                              ? { can_toggle_ntfy_notify: true, ntfy_topic: "" }
+                              : { can_toggle_ntfy_notify: false };
+                            updateUser(user.profiles?.id ?? "", updates);
+                          }}
                         />
                         <span>Show ntfy option</span>
                       </label>

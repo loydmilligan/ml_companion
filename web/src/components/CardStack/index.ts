@@ -5,6 +5,7 @@
 export { default as CardStack } from "./CardStack";
 export { default as RoundCard } from "./RoundCard";
 export { default as SeasonRecapCard } from "./SeasonRecapCard";
+export { default as CurrentSeasonCard } from "./CurrentSeasonCard";
 export { default as CardHero } from "./CardHero";
 export { default as QuickStats } from "./QuickStats";
 export { default as TrackList } from "./TrackList";
