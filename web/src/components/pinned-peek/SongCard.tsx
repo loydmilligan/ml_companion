@@ -8,6 +8,18 @@ type VoteRow = {
   points: number | null;
 };
 
+type Competitor = {
+  id: string;
+  name: string;
+  profile_id: string | null;
+};
+
+type GuessState = {
+  guessedCompetitorId: string | null;
+  result: boolean | null; // true = correct, false = incorrect, null = not revealed
+  isSaving: boolean;
+};
+
 type SongCardProps = {
   song: {
     id: string;
@@ -25,6 +37,13 @@ type SongCardProps = {
   showSubmitter: boolean;
   showVotes: boolean;
   onQuote?: () => void;
+  // Submitter guess props (optional)
+  guessEnabled?: boolean;
+  guessState?: GuessState;
+  competitors?: Competitor[];
+  isRevealed?: boolean;
+  onGuessChange?: (competitorId: string) => void;
+  onSaveGuess?: () => void;
 };
 
 function getTrophyClass(rank: number): string {
@@ -52,9 +71,20 @@ export default function SongCard({
   showSubmitter,
   showVotes,
   onQuote,
+  guessEnabled = false,
+  guessState,
+  competitors = [],
+  isRevealed = false,
+  onGuessChange,
+  onSaveGuess,
 }: SongCardProps) {
   const [votersExpanded, setVotersExpanded] = useState(false);
   const { openSidebar } = useYouTubeSidebar();
+
+  // Find guessed competitor name for display
+  const guessedCompetitor = guessState?.guessedCompetitorId
+    ? competitors.find((c) => c.id === guessState.guessedCompetitorId)
+    : null;
 
   // Get Spotify URL - prefer spotify_url, fall back to link if it's a Spotify link
   const spotifyUrl = song.spotify_url || (song.link?.includes("spotify") ? song.link : null);
@@ -110,8 +140,59 @@ export default function SongCard({
         <h4 className="song-card-title">{song.title}</h4>
         <p className="song-card-artist">{song.artist ?? "Unknown artist"}</p>
 
+        {/* Show submitter name if revealed, or guess UI if enabled during voting */}
         {showSubmitter && song.submitter_name && (
           <p className="song-card-submitter">by {song.submitter_name}</p>
+        )}
+
+        {/* Submitter guess UI - only during voting phase when enabled */}
+        {guessEnabled && !isRevealed && onGuessChange && onSaveGuess && (
+          <div className="song-card-guess">
+            <select
+              value={guessState?.guessedCompetitorId || ""}
+              onChange={(e) => onGuessChange(e.target.value)}
+              disabled={guessState?.isSaving}
+              className="song-card-guess-select"
+            >
+              <option value="">Who submitted this?</option>
+              {competitors.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={onSaveGuess}
+              disabled={!guessState?.guessedCompetitorId || guessState?.isSaving}
+              className="song-card-guess-save"
+            >
+              {guessState?.isSaving ? "..." : "Save"}
+            </button>
+          </div>
+        )}
+
+        {/* Guess result - shown after reveal */}
+        {guessEnabled && isRevealed && guessState && (
+          <div
+            className={clsx(
+              "song-card-guess-result",
+              guessState.result === true && "correct",
+              guessState.result === false && "incorrect"
+            )}
+          >
+            {guessState.result === true && (
+              <span>✓ Correct!</span>
+            )}
+            {guessState.result === false && guessedCompetitor && (
+              <span>✗ You guessed {guessedCompetitor.name}</span>
+            )}
+            {guessState.result === null && guessState.guessedCompetitorId && guessedCompetitor && (
+              <span style={{ color: "var(--text-muted)" }}>
+                You guessed {guessedCompetitor.name}
+              </span>
+            )}
+          </div>
         )}
 
         {song.submitter_comment && (

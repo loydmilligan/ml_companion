@@ -3,10 +3,10 @@ import clsx from "clsx";
 import SongCard from "./SongCard";
 import AIAssistant from "./AIAssistant";
 import RoundChallenge from "./RoundChallenge";
-import SubmitterGuess from "./SubmitterGuess";
 import ExpandableSection from "./ExpandableSection";
 import ActivityTracker from "./ActivityTracker";
 import { useYouTubeSidebar } from "../youtube-sidebar";
+import { useSubmitterGuess } from "./useSubmitterGuess";
 
 type SubmissionRow = {
   id: string;
@@ -101,6 +101,24 @@ export default function PeekPanel({
   submitterGuessEnabled = true,
 }: PeekPanelProps) {
   const { openPlaylist } = useYouTubeSidebar();
+
+  // Submitter guess state
+  const isRevealed = round?.status === "revealed";
+  const showGuessUI = submitterGuessEnabled && (round?.status === "voting" || round?.status === "revealed");
+  const {
+    competitors: guessCompetitors,
+    guessStates,
+    leaderboard,
+    correctCount,
+    totalGuessed,
+    handleGuessChange,
+    handleSaveGuess,
+  } = useSubmitterGuess(
+    round?.id ?? null,
+    groupId,
+    submissions,
+    isRevealed ?? false
+  );
 
   // Prevent body scroll when panel is open
   useEffect(() => {
@@ -236,14 +254,42 @@ export default function PeekPanel({
                 />
               )}
 
-              {/* Submitter Guess (during voting phase or revealed, if enabled) */}
-              {(round.status === "voting" || round.status === "revealed") && submitterGuessEnabled && groupId && (
-                <SubmitterGuess
-                  roundId={round.id}
-                  groupId={groupId}
-                  submissions={submissions}
-                  isRevealed={round.status === "revealed"}
-                />
+              {/* Submitter Guess Header - shows score and leaderboard */}
+              {showGuessUI && groupId && (
+                <div className="peek-panel-section submitter-guess-header-section">
+                  <div className="submitter-guess-header">
+                    <h3>Guess the Submitter</h3>
+                    {totalGuessed > 0 && (
+                      <span className="submitter-guess-score">
+                        {isRevealed ? `${correctCount}/${totalGuessed} correct` : `${totalGuessed} guessed`}
+                      </span>
+                    )}
+                  </div>
+                  <p className="submitter-guess-intro">
+                    {isRevealed
+                      ? "Results are in! See how you did."
+                      : "Who submitted each song? Guess below!"}
+                  </p>
+                  {/* Leaderboard - shown when revealed */}
+                  {isRevealed && leaderboard.length > 0 && (
+                    <div className="submitter-guess-leaderboard">
+                      <h4>Top Guessers</h4>
+                      <div className="leaderboard-list">
+                        {leaderboard.map((entry, index) => (
+                          <div key={entry.guesser_id} className="leaderboard-entry">
+                            <span className="leaderboard-rank">
+                              {index === 0 ? "1st" : index === 1 ? "2nd" : "3rd"}
+                            </span>
+                            <span className="leaderboard-name">{entry.guesser_name}</span>
+                            <span className="leaderboard-score">
+                              {entry.correct_count}/{entry.total_guesses}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Playlist Links */}
@@ -290,6 +336,12 @@ export default function PeekPanel({
                       showSubmitter={isVotingComplete}
                       showVotes={isVotingComplete}
                       onQuote={() => onQuoteSong(song)}
+                      guessEnabled={showGuessUI}
+                      guessState={guessStates[song.id]}
+                      competitors={guessCompetitors}
+                      isRevealed={isRevealed ?? false}
+                      onGuessChange={(competitorId) => handleGuessChange(song.id, competitorId)}
+                      onSaveGuess={() => handleSaveGuess(song.id)}
                     />
                   ))}
                 </div>
@@ -346,6 +398,12 @@ export default function PeekPanel({
                       showSubmitter={isVotingComplete}
                       showVotes={isVotingComplete}
                       onQuote={() => onQuoteSong(song)}
+                      guessEnabled={showGuessUI}
+                      guessState={guessStates[song.id]}
+                      competitors={guessCompetitors}
+                      isRevealed={isRevealed ?? false}
+                      onGuessChange={(competitorId) => handleGuessChange(song.id, competitorId)}
+                      onSaveGuess={() => handleSaveGuess(song.id)}
                     />
                   ))}
                 </ExpandableSection>
@@ -360,6 +418,12 @@ export default function PeekPanel({
                       showSubmitter={isVotingComplete}
                       showVotes={isVotingComplete}
                       onQuote={() => onQuoteSong(song)}
+                      guessEnabled={showGuessUI}
+                      guessState={guessStates[song.id]}
+                      competitors={guessCompetitors}
+                      isRevealed={isRevealed ?? false}
+                      onGuessChange={(competitorId) => handleGuessChange(song.id, competitorId)}
+                      onSaveGuess={() => handleSaveGuess(song.id)}
                     />
                   ))}
                   {submissions.length === 0 && (
