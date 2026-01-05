@@ -2990,8 +2990,11 @@
   letter-spacing: 0.5px;
 }
 
-/* Playlist Link */
+/* Playlist Links */
 .playlist-link-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-bottom: 16px;
 }
 
@@ -3017,6 +3020,15 @@
 
 .playlist-link svg {
   flex-shrink: 0;
+}
+
+.playlist-link-youtube {
+  background: linear-gradient(135deg, #FF0000 0%, #cc0000 100%);
+  box-shadow: 0 2px 8px rgba(255, 0, 0, 0.3);
+}
+
+.playlist-link-youtube:hover {
+  box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
 }
 
 /* Peek Button */
