@@ -16,6 +16,7 @@ export default function TopBar() {
     votes,
     awards,
     activity,
+    competitors,
     submittedCount,
     votedCount,
     totalMembers,
@@ -168,6 +169,7 @@ export default function TopBar() {
         votes={votes}
         awards={awards}
         activity={activity}
+        competitors={competitors}
         totalMembers={totalMembers}
         isVotingComplete={isVotingComplete}
         onQuoteSong={handleQuoteSong}

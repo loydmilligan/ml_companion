@@ -50,6 +50,12 @@ type ActivityRecord = {
   profile_id: string | null;
 };
 
+type Competitor = {
+  id: string;
+  name: string;
+  profile_id: string | null;
+};
+
 type UrgencyLevel = "safe" | "warning" | "urgent" | "overdue" | "neutral";
 
 type RoundContextValue = {
@@ -58,6 +64,7 @@ type RoundContextValue = {
   votes: VoteRow[];
   awards: RoundAwardRow[];
   activity: ActivityRecord[];
+  competitors: Competitor[];
   loading: boolean;
   submittedCount: number;
   votedCount: number;
@@ -90,6 +97,7 @@ export function RoundProvider({ children }: { children: ReactNode }) {
   const [votes, setVotes] = useState<VoteRow[]>([]);
   const [awards, setAwards] = useState<RoundAwardRow[]>([]);
   const [activity, setActivity] = useState<ActivityRecord[]>([]);
+  const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalMembers, setTotalMembers] = useState(0);
 
@@ -151,11 +159,12 @@ export function RoundProvider({ children }: { children: ReactNode }) {
               .eq("visible", true)
               .limit(3)
           : Promise.resolve({ data: null }),
-        // Get competitor count (from season_competitors - the source of truth for league members)
+        // Get competitors (from season_competitors - the source of truth for league members)
         supabase
           .from("season_competitors")
-          .select("*", { count: "exact", head: true })
-          .eq("group_id", group.id),
+          .select("id,name,profile_id")
+          .eq("group_id", group.id)
+          .order("name", { ascending: true }),
         // Get activity from email events (during open/voting phases)
         roundData.status === "open" || roundData.status === "voting"
           ? supabase
@@ -167,9 +176,11 @@ export function RoundProvider({ children }: { children: ReactNode }) {
       ]);
 
       const submissionData = submissionResult.data;
+      const competitorData = (memberResult.data as Competitor[]) ?? [];
       setSubmissions((submissionData as SubmissionRow[]) ?? []);
       setAwards((awardResult.data as RoundAwardRow[]) ?? []);
-      setTotalMembers(memberResult.count ?? 0);
+      setCompetitors(competitorData);
+      setTotalMembers(competitorData.length);
       setActivity((activityResult.data as ActivityRecord[]) ?? []);
 
       // Get votes if voting phase or revealed (needs submission IDs)
@@ -192,12 +203,15 @@ export function RoundProvider({ children }: { children: ReactNode }) {
       setVotes([]);
       setAwards([]);
       setActivity([]);
-      // Still get competitor count even without a round
-      const { count } = await supabase
+      // Still get competitors even without a round
+      const { data: competitorData } = await supabase
         .from("season_competitors")
-        .select("*", { count: "exact", head: true })
-        .eq("group_id", group.id);
-      setTotalMembers(count ?? 0);
+        .select("id,name,profile_id")
+        .eq("group_id", group.id)
+        .order("name", { ascending: true });
+      const competitorsList = (competitorData as Competitor[]) ?? [];
+      setCompetitors(competitorsList);
+      setTotalMembers(competitorsList.length);
     }
 
     setLoading(false);
@@ -284,6 +298,7 @@ export function RoundProvider({ children }: { children: ReactNode }) {
         votes,
         awards,
         activity,
+        competitors,
         loading,
         submittedCount,
         votedCount,

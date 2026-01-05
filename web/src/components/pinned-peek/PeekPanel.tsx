@@ -38,6 +38,12 @@ type ActivityRecord = {
   profile_id: string | null;
 };
 
+type Competitor = {
+  id: string;
+  name: string;
+  profile_id: string | null;
+};
+
 type RoundSummary = {
   id: string;
   theme: string;
@@ -45,6 +51,8 @@ type RoundSummary = {
   theme_author: string | null;
   theme_image_url: string | null;
   status: "open" | "voting" | "revealed" | "archived";
+  submission_deadline: string | null;
+  voting_deadline: string | null;
 };
 
 type PeekPanelProps = {
@@ -56,6 +64,7 @@ type PeekPanelProps = {
   votes: VoteRow[];
   awards: RoundAwardRow[];
   activity: ActivityRecord[];
+  competitors: Competitor[];
   totalMembers: number;
   isVotingComplete: boolean;
   onQuoteSong: (song: SubmissionRow) => void;
@@ -77,6 +86,7 @@ export default function PeekPanel({
   votes,
   awards,
   activity,
+  competitors,
   totalMembers,
   isVotingComplete,
   onQuoteSong,
@@ -185,19 +195,21 @@ export default function PeekPanel({
               </div>
 
               {/* Activity Trackers (during open/voting phases) */}
-              {(round.status === "open" || round.status === "voting") && activity.length > 0 && (
+              {(round.status === "open" || round.status === "voting") && competitors.length > 0 && (
                 <div className="peek-panel-section">
                   <ActivityTracker
                     activity={activity}
-                    totalMembers={totalMembers}
+                    competitors={competitors}
                     activityType="submitted"
                     roundStatus={round.status}
+                    deadline={round.submission_deadline}
                   />
                   <ActivityTracker
                     activity={activity}
-                    totalMembers={totalMembers}
+                    competitors={competitors}
                     activityType="voted"
                     roundStatus={round.status}
+                    deadline={round.voting_deadline}
                   />
                 </div>
               )}
