@@ -3169,6 +3169,12 @@
   min-width: 0;
 }
 
+/* Force readable text in dropdown options */
+.song-card-guess-select option {
+  background: #2a2a2a;
+  color: #ffffff;
+}
+
 .song-card-guess-save {
   padding: 6px 12px;
   font-size: 0.85rem;
