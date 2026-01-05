@@ -769,6 +769,48 @@
   font-size: 12px;
 }
 
+/* Collapsible sections */
+details.preseason-block {
+  padding: 0;
+}
+
+details.preseason-block summary {
+  padding: 12px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  list-style: none;
+}
+
+details.preseason-block summary::-webkit-details-marker {
+  display: none;
+}
+
+details.preseason-block summary::marker {
+  display: none;
+}
+
+.collapse-indicator {
+  margin-left: auto;
+  font-size: 10px;
+  opacity: 0.6;
+  transition: transform 0.2s ease;
+}
+
+details[open].preseason-block .collapse-indicator {
+  transform: rotate(90deg);
+}
+
+.collapsible-content {
+  padding: 0 14px 12px;
+}
+
+details.preseason-block .preseason-text {
+  margin: 0;
+}
+
 /* ========================================
    Season Recap Card
    ======================================== */

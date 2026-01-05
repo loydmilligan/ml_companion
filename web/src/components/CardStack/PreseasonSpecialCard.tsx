@@ -4,11 +4,34 @@
  * Displays extensive pre-season special content including opening monologue,
  * submission board analysis, taste tells, theme fit, timing, predictions,
  * and soft power rankings. Shown once at the start of a new season.
+ * Sections are collapsible and collapsed by default.
  */
 
 import { useMemo } from "react";
 import type { PreseasonSpecialCardProps } from "../../types/cardstack.types";
 import { CARD_TRANSFORMS } from "../../types/cardstack.types";
+
+interface CollapsibleSectionProps {
+  icon: string;
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}
+
+function CollapsibleSection({ icon, title, children, className = "" }: CollapsibleSectionProps) {
+  return (
+    <details className={`preseason-block ${className}`}>
+      <summary className="section-label collapsible-header">
+        <span className="label-icon" aria-hidden="true">{icon}</span>
+        {title}
+        <span className="collapse-indicator" aria-hidden="true">▶</span>
+      </summary>
+      <div className="collapsible-content">
+        {children}
+      </div>
+    </details>
+  );
+}
 
 export default function PreseasonSpecialCard({
   data,
@@ -52,61 +75,33 @@ export default function PreseasonSpecialCard({
       </div>
 
       <div className="card-content preseason-content">
-        <section className="preseason-block preseason-monologue">
-          <h3 className="section-label">
-            <span className="label-icon" aria-hidden="true">🎬</span>
-            Season Opening Monologue
-          </h3>
+        <CollapsibleSection icon="🎬" title="Season Opening Monologue" className="preseason-monologue">
           <p className="preseason-text">{data.openingMonologue}</p>
-        </section>
+        </CollapsibleSection>
 
-        <section className="preseason-block">
-          <h3 className="section-label">
-            <span className="label-icon" aria-hidden="true">📋</span>
-            The Submission Board
-          </h3>
+        <CollapsibleSection icon="📋" title="The Submission Board">
           <p className="preseason-text">{data.submissionBoard}</p>
-        </section>
+        </CollapsibleSection>
 
-        <section className="preseason-block">
-          <h3 className="section-label">
-            <span className="label-icon" aria-hidden="true">🎵</span>
-            Artist & Taste Tells
-          </h3>
+        <CollapsibleSection icon="🎵" title="Artist & Taste Tells">
           <p className="preseason-text">{data.tasteTells}</p>
-        </section>
+        </CollapsibleSection>
 
-        <section className="preseason-block">
-          <h3 className="section-label">
-            <span className="label-icon" aria-hidden="true">🎯</span>
-            Theme Fit
-          </h3>
+        <CollapsibleSection icon="🎯" title="Theme Fit">
           <p className="preseason-text">{data.themeFit}</p>
-        </section>
+        </CollapsibleSection>
 
-        <section className="preseason-block">
-          <h3 className="section-label">
-            <span className="label-icon" aria-hidden="true">⏱️</span>
-            Timing & Energy
-          </h3>
+        <CollapsibleSection icon="⏱️" title="Timing & Energy">
           <p className="preseason-text">{data.timingEnergy}</p>
-        </section>
+        </CollapsibleSection>
 
-        <section className="preseason-block preseason-predictions">
-          <h3 className="section-label">
-            <span className="label-icon" aria-hidden="true">🔮</span>
-            Pre-Vote Predictions
-          </h3>
+        <CollapsibleSection icon="🔮" title="Pre-Vote Predictions" className="preseason-predictions">
           <p className="preseason-text">{data.predictions}</p>
-        </section>
+        </CollapsibleSection>
 
-        <section className="preseason-block preseason-rankings">
-          <h3 className="section-label">
-            <span className="label-icon" aria-hidden="true">📊</span>
-            Soft Power Rankings
-          </h3>
+        <CollapsibleSection icon="📊" title="Soft Power Rankings" className="preseason-rankings">
           <p className="preseason-text preseason-rankings-text">{data.powerRankings}</p>
-        </section>
+        </CollapsibleSection>
       </div>
     </article>
   );
