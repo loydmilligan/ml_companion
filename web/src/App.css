@@ -4682,6 +4682,59 @@
   color: #fff;
 }
 
+/* Submitter Guess Leaderboard */
+.submitter-guess-leaderboard {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(10, 26, 47, 0.1);
+}
+
+.submitter-guess-leaderboard h4 {
+  margin: 0 0 12px 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.leaderboard-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(10, 26, 47, 0.04);
+  border-radius: 8px;
+}
+
+.leaderboard-rank {
+  font-size: 1.2rem;
+}
+
+.leaderboard-name {
+  flex: 1;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.leaderboard-score {
+  font-weight: 600;
+  color: var(--green);
+  font-size: 0.9rem;
+}
+
+[data-mode="dark"] .leaderboard-entry {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-mode="dark"] .submitter-guess-leaderboard {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
 /* ========================================
    Expandable Section
    ======================================== */

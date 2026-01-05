@@ -22,6 +22,13 @@ type SavedGuess = {
   is_correct: boolean | null;
 };
 
+type LeaderboardEntry = {
+  guesser_id: string;
+  guesser_name: string;
+  correct_count: number;
+  total_guesses: number;
+};
+
 type SubmitterGuessProps = {
   roundId: string;
   groupId: string;
@@ -43,6 +50,7 @@ export default function SubmitterGuess({
   const [results, setResults] = useState<Record<string, boolean | null>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
   // Load competitors and user's saved guesses
   const loadData = useCallback(async () => {
@@ -120,6 +128,58 @@ export default function SubmitterGuess({
 
     setResults(newResults);
   }, [isRevealed, submissions, competitors, guesses]);
+
+  // Fetch leaderboard when round is revealed
+  useEffect(() => {
+    if (!isRevealed || !roundId || !groupId) return;
+
+    const fetchLeaderboard = async () => {
+      // Get all guesses for this round with profile info
+      const { data: allGuesses } = await supabase
+        .from("submitter_guesses")
+        .select(`
+          guesser_id,
+          is_correct,
+          profiles!guesser_id(display_name)
+        `)
+        .eq("round_id", roundId);
+
+      if (!allGuesses || allGuesses.length === 0) return;
+
+      // Aggregate scores by guesser
+      const scores: Record<string, { name: string; correct: number; total: number }> = {};
+
+      allGuesses.forEach((g) => {
+        const guesserId = g.guesser_id;
+        const profile = g.profiles as { display_name: string } | null;
+        const name = profile?.display_name ?? "Unknown";
+
+        if (!scores[guesserId]) {
+          scores[guesserId] = { name, correct: 0, total: 0 };
+        }
+
+        scores[guesserId].total += 1;
+        if (g.is_correct === true) {
+          scores[guesserId].correct += 1;
+        }
+      });
+
+      // Convert to array and sort by correct count (descending)
+      const leaderboardData: LeaderboardEntry[] = Object.entries(scores)
+        .map(([id, { name, correct, total }]) => ({
+          guesser_id: id,
+          guesser_name: name,
+          correct_count: correct,
+          total_guesses: total,
+        }))
+        .sort((a, b) => b.correct_count - a.correct_count)
+        .slice(0, 3); // Top 3 only
+
+      setLeaderboard(leaderboardData);
+    };
+
+    fetchLeaderboard();
+  }, [isRevealed, roundId, groupId]);
 
   const handleGuessChange = (submissionId: string, competitorId: string) => {
     setGuesses((prev) => ({ ...prev, [submissionId]: competitorId }));
@@ -285,6 +345,26 @@ export default function SubmitterGuess({
           );
         })}
       </div>
+
+      {/* Leaderboard - shown when revealed */}
+      {isRevealed && leaderboard.length > 0 && (
+        <div className="submitter-guess-leaderboard">
+          <h4>Top Guessers</h4>
+          <div className="leaderboard-list">
+            {leaderboard.map((entry, index) => (
+              <div key={entry.guesser_id} className="leaderboard-entry">
+                <span className="leaderboard-rank">
+                  {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
+                </span>
+                <span className="leaderboard-name">{entry.guesser_name}</span>
+                <span className="leaderboard-score">
+                  {entry.correct_count}/{entry.total_guesses}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
