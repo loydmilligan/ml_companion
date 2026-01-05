@@ -88,6 +88,13 @@ type RoundAwardRow = {
   visible: boolean | null;
 };
 
+type MinigameLeaderboardEntry = {
+  guesser_id: string;
+  name: string;
+  correctCount: number;
+  totalGuesses: number;
+};
+
 type SeasonStatsRow = {
   leagueId: string;
   leagueName: string;
@@ -119,6 +126,7 @@ export default function HistoryPage() {
   const [allSubmissions, setAllSubmissions] = useState<Map<string, SubmissionRow[]>>(new Map());
   const [allVotes, setAllVotes] = useState<Map<string, VoteRow[]>>(new Map());
   const [allAwards, setAllAwards] = useState<Map<string, RoundAwardRow[]>>(new Map());
+  const [allMinigameResults, setAllMinigameResults] = useState<Map<string, MinigameLeaderboardEntry[]>>(new Map());
   const [pastSeasonStats, setPastSeasonStats] = useState<SeasonStatsRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -240,6 +248,65 @@ export default function HistoryPage() {
       awardsByRound.set(award.round_id, existing);
     });
     setAllAwards(awardsByRound);
+
+    // Load minigame guesses for all rounds
+    const { data: guessesData } = await supabase
+      .from("submitter_guesses")
+      .select(`
+        round_id,
+        guesser_id,
+        is_correct,
+        profiles!guesser_id(display_name)
+      `)
+      .in("round_id", roundIds);
+
+    // Group and aggregate guesses by round
+    const guessesByRound = new Map<string, MinigameLeaderboardEntry[]>();
+    const roundGuesserMap = new Map<string, Map<string, { name: string; correct: number; total: number }>>();
+
+    (guessesData ?? []).forEach((guess: any) => {
+      const roundId = guess.round_id;
+      const guesserId = guess.guesser_id;
+      // Handle both array and object forms for profiles
+      const profileData = guess.profiles as unknown;
+      const profile = Array.isArray(profileData)
+        ? (profileData[0] as { display_name: string } | undefined)
+        : (profileData as { display_name: string } | null);
+      const name = profile?.display_name ?? "Unknown";
+
+      if (!roundGuesserMap.has(roundId)) {
+        roundGuesserMap.set(roundId, new Map());
+      }
+      const guesserMap = roundGuesserMap.get(roundId)!;
+
+      if (!guesserMap.has(guesserId)) {
+        guesserMap.set(guesserId, { name, correct: 0, total: 0 });
+      }
+      const entry = guesserMap.get(guesserId)!;
+      entry.total += 1;
+      if (guess.is_correct === true) {
+        entry.correct += 1;
+      }
+    });
+
+    // Convert to leaderboard entries sorted by correct count
+    roundGuesserMap.forEach((guesserMap, roundId) => {
+      const leaderboard: MinigameLeaderboardEntry[] = Array.from(guesserMap.entries())
+        .map(([guesserId, { name, correct, total }]) => ({
+          guesser_id: guesserId,
+          name,
+          correctCount: correct,
+          totalGuesses: total,
+        }))
+        .sort((a, b) => b.correctCount - a.correctCount)
+        .slice(0, 3); // Top 3 only
+
+      if (leaderboard.length > 0) {
+        guessesByRound.set(roundId, leaderboard);
+      }
+    });
+
+    setAllMinigameResults(guessesByRound);
   };
 
   // Load past season stats
@@ -861,6 +928,16 @@ export default function HistoryPage() {
 
       const totalVotes = submissionsWithVotes.reduce((sum, s) => sum + s.totalPoints, 0);
 
+      // Get minigame results for this round
+      const minigameLeaderboard = allMinigameResults.get(round.id) ?? [];
+      const minigameResults = minigameLeaderboard.length > 0
+        ? minigameLeaderboard.map((entry) => ({
+            name: entry.name,
+            correctCount: entry.correctCount,
+            totalGuesses: entry.totalGuesses,
+          }))
+        : undefined;
+
       return {
         id: round.id,
         type: "round",
@@ -881,6 +958,7 @@ export default function HistoryPage() {
           players: Math.max(uniqueVoters.size, submissions.length),
         },
         playlistUrl: round.playlist_url,
+        minigameResults,
       };
     };
 
@@ -938,7 +1016,7 @@ export default function HistoryPage() {
     });
 
     return cards;
-  }, [allRounds, allSubmissions, allVotes, allAwards, pastSeasonStats, leagues]);
+  }, [allRounds, allSubmissions, allVotes, allAwards, allMinigameResults, pastSeasonStats, leagues]);
 
   /* ========================================
      Event Handlers

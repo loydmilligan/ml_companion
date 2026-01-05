@@ -28,6 +28,18 @@ export interface SubmissionWithVotes extends RoundSubmission {
 }
 
 /**
+ * Minigame guesser result entry
+ */
+export interface MinigameGuesser {
+  /** Guesser name */
+  name: string;
+  /** Number of correct guesses */
+  correctCount: number;
+  /** Total guesses made */
+  totalGuesses: number;
+}
+
+/**
  * Round card data for the cardstack view
  */
 export interface RoundCardData {
@@ -61,6 +73,8 @@ export interface RoundCardData {
   stats: RoundStats;
   /** Spotify playlist URL */
   playlistUrl: string | null;
+  /** Submitter guess minigame results (top guessers) */
+  minigameResults?: MinigameGuesser[];
 }
 
 /**

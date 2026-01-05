@@ -1759,3 +1759,94 @@
 [data-mode="dark"] .award-item.clickable:hover {
   background: rgba(255, 153, 20, 0.2);
 }
+
+/* ========================================
+   Minigame Results
+   ======================================== */
+
+.minigame-results {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(45, 70, 185, 0.08) 0%, rgba(30, 215, 96, 0.06) 100%);
+  border-radius: 12px;
+  margin: 8px 0;
+  border: 1px solid rgba(45, 70, 185, 0.15);
+}
+
+.minigame-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.minigame-icon {
+  font-size: 14px;
+}
+
+.minigame-leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.minigame-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.minigame-rank {
+  font-size: 14px;
+  width: 24px;
+  text-align: center;
+}
+
+.minigame-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.minigame-score {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cs-green);
+  background: rgba(30, 215, 96, 0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+@media (min-width: 768px) {
+  .minigame-results {
+    padding: 14px 18px;
+    margin: 10px 0;
+  }
+
+  .minigame-title {
+    font-size: 13px;
+  }
+
+  .minigame-entry {
+    padding: 8px 12px;
+  }
+
+  .minigame-name {
+    font-size: 14px;
+  }
+
+  .minigame-score {
+    font-size: 13px;
+  }
+}

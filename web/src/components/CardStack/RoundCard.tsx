@@ -232,6 +232,29 @@ export default function RoundCard({
           <TrackList submissions={topSubmissions} />
         )}
 
+        {/* Minigame Results */}
+        {data.minigameResults && data.minigameResults.length > 0 && (
+          <div className="minigame-results">
+            <h4 className="minigame-title">
+              <span className="minigame-icon" aria-hidden="true">🎯</span>
+              Top Guessers
+            </h4>
+            <div className="minigame-leaderboard">
+              {data.minigameResults.map((guesser, index) => (
+                <div key={guesser.name} className="minigame-entry">
+                  <span className="minigame-rank">
+                    {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
+                  </span>
+                  <span className="minigame-name">{guesser.name}</span>
+                  <span className="minigame-score">
+                    {guesser.correctCount}/{guesser.totalGuesses}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Admin generation controls */}
         {isLead && adminCallbacks && (
           <div className="admin-generation-controls">
