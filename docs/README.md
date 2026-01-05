@@ -26,9 +26,13 @@ Use this index to navigate the project documentation by stage.
 - `setup/edge_functions.md`: OpenRouter + notification functions, Round Challenge, AI Assistant.
 - `setup/apple_login.md`: Apple Sign In setup with troubleshooting.
 
+## Minigames
+Interactive games during different round phases:
+- **Submitter Guess** (Voting Phase): Guess who submitted each song; own songs auto-excluded; leaderboard after reveal
+- **Round Challenge** (Submission Phase): Trivia game - guess which Season 1 theme songs belonged to
+
 ## AI Features
 The app includes several AI-powered features:
-- **Round Challenge**: Bonus trivia game - guess which Season 1 theme songs belonged to
 - **Theme Explainer**: AI explains theme rules and edge cases
 - **Rule Validator**: Check if a song fits the current theme
 - **Hint Generator**: Creative hints for finding songs

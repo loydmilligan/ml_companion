@@ -15,7 +15,9 @@ This project uses Supabase Edge Functions for:
 | `openrouter-round-story` | Round narratives, theme banners, awards, trophies, season narratives |
 | `round-challenge` | Bonus game - guess which Season 1 theme songs belonged to |
 | `ai-assistant` | Theme explanations, song validation, creative hints |
-| `notify` | Push notifications via ntfy and email |
+| `notify` | Legacy notifications via ntfy and email |
+| `send-push-notification` | FCM v1 API push notifications |
+| `process-email-events` | Email event processing and activity tracking |
 
 ## 1) Install Supabase CLI
 - Follow Supabase CLI install instructions for your OS.
@@ -51,7 +53,7 @@ supabase secrets set SMTP_USERNAME=... SMTP_PASSWORD=... SMTP_FROM_EMAIL=...
 ## 4) Deploy the Functions
 ```bash
 # Deploy all functions at once (recommended)
-supabase functions deploy ai-assistant openrouter-round-story openrouter-compare round-challenge notify --no-verify-jwt
+supabase functions deploy ai-assistant openrouter-round-story openrouter-compare round-challenge notify send-push-notification process-email-events --no-verify-jwt
 
 # Or deploy individually
 supabase functions deploy openrouter-compare --no-verify-jwt
@@ -59,9 +61,11 @@ supabase functions deploy openrouter-round-story --no-verify-jwt
 supabase functions deploy round-challenge --no-verify-jwt
 supabase functions deploy ai-assistant --no-verify-jwt
 supabase functions deploy notify --no-verify-jwt
+supabase functions deploy send-push-notification --no-verify-jwt
+supabase functions deploy process-email-events --no-verify-jwt
 ```
 
-**Note:** The `--no-verify-jwt` flag is used because these functions handle their own authentication or are called from the server side.
+**Note:** All functions implement JWT authentication internally. The `--no-verify-jwt` flag is used because Supabase's default verification is bypassed in favor of custom auth handling.
 
 ## 5) Round Challenge Function
 
@@ -146,7 +150,47 @@ All OpenRouter API calls include an `X-Title` header for app identification and 
 ## 9) Confirm Function URLs
 In Supabase → Edge Functions, copy the function URL. The client uses `supabase.functions.invoke()` so no additional config is required.
 
-## 10) Create the Avatars Storage Bucket
+## 10) Send Push Notification Function
+
+The `send-push-notification` function handles Firebase Cloud Messaging (FCM) v1 API push notifications.
+
+**Features:**
+- FCM v1 API with service account authentication
+- Notification type filtering (new_round, results_revealed, new_chat, deadline_reminder)
+- User preference checking before sending
+- Group-based notification targeting
+
+**Required Secrets:**
+```bash
+supabase secrets set FCM_PROJECT_ID=...
+supabase secrets set FCM_SERVICE_ACCOUNT_EMAIL=...
+supabase secrets set FCM_PRIVATE_KEY=...
+```
+
+**Database Requirements:**
+- `profiles.push_token` - Stores user's FCM token
+- `profiles.push_enabled` - Master push toggle
+- `profiles.push_new_round` - Notify on new rounds
+- `profiles.push_results_revealed` - Notify on results
+- `profiles.push_new_chat` - Notify on chat messages
+- `profiles.push_deadline_reminder` - Notify on deadlines
+
+## 11) Process Email Events Function
+
+The `process-email-events` function handles Music League email ingestion and activity tracking.
+
+**Features:**
+- Processes events from `ml_email_events` table
+- Matches actor names to season competitors
+- Creates activity records in `round_user_activity` table
+- Supports: round_start, playlist_ready, votes_in, user_submitted, user_voted
+
+**Database Requirements:**
+- `ml_email_events` - Stores parsed email events from n8n
+- `round_user_activity` - Tracks user submission/voting activity
+- `season_competitors` - Maps actor names to profiles
+
+## 12) Create the Avatars Storage Bucket
 In Supabase → Storage:
 - Create a bucket named `avatars` (public bucket).
 - Add a policy to allow authenticated users to upload.

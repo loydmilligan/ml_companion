@@ -213,6 +213,18 @@ async function updateCurrentSeasonStory(
     return;
   }
 
+  // Verify this round belongs to the current season's league
+  const { data: roundData } = await supabase
+    .from("rounds")
+    .select("league_id")
+    .eq("id", roundId)
+    .single();
+
+  if (!roundData || roundData.league_id !== league.id) {
+    console.log("Skipping current season story - round belongs to different league");
+    return;
+  }
+
   const payload = await buildSeasonStoryPayload(supabase, league.id, roundId);
   if (!payload) return;
 

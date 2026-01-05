@@ -84,3 +84,31 @@ Facilitating direct access to music content.
 * **User Story: Play Song Previews:** As a family member, I want to play 30-second previews of submitted songs directly within the app (similar to Humit) so I can quickly refresh my memory or check out a new track without leaving the app.
 * **User Story: Open Song in Music Service:** Implement deep linking functionality to launch full songs directly in Spotify or Apple Music from within the app.
 * **User Story: Share Songs Outside the App:** Integrate native sharing functionality to allow users to share links to individual songs or family-curated playlist links externally.
+
+### 3.8. Voting Phase Minigames
+Interactive games during the voting phase to enhance engagement.
+* **User Story: Submitter Guess:** As a family member, during the voting phase, I want to guess who submitted each song so I can test my knowledge of family members' musical tastes.
+* **User Story: Own Song Detection:** As a family member, I want my own song to be excluded from the guessing game so I'm only guessing songs that aren't mine.
+* **User Story: Guess Scoring:** As a family member, I want to see how many guesses I got correct after the round reveals, and compare my score to other family members on a leaderboard.
+* **User Story: Submitter Comments:** As a family member, I want to see what comment the submitter left about their song choice, displayed with a clear "Submitter's comment" label.
+
+### 3.9. Submission Phase Minigames
+Interactive games during the submission phase.
+* **User Story: Round Challenge:** As a family member, during the submission phase, I want to play a trivia game guessing which Season 1 theme songs belonged to, so I can test my memory and earn bonus points.
+
+### 3.10. Push Notifications
+Real-time alerts for league events.
+* **User Story: Receive Push Notifications:** As a family member, I want to receive push notifications when important events happen (new round, results ready, chat messages, deadlines) so I never miss an update.
+* **User Story: Notification Preferences:** As a family member, I want to control which types of notifications I receive so I can customize my experience.
+* **User Story: Test Notifications:** As a family member, I want to test that push notifications are working so I can verify my setup.
+
+### 3.11. Activity Tracking
+Track participation during rounds.
+* **User Story: See Who Has Submitted:** As a family member, during the submission phase, I want to see which competitors have already submitted so I know who's still deciding.
+* **User Story: See Who Has Voted:** As a family member, during the voting phase, I want to see which competitors have already voted so I know who's still listening.
+* **User Story: Urgency Indicators:** As a family member, I want visual cues showing how urgent it is for remaining participants to act so we can encourage timely participation.
+
+### 3.12. YouTube Integration
+In-app YouTube playback.
+* **User Story: Play Songs In-App:** As a family member, I want to play YouTube videos in a sidebar player without leaving the app so I can easily listen while browsing.
+* **User Story: Quick Actions:** As a family member, I want icon buttons on song cards for Spotify, YouTube, and quoting so I can quickly access different playback options.

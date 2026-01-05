@@ -130,6 +130,27 @@ This document outlines the high-level project plan for the Music League Family C
     * After round closes, show previous round's correct answers.
     * Admin can award bonus points via `challenge_bonus_points` table.
 
+### 2.11. Submitter Guess Minigame
+* **US: Guess Who Submitted Each Song:**
+    * During voting phase, users guess which competitor submitted each song.
+    * Dropdown integrated directly into each SongCard for streamlined UX.
+    * User's own song detected and excluded (shows "Your song" indicator).
+    * Guesses saved to `submitter_guesses` table.
+* **US: Score Tracking:**
+    * Show progress as X/N guessed (N = total songs minus own song).
+    * After reveal, show correct count and leaderboard (top 3 guessers).
+* **US: Toggle and Settings:**
+    * Admin can enable/disable via `submitter_guess_enabled` in group_settings.
+    * Coexists with Round Challenge (different phases).
+
+### 2.12. Submission Comments
+* **US: View Submitter Comments:**
+    * Each song card displays the submitter's comment with "Submitter's comment:" label.
+    * Comments visible during voting and after reveal.
+* **US: Comment Required Toggle:**
+    * Admin can set `comment_required` per round.
+    * Toggle in admin round editing UI.
+
 ### 2.10. AI-Powered Peek Panel Features
 * **US: Theme Explainer:**
     * AI explains the current theme rules and edge cases.
@@ -143,6 +164,50 @@ This document outlines the high-level project plan for the Music League Family C
 * **US: Round Narratives:**
     * Store `narrative` on `rounds` table for AI-generated round stories.
     * Store `narrative` on `leagues` table for season-level recaps.
+
+### 2.13. Push Notifications (FCM)
+* **US: Receive Push Notifications:**
+    * Users receive push notifications for round events.
+    * Firebase Cloud Messaging v1 API integration.
+    * PWA support with service worker for background handling.
+* **US: Notification Preferences:**
+    * Toggle notifications by type: new_round, results_revealed, new_chat, deadline_reminder.
+    * Settings page with test button.
+    * Admin controls for user notification permissions.
+* **US: ntfy.sh Fallback:**
+    * Alternative push via ntfy.sh for users who can't use FCM.
+    * Subscribe screenshot guide included.
+
+### 2.14. YouTube Integration
+* **US: Play Songs In-App:**
+    * Collapsible YouTube sidebar player.
+    * Play songs directly from song cards via icon button.
+    * YouTube playlist URL field for rounds (admin).
+* **US: Song Link Management:**
+    * Icon buttons for Spotify, YouTube, and quote actions on song cards.
+    * Direct playback vs search fallback.
+
+### 2.15. Activity Tracker
+* **US: Track Submissions and Votes:**
+    * Show who has submitted/voted during round phases.
+    * All competitors displayed with urgency-based pill colors.
+    * Real-time status updates via email event processing.
+* **US: Email Ingestion:**
+    * Parse Music League notification emails via n8n → Supabase.
+    * Store events in `ml_email_events` table.
+    * Track user activity in `round_user_activity` table.
+
+### 2.16. Admin Enhancements
+* **US: Email Invite System:**
+    * Send invite emails with group join link.
+    * Invite URL uses production domain.
+* **US: Round Challenge Controls:**
+    * Generation button with status indicator.
+    * Edit Spotify/YouTube links for challenge songs.
+    * Toggle to enable/disable per group.
+* **US: Comment Required Toggle:**
+    * Require comments on submissions per round.
+    * Toggle in admin round editing UI.
 
 ## Atomic Tasks List
 

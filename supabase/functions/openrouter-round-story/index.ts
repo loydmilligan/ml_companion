@@ -154,6 +154,141 @@ Deno.serve(async (req) => {
   const imageModel = resolveModelKey(imageModelKey);
   const awardsModel = resolveModelKey(awardsModelKey) ?? OPENROUTER_MODEL;
 
+  if (mode === "preseason_special") {
+    const leagueName = body?.league_name ?? "Music League";
+    const seasonNumber = body?.season_number ?? null;
+    const roundTheme = body?.round_theme ?? "Unknown Theme";
+    const themeAuthor = body?.theme_author ?? null;
+    const submissions = body?.submissions ?? [];
+    const lastSeasonData = body?.last_season_data ?? null;
+    const competitors = body?.competitors ?? [];
+
+    const preseasonPrompt = `You are writing an extensive PRE-SEASON SPECIAL for a music league.
+
+Context: This is BEFORE any votes are cast. Round 1 submissions are in, but we don't know who will win yet.
+
+Tone: Dramatic, anticipatory, playful. Like a sports season preview meets reality TV premiere.
+Audience: Close friends and family who played last season together.
+
+Write SEVEN sections for a comprehensive pre-season card:
+
+1) "Season Opening Monologue" (3-4 sentences)
+   A dramatic framing of the new season. Blend last year's outcomes with what the submissions already reveal.
+   - Who has lingering reputations from last season?
+   - Who needed a strong start vs who can afford to experiment?
+   - Does the room feel cautious, nostalgic, or unhinged based on submissions?
+   End with something like: "The season hasn't been decided yet, but the tone absolutely has."
+
+2) "The Submission Board" (3-4 sentences)
+   Analyze the song list like a draft board. No scores yet, just vibes.
+   - Genre spread: tight consensus or wild scatter?
+   - Decade clustering: same era or time travel?
+   - Safe picks vs risky swings
+   - Any immediate outliers?
+
+3) "Artist & Taste Tells" (2-3 sentences)
+   Compare submissions against each player's historical behavior.
+   - Any repeat artists?
+   - Someone doing something uncharacteristically bold or safe?
+   - Comfort zones vs surprises?
+
+4) "Theme Fit: On Paper vs In Practice" (2-3 sentences)
+   Analyze how well people interpreted the theme "${roundTheme}"${themeAuthor ? ` (by ${themeAuthor})` : ""}.
+   - Who understood the assignment immediately?
+   - Who interpreted it too literally or too abstractly?
+   - Did the theme invite personal stories, jokes, or flexing?
+
+5) "Submission Timing & Comment Energy" (2-3 sentences)
+   Use non-vote metadata:
+   - Who submitted immediately vs deadline scrambles?
+   - Essay-length comments vs silence?
+   - Any deviations from historical habits?
+
+6) "Pre-Vote Predictions" (3-4 sentences with bullet points)
+   Make 3 bold, testable predictions:
+   - Predicted winner (and why)
+   - Predicted controversy or upset
+   - A song voters will argue about
+   End with: "If history holds, one of the safest-looking picks here will finish dead last."
+
+7) "Soft Power Rankings" (list format)
+   Rank the top 5 players WITHOUT using votes. Based on:
+   - Theme fit
+   - Historical success with similar genres/decades
+   - Risk vs reward profile
+   Label this as speculative: "Based on vibes, history, and questionable confidence."
+
+Keep it warm, playful, family-friendly. Be VERY specific—use real names, song titles, and artists from the data.
+
+Return JSON ONLY:
+{
+  "opening_monologue": "...",
+  "submission_board": "...",
+  "taste_tells": "...",
+  "theme_fit": "...",
+  "timing_energy": "...",
+  "predictions": "...",
+  "power_rankings": "..."
+}
+
+League: ${leagueName}
+Season: ${seasonNumber ?? "Unknown"}
+Round theme: ${roundTheme}${themeAuthor ? ` (by ${themeAuthor})` : ""}
+
+Submissions this round:
+${JSON.stringify(submissions)}
+
+${lastSeasonData ? `Last season summary:\n${JSON.stringify(lastSeasonData)}` : "No last season data available."}
+
+Competitors:
+${JSON.stringify(competitors)}`;
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "X-Title": "TML - Pre-Season Special",
+      },
+      body: JSON.stringify({
+        model: textModel,
+        messages: [{ role: "user", content: preseasonPrompt }],
+        temperature: 0.85,
+        max_tokens: 1500,
+      }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      return new Response(
+        JSON.stringify({ error: "OpenRouter request failed", detail: text }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const json = await response.json();
+    const content = json?.choices?.[0]?.message?.content ?? "";
+    let parsed: Record<string, string> = {};
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      parsed = {};
+    }
+
+    return new Response(
+      JSON.stringify({
+        opening_monologue: parsed.opening_monologue ?? "",
+        submission_board: parsed.submission_board ?? "",
+        taste_tells: parsed.taste_tells ?? "",
+        theme_fit: parsed.theme_fit ?? "",
+        timing_energy: parsed.timing_energy ?? "",
+        predictions: parsed.predictions ?? "",
+        power_rankings: parsed.power_rankings ?? "",
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   if (mode === "theme") {
     const themePrompt = buildThemePrompt(round);
     const image = await generateImage(themePrompt, imageModel, "TML - Round Banner");
@@ -305,21 +440,50 @@ Return JSON ONLY with key: narrative`;
     const seasonNumber = body?.season_number ?? null;
     const latestRound = body?.latest_round ?? {};
     const minigameSummary = body?.minigame_summary ?? {};
+    const roundNumber = latestRound?.round_number ?? seasonData?.rounds_completed ?? 1;
 
-    const currentSeasonPrompt = `You are writing a short, punchy recap card for an ongoing music league season.
+    // Contextual section names based on round number
+    const getSectionOneName = (rn: number) => {
+      if (rn <= 2) return "Season So Far";
+      if (rn <= 4) return "Early Season Check-In";
+      if (rn <= 7) return "Midseason Report";
+      return "Stretch Run";
+    };
 
-Write THREE short paragraphs (2-3 sentences each) with distinct purposes:
-1) Season opening storylines: highlight standout starts, surprise winners, early/late submitters, and players with something to prove.
-2) Round-two riff: deliver a quippy, pun-ready take on the most recent round theme, and if a theme author is provided, tie it back to any earlier theme by the same author if possible.
-3) Minigame recap: summarize who performed best/worst, who was an easy guess, and who was a tough guess.
+    const sectionOneName = getSectionOneName(roundNumber);
 
-Keep it warm, playful, and family-friendly. Avoid making up names or facts not in the data.
+    const currentSeasonPrompt = `You are writing a punchy, narrative-driven recap card for an ongoing music league season.
+
+Tone: witty, insightful, lightly roasting but affectionate. Think sports broadcast meets family group chat.
+Audience: close friends and family who know each other well.
+
+Write THREE sections (2-4 sentences each):
+
+1) "${sectionOneName}": Summarize the current state of the season.
+   - Who's leading and by how much?
+   - Any hot streaks, comebacks, or players cooling off?
+   - Highlight momentum, not just rankings.
+   - If early season (rounds 1-2), focus on opening storylines and who needed a strong start.
+
+2) "Round ${roundNumber} Riff": A quippy take on the most recent round.
+   - What did this theme reveal about people's taste?
+   - Any shocking landslides or photo finishes?
+   - If a theme author is provided, call them out (good or bad).
+   - Reference the winning song/player.
+
+3) "Guessing Game": Summarize the submitter-guess minigame results.
+   - Who was the best guesser this round?
+   - Who was easy to guess vs impossible to guess?
+   - Any patterns or surprises?
+
+Keep it warm, playful, and family-friendly. Be specific—use real names and facts from the data. No generic phrases.
 
 Return JSON ONLY in this format:
-{\"season_intro\":\"...\",\"round_two_riff\":\"...\",\"minigame_summary\":\"...\"}
+{"section_one":"...","round_riff":"...","minigame_summary":"..."}
 
 League: ${leagueName}
-Season number: ${seasonNumber ?? "Unknown"}
+Season: ${seasonNumber ?? "Unknown"}
+Current round: ${roundNumber}
 
 Season statistics and standings:
 ${JSON.stringify(seasonData)}
@@ -355,7 +519,7 @@ ${JSON.stringify(minigameSummary)}`;
 
     const json = await response.json();
     const content = json?.choices?.[0]?.message?.content ?? "";
-    let parsed: { season_intro?: string; round_two_riff?: string; minigame_summary?: string } = {};
+    let parsed: { section_one?: string; round_riff?: string; minigame_summary?: string } = {};
     try {
       parsed = JSON.parse(content);
     } catch {
@@ -364,9 +528,11 @@ ${JSON.stringify(minigameSummary)}`;
 
     return new Response(
       JSON.stringify({
-        season_intro: parsed.season_intro ?? "",
-        round_two_riff: parsed.round_two_riff ?? "",
+        season_intro: parsed.section_one ?? "",
+        round_two_riff: parsed.round_riff ?? "",
         minigame_summary: parsed.minigame_summary ?? "",
+        section_one_title: sectionOneName,
+        round_number: roundNumber,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

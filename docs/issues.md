@@ -1,7 +1,7 @@
 # Issues & Roadmap
 
-Version: v1.4
-Date: 2026-01-03
+Version: v1.6
+Date: 2026-01-04
 
 **Legend:**
 - **Effort:** Low (< 1 day) | Medium (1-3 days) | High (1+ week)
@@ -15,6 +15,8 @@ Date: 2026-01-03
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.6 | 2026-01-04 | Major update: PN-001 complete (FCM push), INT-001 partial (email ingestion), YouTube integration, activity tracker |
+| v1.5 | 2026-01-04 | Marked SG-001 complete (Submitter Guess minigame deployed) |
 | v1.4 | 2026-01-03 | Added Linear issue IDs (LOYD-129 to LOYD-148) |
 | v1.3 | 2026-01-02 | Merged awards roadmap content; marked SEC-001/EF-001 complete (JWT auth deployed) |
 | v1.2 | 2026-01-01 | Initial consolidated issues & roadmap document |
@@ -27,16 +29,20 @@ Date: 2026-01-03
 
 | ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
 |----|--------|---------|--------|--------|---------|------|-------|
-| PN-001 | [LOYD-129](https://linear.app/loydmilligan/issue/LOYD-129) | Android Push (FCM) | Planned | High | High | Medium | FCM integration, service worker, notification handling |
-| PN-002 | [LOYD-130](https://linear.app/loydmilligan/issue/LOYD-130) | iOS Push (APNs) | Planned | High | High | Medium | Requires Apple Developer account ($99/yr), APNs certs |
+| PN-001 | [LOYD-129](https://linear.app/loydmilligan/issue/LOYD-129) | FCM Push Notifications | **Complete** | High | High | Medium | FCM v1 API, service worker, PWA support. Deployed 2026-01-03 |
+| PN-002 | [LOYD-130](https://linear.app/loydmilligan/issue/LOYD-130) | iOS Push (APNs) | In Progress | High | High | Medium | PWA installed, needs Apple Developer account for native APNs |
+| PN-003 | — | Notification Preferences | **Complete** | Medium | Medium | Low | Type toggles (new_round, results, chat, deadline). Deployed 2026-01-03 |
+| PN-004 | — | ntfy.sh Fallback | **Complete** | Low | Medium | Low | Alternative push via ntfy.sh with subscribe guide. Deployed 2026-01-03 |
 
 ### Integrations
 
 | ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
 |----|--------|---------|--------|--------|---------|------|-------|
-| INT-001 | [LOYD-131](https://linear.app/loydmilligan/issue/LOYD-131) | Music League Email Integration | Planned | High | High | Low | Parse incoming ML emails to trigger app updates |
+| INT-001 | [LOYD-131](https://linear.app/loydmilligan/issue/LOYD-131) | Music League Email Integration | **Partial** | High | High | Low | Email parsing via n8n→Supabase done. Activity tracking working. Deployed 2026-01-04 |
 | INT-002 | [LOYD-132](https://linear.app/loydmilligan/issue/LOYD-132) | Supabase Realtime | Planned | Medium | High | High | Live updates for chat, votes, round status |
 | INT-003 | [LOYD-133](https://linear.app/loydmilligan/issue/LOYD-133) | Spotify Embeds | Planned | Medium | Medium | Low | Embedded player for in-app playback |
+| INT-004 | — | YouTube Sidebar Player | **Complete** | Medium | High | Low | In-app YouTube playback with sidebar. Deployed 2026-01-04 |
+| INT-005 | — | Activity Tracker | **Complete** | Medium | High | Low | Show who submitted/voted with urgency colors. Deployed 2026-01-04 |
 
 ### Media Links
 
@@ -59,6 +65,24 @@ Date: 2026-01-03
 |----|--------|---------|--------|--------|---------|------|-------|
 | STG-001 | [LOYD-141](https://linear.app/loydmilligan/issue/LOYD-141) | Round Art Bucket | Planned | Low | Low | Low | Create dedicated bucket instead of using `avatars` |
 | STG-002 | [LOYD-142](https://linear.app/loydmilligan/issue/LOYD-142) | Trophy Storage Bucket | Planned | Low | Low | Low | Create dedicated bucket for award trophies |
+
+---
+
+## Minigames
+
+### Submitter Guess (Voting Phase)
+
+| ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
+|----|--------|---------|--------|--------|---------|------|-------|
+| SG-001 | — | Submitter Guess Minigame | **Complete** | Medium | High | Low | Guess who submitted each song during voting. Deployed 2026-01-04 |
+| SG-002 | — | Leaderboard Persistence | Planned | Low | Medium | Low | Store leaderboard history per round |
+| SG-003 | — | Cross-Round Scoring | Planned | Medium | Medium | Low | Aggregate scores across the season |
+
+### Round Challenge (Submission Phase)
+
+| ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
+|----|--------|---------|--------|--------|---------|------|-------|
+| RC-001 | — | Round Challenge Minigame | **Complete** | Medium | High | Low | Guess which S1 theme songs belonged to. Deployed 2025-12-31 |
 
 ---
 
@@ -221,7 +245,7 @@ Display on History page showing:
 - EF-003 (LOYD-138): Add payload limits
 
 **High Impact (Worth the Effort):**
-- PN-001/PN-002 (LOYD-129/130): Push notifications
+- PN-002 (LOYD-130): iOS native push (APNs)
 - INT-002 (LOYD-132): Supabase Realtime
 - AWD-005 (LOYD-147): Current Season Card
 
@@ -231,3 +255,19 @@ Display on History page showing:
 **Nice to Have:**
 - INT-003/ML-003 (LOYD-133/136): Spotify embeds
 - AWD-006 (LOYD-148): Awards gamification
+
+---
+
+## Recently Completed (2026-01-01 to 2026-01-04)
+
+| ID | Feature | Date |
+|----|---------|------|
+| SEC-001 | JWT Authentication for Edge Functions | 2026-01-02 |
+| PN-001 | FCM Push Notifications | 2026-01-03 |
+| PN-003 | Notification Preferences | 2026-01-03 |
+| PN-004 | ntfy.sh Fallback | 2026-01-03 |
+| RC-001 | Round Challenge Minigame | 2025-12-31 |
+| SG-001 | Submitter Guess Minigame | 2026-01-04 |
+| INT-001 | Email Ingestion (partial) | 2026-01-04 |
+| INT-004 | YouTube Sidebar Player | 2026-01-04 |
+| INT-005 | Activity Tracker | 2026-01-04 |
