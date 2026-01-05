@@ -16,6 +16,7 @@ import type {
   RoundCardData,
   SeasonRecapCardData,
   CurrentSeasonCardData,
+  PreseasonSpecialCardData,
   SubmissionWithVotes,
   LeaderboardEntry,
   VotingPattern,
@@ -31,6 +32,17 @@ import awardsData from "../data/awards.json";
    Type Definitions (local to this page)
    ======================================== */
 
+type PreseasonSpecialJson = {
+  openingMonologue: string;
+  submissionBoard: string;
+  tasteTells: string;
+  themeFit: string;
+  timingEnergy: string;
+  predictions: string;
+  powerRankings: string;
+  roundTheme?: string;
+};
+
 type LeagueRow = {
   id: string;
   name: string;
@@ -42,6 +54,7 @@ type LeagueRow = {
   current_minigame_summary: string | null;
   current_story_updated_at: string | null;
   current_story_round_id: string | null;
+  preseason_special: PreseasonSpecialJson | null;
 };
 
 type RoundRow = {
@@ -150,7 +163,7 @@ export default function HistoryPage() {
     const loadLeagues = async () => {
       const { data } = await supabase
         .from("leagues")
-        .select("id,name,season_number,narrative,playlist_url,current_story_intro,current_round_riff,current_minigame_summary,current_story_updated_at,current_story_round_id")
+        .select("id,name,season_number,narrative,playlist_url,current_story_intro,current_round_riff,current_minigame_summary,current_story_updated_at,current_story_round_id,preseason_special")
         .eq("group_id", group.id)
         .order("season_number", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
@@ -992,6 +1005,26 @@ export default function HistoryPage() {
       seasonRounds.sort((a, b) => (b.round_number ?? 0) - (a.round_number ?? 0));
 
       if (isCurrentSeason && seasonRounds.length > 0) {
+        // Add preseason special card at the very top if available
+        if (currentLeague?.preseason_special) {
+          const ps = currentLeague.preseason_special;
+          const preseasonCard: PreseasonSpecialCardData = {
+            id: `preseason-${seasonNum}`,
+            type: "preseason-special",
+            seasonNumber: seasonNum,
+            leagueName: currentLeague.name ?? `Season ${seasonNum}`,
+            roundTheme: ps.roundTheme ?? seasonRounds[seasonRounds.length - 1]?.theme ?? "Round 1",
+            openingMonologue: ps.openingMonologue,
+            submissionBoard: ps.submissionBoard,
+            tasteTells: ps.tasteTells,
+            themeFit: ps.themeFit,
+            timingEnergy: ps.timingEnergy,
+            predictions: ps.predictions,
+            powerRankings: ps.powerRankings,
+          };
+          cards.push(preseasonCard);
+        }
+
         const seasonIntro =
           currentLeague?.current_story_intro ??
           "Season storylines will appear after the latest round results are in.";

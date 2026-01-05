@@ -1,7 +1,7 @@
 # Issues & Roadmap
 
-Version: v1.6
-Date: 2026-01-04
+Version: v1.8
+Date: 2026-01-05
 
 **Legend:**
 - **Effort:** Low (< 1 day) | Medium (1-3 days) | High (1+ week)
@@ -15,6 +15,8 @@ Date: 2026-01-04
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.8 | 2026-01-05 | Sprint planning: Added YouTube Automation epic, Chat Quote Reply, History Spotify links. Canceled EF-002 (JWT covers it) |
+| v1.7 | 2026-01-05 | Added BE-001, AI-001, ADM-001 from Linear sync |
 | v1.6 | 2026-01-04 | Major update: PN-001 complete (FCM push), INT-001 partial (email ingestion), YouTube integration, activity tracker |
 | v1.5 | 2026-01-04 | Marked SG-001 complete (Submitter Guess minigame deployed) |
 | v1.4 | 2026-01-03 | Added Linear issue IDs (LOYD-129 to LOYD-148) |
@@ -65,6 +67,38 @@ Date: 2026-01-04
 |----|--------|---------|--------|--------|---------|------|-------|
 | STG-001 | [LOYD-141](https://linear.app/loydmilligan/issue/LOYD-141) | Round Art Bucket | Planned | Low | Low | Low | Create dedicated bucket instead of using `avatars` |
 | STG-002 | [LOYD-142](https://linear.app/loydmilligan/issue/LOYD-142) | Trophy Storage Bucket | Planned | Low | Low | Low | Create dedicated bucket for award trophies |
+
+### Backend Improvements
+
+| ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
+|----|--------|---------|--------|--------|---------|------|-------|
+| BE-001 | [LOYD-149](https://linear.app/loydmilligan/issue/LOYD-149) | Enhanced Competitor Matching | Planned | Medium | High | Medium | Handle ML username changes, season_competitors as source of truth |
+
+### AI & Admin Improvements
+
+| ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
+|----|--------|---------|--------|--------|---------|------|-------|
+| AI-001 | [LOYD-150](https://linear.app/loydmilligan/issue/LOYD-150) | AI Chat Voting Phase Prompt | **In Progress** | Low | Medium | Low | Adjust AI assistant prompt for voting phase context |
+
+### YouTube Automation
+
+| ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
+|----|--------|---------|--------|--------|---------|------|-------|
+| YT-001 | [LOYD-153](https://linear.app/loydmilligan/issue/LOYD-153) | YouTube Playlist Automation | Planned | High | High | Medium | Parent epic: auto-generate YouTube playlists from Spotify rounds |
+| YT-002 | [LOYD-151](https://linear.app/loydmilligan/issue/LOYD-151) | Copy AI Image URLs in Admin | Planned | Low | Medium | Low | Sub of YT-001: copy URLs for YouTube thumbnails |
+| YT-003 | [LOYD-156](https://linear.app/loydmilligan/issue/LOYD-156) | Spotify-to-YouTube Converter | Planned | Medium | High | Low | Sub of YT-001: convert Spotify tracks to YouTube links via song.link API |
+
+### Chat Improvements
+
+| ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
+|----|--------|---------|--------|--------|---------|------|-------|
+| CHAT-001 | [LOYD-154](https://linear.app/loydmilligan/issue/LOYD-154) | Chat Quote Reply | **In Progress** | Low | Medium | Low | Add quote reply button to reaction picker |
+
+### History Page
+
+| ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
+|----|--------|---------|--------|--------|---------|------|-------|
+| HIST-001 | [LOYD-155](https://linear.app/loydmilligan/issue/LOYD-155) | Spotify Links on Song Cards | **In Progress** | Low | Medium | Low | Convert source_uri to clickable Spotify links |
 
 ---
 
@@ -220,7 +254,7 @@ Display on History page showing:
 | ID | Linear | Issue | Status | Effort | Benefit | Risk | Notes |
 |----|--------|-------|--------|--------|---------|------|-------|
 | EF-001 | — | No auth on edge functions | **Complete** | Medium | High | Medium | JWT verification added to all 6 functions. Deployed 2026-01-02 |
-| EF-002 | [LOYD-137](https://linear.app/loydmilligan/issue/LOYD-137) | `notify` accepts arbitrary recipients | Planned | Low | High | Low | Potential spam vector. Fix: add recipient allowlist |
+| EF-002 | [LOYD-137](https://linear.app/loydmilligan/issue/LOYD-137) | `notify` accepts arbitrary recipients | **Canceled** | Low | High | Low | JWT auth mitigates spam risk - only authenticated users can call |
 
 ### Medium Severity
 
@@ -237,10 +271,19 @@ Display on History page showing:
 
 ---
 
+## Current Sprint (2026-01-05)
+
+| ID | Linear | Feature | Status |
+|----|--------|---------|--------|
+| AI-001 | LOYD-150 | AI Chat Voting Phase Prompt | In Progress |
+| CHAT-001 | LOYD-154 | Chat Quote Reply | In Progress |
+| HIST-001 | LOYD-155 | Spotify Links on History Cards | In Progress |
+
+---
+
 ## Priority Matrix
 
 **Quick Wins (Low Effort, High/Medium Benefit):**
-- EF-002 (LOYD-137): Fix notify recipients
 - ML-001/ML-002 (LOYD-134/135): Verify media links
 - EF-003 (LOYD-138): Add payload limits
 
@@ -248,6 +291,7 @@ Display on History page showing:
 - PN-002 (LOYD-130): iOS native push (APNs)
 - INT-002 (LOYD-132): Supabase Realtime
 - AWD-005 (LOYD-147): Current Season Card
+- YT-001 (LOYD-153): YouTube Playlist Automation
 
 **Technical Debt:**
 - STG-001/STG-002 (LOYD-141/142): Storage buckets cleanup

@@ -15,7 +15,7 @@ import type {
 /**
  * Card type discriminator
  */
-export type CardType = "round" | "season-recap" | "current-season";
+export type CardType = "round" | "season-recap" | "current-season" | "preseason-special";
 
 /**
  * Submission with calculated vote points
@@ -202,9 +202,39 @@ export interface CurrentSeasonCardData {
 }
 
 /**
+ * Pre-season special card data (one-time intro card before votes)
+ */
+export interface PreseasonSpecialCardData {
+  /** Unique identifier */
+  id: string;
+  /** Card type discriminator */
+  type: "preseason-special";
+  /** Season number */
+  seasonNumber: number;
+  /** League/season name */
+  leagueName: string;
+  /** Round theme */
+  roundTheme: string;
+  /** Season opening monologue */
+  openingMonologue: string;
+  /** The submission board analysis */
+  submissionBoard: string;
+  /** Artist and taste tells */
+  tasteTells: string;
+  /** Theme fit analysis */
+  themeFit: string;
+  /** Timing and energy observations */
+  timingEnergy: string;
+  /** Pre-vote predictions */
+  predictions: string;
+  /** Soft power rankings */
+  powerRankings: string;
+}
+
+/**
  * Union type for all card types
  */
-export type CardData = RoundCardData | SeasonRecapCardData | CurrentSeasonCardData;
+export type CardData = RoundCardData | SeasonRecapCardData | CurrentSeasonCardData | PreseasonSpecialCardData;
 
 /**
  * Type guard for RoundCardData
@@ -225,6 +255,13 @@ export function isSeasonRecapCard(card: CardData): card is SeasonRecapCardData {
  */
 export function isCurrentSeasonCard(card: CardData): card is CurrentSeasonCardData {
   return card.type === "current-season";
+}
+
+/**
+ * Type guard for PreseasonSpecialCardData
+ */
+export function isPreseasonSpecialCard(card: CardData): card is PreseasonSpecialCardData {
+  return card.type === "preseason-special";
 }
 
 /**
@@ -345,6 +382,14 @@ export interface SeasonRecapCardProps extends CardComponentProps {
 export interface CurrentSeasonCardProps extends CardComponentProps {
   /** Current season story data */
   data: CurrentSeasonCardData;
+}
+
+/**
+ * PreseasonSpecialCard component props
+ */
+export interface PreseasonSpecialCardProps extends CardComponentProps {
+  /** Pre-season special data */
+  data: PreseasonSpecialCardData;
 }
 
 /**

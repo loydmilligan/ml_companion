@@ -12,10 +12,11 @@ import type {
   CardPosition,
   GestureState,
 } from "../../types/cardstack.types";
-import { isRoundCard, isSeasonRecapCard, isCurrentSeasonCard } from "../../types/cardstack.types";
+import { isRoundCard, isSeasonRecapCard, isCurrentSeasonCard, isPreseasonSpecialCard } from "../../types/cardstack.types";
 import RoundCard from "./RoundCard";
 import SeasonRecapCard from "./SeasonRecapCard";
 import CurrentSeasonCard from "./CurrentSeasonCard";
+import PreseasonSpecialCard from "./PreseasonSpecialCard";
 import SwipeIndicator from "./SwipeIndicator";
 import "./CardStack.css";
 
@@ -289,6 +290,19 @@ export default function CardStack({
           if (isCurrentSeasonCard(card)) {
             return (
               <CurrentSeasonCard
+                key={card.id}
+                data={card}
+                position={position}
+                isActive={isActive}
+                dragOffset={dragOffset}
+                isDragging={isActive && gesture.isDragging}
+              />
+            );
+          }
+
+          if (isPreseasonSpecialCard(card)) {
+            return (
+              <PreseasonSpecialCard
                 key={card.id}
                 data={card}
                 position={position}

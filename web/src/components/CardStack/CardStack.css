@@ -642,6 +642,134 @@
 }
 
 /* ========================================
+   Pre-Season Special Card
+   ======================================== */
+
+.preseason-special-card {
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: calc(100% - 20px);
+  border-radius: 24px;
+  background: white;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  will-change: transform, opacity;
+}
+
+@media (min-width: 768px) {
+  .preseason-special-card {
+    left: 24px;
+    right: 24px;
+    border-radius: 28px;
+    box-shadow:
+      0 25px 80px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+}
+
+.preseason-special-card.dragging {
+  transition: none;
+  cursor: grabbing;
+}
+
+.preseason-hero {
+  position: relative;
+  height: 18%;
+  min-height: 100px;
+  background: linear-gradient(135deg, #ff9914 0%, #e67e00 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preseason-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 30% 20%,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(0, 0, 0, 0.3) 70%
+  );
+}
+
+.preseason-hero-content {
+  position: relative;
+  text-align: center;
+  color: white;
+}
+
+.preseason-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 6px;
+}
+
+.preseason-title {
+  font-size: 20px;
+  font-weight: 900;
+  margin: 0 0 2px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.preseason-theme {
+  font-size: 13px;
+  margin: 0;
+  opacity: 0.95;
+  font-weight: 500;
+}
+
+.preseason-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.preseason-block {
+  background: rgba(255, 153, 20, 0.06);
+  border-radius: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 153, 20, 0.15);
+}
+
+.preseason-monologue {
+  background: rgba(255, 153, 20, 0.1);
+  border-color: rgba(255, 153, 20, 0.2);
+}
+
+.preseason-predictions {
+  background: rgba(139, 92, 246, 0.08);
+  border-color: rgba(139, 92, 246, 0.15);
+}
+
+.preseason-rankings {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.15);
+}
+
+.preseason-text {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #1c1c1c;
+}
+
+.preseason-rankings-text {
+  white-space: pre-line;
+  font-size: 12px;
+}
+
+/* ========================================
    Season Recap Card
    ======================================== */
 
