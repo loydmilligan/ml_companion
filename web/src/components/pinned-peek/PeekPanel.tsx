@@ -3,6 +3,7 @@ import clsx from "clsx";
 import SongCard from "./SongCard";
 import AIAssistant from "./AIAssistant";
 import RoundChallenge from "./RoundChallenge";
+import ActivityTracker from "./ActivityTracker";
 
 type SubmissionRow = {
   id: string;
@@ -28,6 +29,13 @@ type RoundAwardRow = {
   winner_name: string | null;
 };
 
+type ActivityRecord = {
+  id: string;
+  actor_name: string;
+  activity_type: "submitted" | "voted";
+  profile_id: string | null;
+};
+
 type RoundSummary = {
   id: string;
   theme: string;
@@ -45,6 +53,8 @@ type PeekPanelProps = {
   submissions: SubmissionRow[];
   votes: VoteRow[];
   awards: RoundAwardRow[];
+  activity: ActivityRecord[];
+  totalMembers: number;
   isVotingComplete: boolean;
   onQuoteSong: (song: SubmissionRow) => void;
   narrative?: string | null;
@@ -62,6 +72,8 @@ export default function PeekPanel({
   submissions,
   votes,
   awards,
+  activity,
+  totalMembers,
   isVotingComplete,
   onQuoteSong,
   narrative,
@@ -165,6 +177,24 @@ export default function PeekPanel({
                   </p>
                 )}
               </div>
+
+              {/* Activity Trackers (during open/voting phases) */}
+              {(round.status === "open" || round.status === "voting") && activity.length > 0 && (
+                <div className="peek-panel-section">
+                  <ActivityTracker
+                    activity={activity}
+                    totalMembers={totalMembers}
+                    activityType="submitted"
+                    roundStatus={round.status}
+                  />
+                  <ActivityTracker
+                    activity={activity}
+                    totalMembers={totalMembers}
+                    activityType="voted"
+                    roundStatus={round.status}
+                  />
+                </div>
+              )}
 
               {/* AI Assistant (only during open/voting phase) */}
               {(round.status === "open" || round.status === "voting") && (

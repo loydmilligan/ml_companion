@@ -1,6 +1,10 @@
-import { corsHeaders } from "../_shared/cors.ts";
-import { verifyAuth, unauthorizedResponse } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 // FCM v1 API Configuration
 const FIREBASE_PROJECT_ID = Deno.env.get("FIREBASE_PROJECT_ID");
@@ -228,15 +232,52 @@ async function sendFCMNotification(
   return { success: false, error: `FCM error: ${JSON.stringify(error)}` };
 }
 
+/**
+ * Verify authentication - accepts both user JWTs and service role keys
+ */
+async function verifyAuth(req: Request): Promise<{ isValid: boolean; isServiceRole: boolean; error?: string }> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return { isValid: false, isServiceRole: false, error: "Missing or invalid Authorization header" };
+  }
+
+  const token = authHeader.replace("Bearer ", "");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  // Check if it's a service role key (for internal calls from other edge functions)
+  if (token === supabaseServiceKey) {
+    return { isValid: true, isServiceRole: true };
+  }
+
+  // Otherwise validate as a user JWT
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return { isValid: false, isServiceRole: false, error: "Server configuration error" };
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+
+  if (error || !user) {
+    return { isValid: false, isServiceRole: false, error: error?.message || "Invalid token" };
+  }
+
+  return { isValid: true, isServiceRole: false };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // Verify JWT authentication
-  const { user, error: authError } = await verifyAuth(req);
-  if (authError) {
-    return unauthorizedResponse(authError, corsHeaders);
+  // Verify authentication (accepts user JWTs or service role key)
+  const { isValid, error: authError } = await verifyAuth(req);
+  if (!isValid) {
+    return new Response(
+      JSON.stringify({ error: authError }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 
   // Check Firebase configuration

@@ -43,6 +43,13 @@ type RoundAwardRow = {
   winner_name: string | null;
 };
 
+type ActivityRecord = {
+  id: string;
+  actor_name: string;
+  activity_type: "submitted" | "voted";
+  profile_id: string | null;
+};
+
 type UrgencyLevel = "safe" | "warning" | "urgent" | "overdue" | "neutral";
 
 type RoundContextValue = {
@@ -50,6 +57,7 @@ type RoundContextValue = {
   submissions: SubmissionRow[];
   votes: VoteRow[];
   awards: RoundAwardRow[];
+  activity: ActivityRecord[];
   loading: boolean;
   submittedCount: number;
   votedCount: number;
@@ -81,6 +89,7 @@ export function RoundProvider({ children }: { children: ReactNode }) {
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
   const [votes, setVotes] = useState<VoteRow[]>([]);
   const [awards, setAwards] = useState<RoundAwardRow[]>([]);
+  const [activity, setActivity] = useState<ActivityRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalMembers, setTotalMembers] = useState(0);
 
@@ -126,7 +135,7 @@ export function RoundProvider({ children }: { children: ReactNode }) {
 
     if (roundData) {
       // Run all queries in parallel for better performance
-      const [submissionResult, awardResult, memberResult] = await Promise.all([
+      const [submissionResult, awardResult, memberResult, activityResult] = await Promise.all([
         // Get submissions
         supabase
           .from("submissions")
@@ -147,12 +156,21 @@ export function RoundProvider({ children }: { children: ReactNode }) {
           .from("group_members")
           .select("*", { count: "exact", head: true })
           .eq("group_id", group.id),
+        // Get activity from email events (during open/voting phases)
+        roundData.status === "open" || roundData.status === "voting"
+          ? supabase
+              .from("round_user_activity")
+              .select("id,actor_name,activity_type,profile_id")
+              .eq("round_id", roundData.id)
+              .order("created_at", { ascending: true })
+          : Promise.resolve({ data: null }),
       ]);
 
       const submissionData = submissionResult.data;
       setSubmissions((submissionData as SubmissionRow[]) ?? []);
       setAwards((awardResult.data as RoundAwardRow[]) ?? []);
       setTotalMembers(memberResult.count ?? 0);
+      setActivity((activityResult.data as ActivityRecord[]) ?? []);
 
       // Get votes if voting phase or revealed (needs submission IDs)
       if (roundData.status === "voting" || roundData.status === "revealed") {
@@ -173,6 +191,7 @@ export function RoundProvider({ children }: { children: ReactNode }) {
       setSubmissions([]);
       setVotes([]);
       setAwards([]);
+      setActivity([]);
       // Still get member count even without a round
       const { count } = await supabase
         .from("group_members")
@@ -263,6 +282,7 @@ export function RoundProvider({ children }: { children: ReactNode }) {
         submissions,
         votes,
         awards,
+        activity,
         loading,
         submittedCount,
         votedCount,

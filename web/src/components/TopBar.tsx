@@ -15,6 +15,7 @@ export default function TopBar() {
     submissions,
     votes,
     awards,
+    activity,
     submittedCount,
     votedCount,
     totalMembers,
@@ -162,6 +163,8 @@ export default function TopBar() {
         submissions={submissions}
         votes={votes}
         awards={awards}
+        activity={activity}
+        totalMembers={totalMembers}
         isVotingComplete={isVotingComplete}
         onQuoteSong={handleQuoteSong}
         previousRoundChallenge={null}

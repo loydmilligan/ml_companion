@@ -3294,6 +3294,64 @@
   opacity: 1;
 }
 
+/* Activity Tracker */
+.activity-tracker {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.activity-tracker-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.activity-tracker-icon {
+  font-size: 1rem;
+}
+
+.activity-tracker-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.activity-tracker-count {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface-dark);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.activity-tracker-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.activity-tracker-name {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 3px 10px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.activity-tracker-name::before {
+  content: "✓";
+  color: var(--green);
+  font-size: 0.7rem;
+}
+
 /* Chat Mention Chips */
 .chat-mention-chip {
   display: inline-flex;
