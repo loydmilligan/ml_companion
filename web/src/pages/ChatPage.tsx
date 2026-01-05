@@ -43,15 +43,19 @@ type NotifyProfile = {
 };
 
 function extractYouTubeId(text: string) {
-  const urlMatch = text.match(/https?:\/\/[^\s]+/g)?.[0];
-  if (!urlMatch) return null;
-  if (urlMatch.includes("youtu.be/")) {
-    const id = urlMatch.split("youtu.be/")[1]?.split(/[?&#]/)[0];
-    return id ?? null;
-  }
-  if (urlMatch.includes("youtube.com") || urlMatch.includes("music.youtube.com")) {
-    const match = urlMatch.match(/[?&]v=([^&]+)/);
-    return match?.[1] ?? null;
+  // Find all URLs in the text
+  const urls = text.match(/https?:\/\/[^\s)]+/g) ?? [];
+
+  // Look for a YouTube URL specifically
+  for (const url of urls) {
+    if (url.includes("youtu.be/")) {
+      const id = url.split("youtu.be/")[1]?.split(/[?&#]/)[0];
+      if (id) return id;
+    }
+    if (url.includes("youtube.com") || url.includes("music.youtube.com")) {
+      const match = url.match(/[?&]v=([^&]+)/);
+      if (match?.[1]) return match[1];
+    }
   }
   return null;
 }
