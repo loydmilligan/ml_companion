@@ -902,6 +902,30 @@ export default function HistoryPage() {
      ======================================== */
 
   const cardData = useMemo((): CardData[] => {
+    const cards: CardData[] = [];
+
+    // First, check if the newest league has a preseason special to show at the very top
+    // This shows regardless of whether any rounds are revealed yet
+    const newestLeague = leagues[0]; // leagues are sorted by season_number DESC
+    if (newestLeague?.preseason_special) {
+      const ps = newestLeague.preseason_special;
+      const preseasonCard: PreseasonSpecialCardData = {
+        id: `preseason-${newestLeague.season_number ?? 0}`,
+        type: "preseason-special",
+        seasonNumber: newestLeague.season_number ?? 0,
+        leagueName: newestLeague.name ?? `Season ${newestLeague.season_number ?? 0}`,
+        roundTheme: ps.roundTheme ?? "Round 1",
+        openingMonologue: ps.openingMonologue,
+        submissionBoard: ps.submissionBoard,
+        tasteTells: ps.tasteTells,
+        themeFit: ps.themeFit,
+        timingEnergy: ps.timingEnergy,
+        predictions: ps.predictions,
+        powerRankings: ps.powerRankings,
+      };
+      cards.push(preseasonCard);
+    }
+
     // Helper to build round card (inside useMemo to use current state)
     const buildRoundCard = (round: RoundRow): RoundCardData => {
       const submissions = allSubmissions.get(round.id) ?? [];
@@ -981,8 +1005,6 @@ export default function HistoryPage() {
       };
     };
 
-    const cards: CardData[] = [];
-
     // Group rounds by season
     const roundsBySeason = new Map<number, RoundRow[]>();
     allRounds.forEach((round) => {
@@ -1005,25 +1027,7 @@ export default function HistoryPage() {
       seasonRounds.sort((a, b) => (b.round_number ?? 0) - (a.round_number ?? 0));
 
       if (isCurrentSeason && seasonRounds.length > 0) {
-        // Add preseason special card at the very top if available
-        if (currentLeague?.preseason_special) {
-          const ps = currentLeague.preseason_special;
-          const preseasonCard: PreseasonSpecialCardData = {
-            id: `preseason-${seasonNum}`,
-            type: "preseason-special",
-            seasonNumber: seasonNum,
-            leagueName: currentLeague.name ?? `Season ${seasonNum}`,
-            roundTheme: ps.roundTheme ?? seasonRounds[seasonRounds.length - 1]?.theme ?? "Round 1",
-            openingMonologue: ps.openingMonologue,
-            submissionBoard: ps.submissionBoard,
-            tasteTells: ps.tasteTells,
-            themeFit: ps.themeFit,
-            timingEnergy: ps.timingEnergy,
-            predictions: ps.predictions,
-            powerRankings: ps.powerRankings,
-          };
-          cards.push(preseasonCard);
-        }
+        // Preseason special card is now added at the top level, before this loop
 
         const seasonIntro =
           currentLeague?.current_story_intro ??
