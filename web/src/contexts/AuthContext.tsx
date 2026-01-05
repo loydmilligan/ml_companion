@@ -16,6 +16,11 @@ type Profile = {
   can_toggle_email_notify: boolean | null;
   reaction_notify_enabled: boolean | null;
   can_toggle_reaction_notify: boolean | null;
+  // Notification type controls
+  push_notify_enabled: boolean | null;
+  ntfy_notify_enabled: boolean | null;
+  can_toggle_push_notify: boolean | null;
+  can_toggle_ntfy_notify: boolean | null;
 };
 
 type Group = {
@@ -38,7 +43,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 async function ensureProfile(userId: string, email?: string | null) {
   const { data: existing, error } = await supabase
     .from("profiles")
-    .select("id,email,display_name,avatar_url,season1_competitor_id,music_league_username,ntfy_topic,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify,reaction_notify_enabled,can_toggle_reaction_notify")
+    .select("id,email,display_name,avatar_url,season1_competitor_id,music_league_username,ntfy_topic,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify,reaction_notify_enabled,can_toggle_reaction_notify,push_notify_enabled,ntfy_notify_enabled,can_toggle_push_notify,can_toggle_ntfy_notify")
     .eq("id", userId)
     .maybeSingle();
 
@@ -51,7 +56,7 @@ async function ensureProfile(userId: string, email?: string | null) {
     const { data, error: insertError } = await supabase
       .from("profiles")
       .insert({ id: userId, email: email ?? null, display_name: fallbackName })
-      .select("id,email,display_name,avatar_url,season1_competitor_id,music_league_username,ntfy_topic,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify,reaction_notify_enabled,can_toggle_reaction_notify")
+      .select("id,email,display_name,avatar_url,season1_competitor_id,music_league_username,ntfy_topic,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify,reaction_notify_enabled,can_toggle_reaction_notify,push_notify_enabled,ntfy_notify_enabled,can_toggle_push_notify,can_toggle_ntfy_notify")
       .single();
 
     if (insertError) {

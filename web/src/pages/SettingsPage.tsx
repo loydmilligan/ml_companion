@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import PushNotificationToggle from "../components/PushNotificationToggle";
+import NtfyHelpModal from "../components/NtfyHelpModal";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { usePushNotifications } from "../hooks/usePushNotifications";
@@ -12,22 +13,37 @@ export default function SettingsPage() {
   const { profile, group } = useAuth();
   const isLead = group?.role === "lead";
   const { isEnabled: pushEnabled } = usePushNotifications();
-  const [message, setMessage] = useState("Test notification from Talking Music League.");
-  const [status, setStatus] = useState<string | null>(null);
-  const [adminStatus, setAdminStatus] = useState<string | null>(null);
-  const [chatNotifyEnabled, setChatNotifyEnabled] = useState(profile?.chat_notify_enabled ?? true);
-  const [emailNotifyEnabled, setEmailNotifyEnabled] = useState(profile?.email_notify_enabled ?? true);
-  const [reactionNotifyEnabled, setReactionNotifyEnabled] = useState(profile?.reaction_notify_enabled ?? true);
+
+  // Theme settings
   const [theme, setTheme] = useState(() => localStorage.getItem("tml_theme") ?? "ocean");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("tml_mode") === "dark");
   const [defaultEmoji, setDefaultEmoji] = useState(() => localStorage.getItem("tml_default_emoji") ?? "👍");
 
+  // Notification type settings
+  const [emailNotifyEnabled, setEmailNotifyEnabled] = useState(profile?.email_notify_enabled ?? true);
+  const [ntfyNotifyEnabled, setNtfyNotifyEnabled] = useState(profile?.ntfy_notify_enabled ?? false);
+  const [ntfyTopic, setNtfyTopic] = useState(profile?.ntfy_topic ?? "");
+  const [showNtfyHelp, setShowNtfyHelp] = useState(false);
+
+  // Notification item settings
+  const [chatNotifyEnabled, setChatNotifyEnabled] = useState(profile?.chat_notify_enabled ?? true);
+  const [reactionNotifyEnabled, setReactionNotifyEnabled] = useState(profile?.reaction_notify_enabled ?? true);
+
+  // Test notification
+  const [message, setMessage] = useState("Test notification from Talking Music League.");
+  const [status, setStatus] = useState<string | null>(null);
+  const [adminStatus, setAdminStatus] = useState<string | null>(null);
+
+  // Sync state with profile
   useEffect(() => {
-    setChatNotifyEnabled(profile?.chat_notify_enabled ?? true);
     setEmailNotifyEnabled(profile?.email_notify_enabled ?? true);
+    setNtfyNotifyEnabled(profile?.ntfy_notify_enabled ?? false);
+    setNtfyTopic(profile?.ntfy_topic ?? "");
+    setChatNotifyEnabled(profile?.chat_notify_enabled ?? true);
     setReactionNotifyEnabled(profile?.reaction_notify_enabled ?? true);
   }, [profile]);
 
+  // Apply theme
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.theme = theme;
@@ -36,22 +52,35 @@ export default function SettingsPage() {
     localStorage.setItem("tml_mode", darkMode ? "dark" : "light");
   }, [theme, darkMode]);
 
+  // Apply default emoji
   useEffect(() => {
     localStorage.setItem("tml_default_emoji", defaultEmoji);
-    // Dispatch storage event so other components (ChatPage) pick up the change
     window.dispatchEvent(new Event("storage"));
   }, [defaultEmoji]);
 
-  const saveChatToggle = async (enabled: boolean) => {
-    if (!profile) return;
-    setChatNotifyEnabled(enabled);
-    await supabase.from("profiles").update({ chat_notify_enabled: enabled }).eq("id", profile.id);
-  };
-
+  // Save notification type toggles
   const saveEmailToggle = async (enabled: boolean) => {
     if (!profile) return;
     setEmailNotifyEnabled(enabled);
     await supabase.from("profiles").update({ email_notify_enabled: enabled }).eq("id", profile.id);
+  };
+
+  const saveNtfyToggle = async (enabled: boolean) => {
+    if (!profile) return;
+    setNtfyNotifyEnabled(enabled);
+    await supabase.from("profiles").update({ ntfy_notify_enabled: enabled }).eq("id", profile.id);
+  };
+
+  const saveNtfyTopic = async () => {
+    if (!profile) return;
+    await supabase.from("profiles").update({ ntfy_topic: ntfyTopic }).eq("id", profile.id);
+  };
+
+  // Save notification item toggles
+  const saveChatToggle = async (enabled: boolean) => {
+    if (!profile) return;
+    setChatNotifyEnabled(enabled);
+    await supabase.from("profiles").update({ chat_notify_enabled: enabled }).eq("id", profile.id);
   };
 
   const saveReactionToggle = async (enabled: boolean) => {
@@ -60,6 +89,7 @@ export default function SettingsPage() {
     await supabase.from("profiles").update({ reaction_notify_enabled: enabled }).eq("id", profile.id);
   };
 
+  // Test notifications
   const sendTest = async () => {
     setStatus("Sending...");
     const results: string[] = [];
@@ -115,7 +145,7 @@ export default function SettingsPage() {
 
     const results: string[] = [];
 
-    // Send email only to admin (current user)
+    // Send email only to admin
     const { data, error } = await supabase.functions.invoke("notify", {
       body: {
         title: "Admin Test - Talking Music League",
@@ -151,25 +181,32 @@ export default function SettingsPage() {
     setAdminStatus(results.join(" | "));
   };
 
+  // Check if user can see ntfy settings (admin enabled it for them)
+  const canSeeNtfy = profile?.can_toggle_ntfy_notify === true;
+  // Check if user can see push settings (admin only for now)
+  const canSeePush = isLead;
+
   return (
     <div className="page">
       <div className="page-header">
         <h1>Settings</h1>
         <p>Appearance preferences and notification controls.</p>
       </div>
+
+      {/* Appearance Card */}
       <Card>
         <h2>Appearance</h2>
         <p className="muted">Switch themes and toggle dark mode.</p>
         <label className="field">
           <span className="field-label">Theme</span>
-          <select className="field-input" value={theme} onChange={(event) => setTheme(event.target.value)}>
+          <select className="field-input" value={theme} onChange={(e) => setTheme(e.target.value)}>
             <option value="ocean">Ocean</option>
             <option value="sunset">Sunset</option>
             <option value="evergreen">Evergreen</option>
           </select>
         </label>
         <label className="checkbox-row">
-          <input type="checkbox" checked={darkMode} onChange={(event) => setDarkMode(event.target.checked)} />
+          <input type="checkbox" checked={darkMode} onChange={(e) => setDarkMode(e.target.checked)} />
           <span>Dark mode</span>
         </label>
         <div className="field" style={{ marginTop: "16px" }}>
@@ -191,46 +228,123 @@ export default function SettingsPage() {
           </div>
         </div>
       </Card>
+
+      {/* Notification Types Card */}
       <Card>
-        <h2>Notification preferences</h2>
-        <p className="muted">These settings control chat and email alerts.</p>
-        <PushNotificationToggle />
-        <div className="notification-divider" />
-        <label className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={chatNotifyEnabled}
-            onChange={(event) => saveChatToggle(event.target.checked)}
-            disabled={profile?.can_toggle_chat_notify === false}
-          />
-          <span>Enable chat notifications</span>
-        </label>
+        <h2>Notification Types</h2>
+        <p className="muted">Choose how you want to receive notifications.</p>
+
+        {/* Email notifications */}
         <label className="checkbox-row">
           <input
             type="checkbox"
             checked={emailNotifyEnabled}
-            onChange={(event) => saveEmailToggle(event.target.checked)}
+            onChange={(e) => saveEmailToggle(e.target.checked)}
             disabled={profile?.can_toggle_email_notify === false}
           />
-          <span>Enable email notifications</span>
+          <span>Email notifications</span>
         </label>
+
+        {/* Push notifications - admin only */}
+        {canSeePush && (
+          <>
+            <div className="notification-divider" />
+            <div className="notification-type-section">
+              <span className="notification-type-label">Push notifications (Admin testing)</span>
+              <PushNotificationToggle />
+            </div>
+          </>
+        )}
+
+        {/* ntfy notifications - if enabled by admin */}
+        {canSeeNtfy && (
+          <>
+            <div className="notification-divider" />
+            <div className="notification-type-section">
+              <div className="notification-type-header">
+                <label className="checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={ntfyNotifyEnabled}
+                    onChange={(e) => saveNtfyToggle(e.target.checked)}
+                  />
+                  <span>ntfy push notifications</span>
+                </label>
+                <button
+                  type="button"
+                  className="ntfy-help-button"
+                  onClick={() => setShowNtfyHelp(true)}
+                  title="How to set up ntfy"
+                >
+                  ?
+                </button>
+              </div>
+              {ntfyNotifyEnabled && (
+                <div className="ntfy-topic-field">
+                  <label className="field">
+                    <span className="field-label">ntfy topic (optional override)</span>
+                    <input
+                      type="text"
+                      className="field-input"
+                      value={ntfyTopic}
+                      onChange={(e) => setNtfyTopic(e.target.value)}
+                      onBlur={saveNtfyTopic}
+                      placeholder="mariani_music_league"
+                    />
+                  </label>
+                  <span className="field-helper">
+                    Leave blank to use the default topic: mariani_music_league
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {profile?.can_toggle_email_notify === false && (
+          <span className="field-helper">An admin must enable notification controls for your account.</span>
+        )}
+      </Card>
+
+      {/* Notification Items Card */}
+      <Card>
+        <h2>What to notify</h2>
+        <p className="muted">Choose which events trigger notifications.</p>
+
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={chatNotifyEnabled}
+            onChange={(e) => saveChatToggle(e.target.checked)}
+            disabled={profile?.can_toggle_chat_notify === false}
+          />
+          <span>Chat messages</span>
+        </label>
+
         <label className="checkbox-row">
           <input
             type="checkbox"
             checked={reactionNotifyEnabled}
-            onChange={(event) => saveReactionToggle(event.target.checked)}
+            onChange={(e) => saveReactionToggle(e.target.checked)}
             disabled={profile?.can_toggle_reaction_notify === false}
           />
-          <span>Enable reaction notifications</span>
+          <span>Reactions to your messages</span>
         </label>
-        {(profile?.can_toggle_chat_notify === false || profile?.can_toggle_email_notify === false || profile?.can_toggle_reaction_notify === false) ? (
-          <span className="field-helper">An admin must enable notification controls for your account.</span>
-        ) : null}
+
+        {(profile?.can_toggle_chat_notify === false || profile?.can_toggle_reaction_notify === false) && (
+          <span className="field-helper">An admin must enable some notification controls for your account.</span>
+        )}
+      </Card>
+
+      {/* Test Notifications Card */}
+      <Card>
+        <h2>Test notifications</h2>
+        <p className="muted">Send a test notification to verify your setup.</p>
         <div className="notification-test">
           <input
             className="field-input"
             value={message}
-            onChange={(event) => setMessage(event.target.value)}
+            onChange={(e) => setMessage(e.target.value)}
             placeholder="Test notification message..."
           />
           <div className="notification-test-buttons">
@@ -243,10 +357,13 @@ export default function SettingsPage() {
               </Button>
             )}
           </div>
-          {status ? <p className="muted">{status}</p> : null}
-          {adminStatus ? <p className="muted">{adminStatus}</p> : null}
+          {status && <p className="muted">{status}</p>}
+          {adminStatus && <p className="muted">{adminStatus}</p>}
         </div>
       </Card>
+
+      {/* ntfy Help Modal */}
+      <NtfyHelpModal isOpen={showNtfyHelp} onClose={() => setShowNtfyHelp(false)} />
     </div>
   );
 }
