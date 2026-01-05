@@ -4,6 +4,7 @@ import SongCard from "./SongCard";
 import AIAssistant from "./AIAssistant";
 import RoundChallenge from "./RoundChallenge";
 import SubmitterGuess from "./SubmitterGuess";
+import ExpandableSection from "./ExpandableSection";
 import ActivityTracker from "./ActivityTracker";
 
 type SubmissionRow = {
@@ -246,9 +247,8 @@ export default function PeekPanel({
 
               {/* Awards (if voting complete) */}
               {isVotingComplete && awards.length > 0 && (
-                <div className="peek-panel-section">
-                  <h3>Round Awards</h3>
-                  {awards.slice(0, 3).map((award) => (
+                <ExpandableSection title="Round Awards" badge={awards.length} defaultExpanded>
+                  {awards.map((award) => (
                     <div key={award.id} className="award-card">
                       {award.trophy_url ? (
                         <img
@@ -270,38 +270,55 @@ export default function PeekPanel({
                       )}
                     </div>
                   ))}
-                </div>
+                </ExpandableSection>
               )}
 
               {/* Round Story (if available) */}
               {isVotingComplete && narrative && (
-                <div className="peek-panel-section">
-                  <h3>Round Story</h3>
-                  <p style={{ fontSize: "0.9rem", color: "var(--text-primary)", lineHeight: 1.6 }}>
+                <ExpandableSection title="Round Story">
+                  <p style={{ fontSize: "0.9rem", color: "var(--text-primary)", lineHeight: 1.6, margin: 0 }}>
                     {narrative}
                   </p>
-                </div>
+                </ExpandableSection>
               )}
 
               {/* All Songs */}
-              <div className="peek-panel-section">
-                <h3>{isVotingComplete ? "All Songs" : "Songs"}</h3>
-                {(isVotingComplete ? restOfSongs : rankedSubmissions).map((song) => (
-                  <SongCard
-                    key={song.id}
-                    song={song}
-                    votes={song.votes}
-                    showSubmitter={isVotingComplete}
-                    showVotes={isVotingComplete}
-                    onQuote={() => onQuoteSong(song)}
-                  />
-                ))}
-                {submissions.length === 0 && (
-                  <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-                    No songs submitted yet.
-                  </p>
-                )}
-              </div>
+              {isVotingComplete && restOfSongs.length > 0 ? (
+                <ExpandableSection
+                  title="All Songs"
+                  badge={restOfSongs.length}
+                >
+                  {restOfSongs.map((song) => (
+                    <SongCard
+                      key={song.id}
+                      song={song}
+                      votes={song.votes}
+                      showSubmitter={isVotingComplete}
+                      showVotes={isVotingComplete}
+                      onQuote={() => onQuoteSong(song)}
+                    />
+                  ))}
+                </ExpandableSection>
+              ) : (
+                <div className="peek-panel-section">
+                  <h3>Songs</h3>
+                  {rankedSubmissions.map((song) => (
+                    <SongCard
+                      key={song.id}
+                      song={song}
+                      votes={song.votes}
+                      showSubmitter={isVotingComplete}
+                      showVotes={isVotingComplete}
+                      onQuote={() => onQuoteSong(song)}
+                    />
+                  ))}
+                  {submissions.length === 0 && (
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+                      No songs submitted yet.
+                    </p>
+                  )}
+                </div>
+              )}
             </>
           )}
 

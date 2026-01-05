@@ -4667,6 +4667,90 @@
   color: #fff;
 }
 
+/* ========================================
+   Expandable Section
+   ======================================== */
+
+.expandable-section {
+  margin-bottom: 16px;
+  border: 1px solid rgba(10, 26, 47, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.expandable-section-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 14px 16px;
+  background: rgba(10, 26, 47, 0.03);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s ease;
+}
+
+.expandable-section-header:hover {
+  background: rgba(10, 26, 47, 0.06);
+}
+
+.expandable-section-title {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.expandable-section-badge {
+  margin-right: 12px;
+  padding: 2px 8px;
+  background: var(--blue);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.expandable-section-icon {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.expandable-section.expanded .expandable-section-icon {
+  transform: rotate(180deg);
+}
+
+.expandable-section-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  padding: 0 16px;
+}
+
+.expandable-section.expanded .expandable-section-content {
+  max-height: 2000px;
+  padding: 16px;
+  border-top: 1px solid rgba(10, 26, 47, 0.08);
+}
+
+/* Dark mode for Expandable Section */
+[data-mode="dark"] .expandable-section {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-mode="dark"] .expandable-section-header {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-mode="dark"] .expandable-section-header:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-mode="dark"] .expandable-section.expanded .expandable-section-content {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
 /* Dark mode for AI and Challenge sections */
 [data-mode="dark"] .ai-assistant-content {
   background: rgba(255, 255, 255, 0.05);
