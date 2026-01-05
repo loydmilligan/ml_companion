@@ -212,6 +212,14 @@ export default function AdminPage() {
   const [roundChallengeExists, setRoundChallengeExists] = useState<Record<string, boolean>>({});
   const [challengeGenLoadingId, setChallengeGenLoadingId] = useState<string | null>(null);
   const [challengeStatusByRound, setChallengeStatusByRound] = useState<Record<string, string>>({});
+  // Song Links state (for Submitter Guess minigame)
+  const [songLinksRoundId, setSongLinksRoundId] = useState<string | null>(null);
+  const [songLinksSubmissions, setSongLinksSubmissions] = useState<
+    { id: string; title: string; artist: string | null; youtube_url: string | null; spotify_url: string | null }[]
+  >([]);
+  const [songLinksEditing, setSongLinksEditing] = useState<Record<string, { youtube_url: string; spotify_url: string }>>({});
+  const [songLinksLoading, setSongLinksLoading] = useState(false);
+  const [songLinksSaving, setSongLinksSaving] = useState(false);
 
   useEffect(() => {
     if (!selectedLeagueId) return;
@@ -757,6 +765,62 @@ export default function AdminPage() {
       console.error("Error saving challenge links:", err);
     } finally {
       setChallengeSaving(false);
+    }
+  };
+
+  // Load submissions for song links editing
+  const loadSongLinks = async (roundId: string) => {
+    if (!group) return;
+    setSongLinksLoading(true);
+    setSongLinksRoundId(roundId);
+    try {
+      const { data } = await supabase
+        .from("submissions")
+        .select("id,title,artist,youtube_url,spotify_url")
+        .eq("round_id", roundId)
+        .order("created_at", { ascending: true });
+
+      const submissions = data ?? [];
+      setSongLinksSubmissions(submissions);
+
+      // Initialize editing state
+      const editing: Record<string, { youtube_url: string; spotify_url: string }> = {};
+      submissions.forEach((sub) => {
+        editing[sub.id] = {
+          youtube_url: sub.youtube_url ?? "",
+          spotify_url: sub.spotify_url ?? "",
+        };
+      });
+      setSongLinksEditing(editing);
+    } catch (err) {
+      console.error("Error loading song links:", err);
+    } finally {
+      setSongLinksLoading(false);
+    }
+  };
+
+  // Save song links
+  const saveSongLinks = async () => {
+    if (!group || !songLinksRoundId) return;
+    setSongLinksSaving(true);
+    try {
+      // Update each submission with its new URLs
+      const updates = Object.entries(songLinksEditing).map(([id, urls]) =>
+        supabase
+          .from("submissions")
+          .update({
+            youtube_url: urls.youtube_url || null,
+            spotify_url: urls.spotify_url || null,
+          })
+          .eq("id", id)
+      );
+      await Promise.all(updates);
+      // Reload to confirm changes
+      await loadSongLinks(songLinksRoundId);
+    } catch (err) {
+      console.error("Error saving song links:", err);
+    } finally {
+      setSongLinksSaving(false);
     }
   };
 
@@ -3284,6 +3348,85 @@ python scripts/build_track_metadata.py`}
                   {challengeSaving ? "Saving..." : "Save Links"}
                 </Button>
               </div>
+            )}
+          </div>
+
+          {/* Song Links for Submitter Guess */}
+          <div className="admin-form" style={{ marginBottom: 24 }}>
+            <h3 style={{ margin: "0 0 12px 0", fontSize: "1rem" }}>Edit Song Media Links</h3>
+            <p className="muted" style={{ marginBottom: 12 }}>
+              Add YouTube and Spotify links to songs for playback in the Peek Panel.
+            </p>
+
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              <select
+                className="field-input"
+                value={songLinksRoundId ?? ""}
+                onChange={(e) => e.target.value && loadSongLinks(e.target.value)}
+                style={{ flex: 1 }}
+              >
+                <option value="">Select a round...</option>
+                {rounds.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    S{r.season_number ?? "?"} R{r.round_number ?? "?"}: {r.theme}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {songLinksLoading && (
+              <div style={{ padding: 16, color: "var(--text-muted)" }}>Loading songs...</div>
+            )}
+
+            {songLinksSubmissions.length > 0 && !songLinksLoading && (
+              <div style={{ display: "grid", gap: 12 }}>
+                {songLinksSubmissions.map((sub) => (
+                  <div key={sub.id} style={{ padding: 12, background: "var(--bg-secondary)", borderRadius: 8 }}>
+                    <div style={{ marginBottom: 8 }}>
+                      <strong>{sub.title}</strong>
+                      {sub.artist && <span className="muted" style={{ marginLeft: 8 }}>by {sub.artist}</span>}
+                    </div>
+                    <div style={{ display: "grid", gap: 8, gridTemplateColumns: "1fr 1fr" }}>
+                      <label className="field" style={{ margin: 0 }}>
+                        <span className="field-label" style={{ fontSize: "0.8rem" }}>YouTube URL</span>
+                        <input
+                          className="field-input"
+                          value={songLinksEditing[sub.id]?.youtube_url ?? ""}
+                          onChange={(e) =>
+                            setSongLinksEditing((prev) => ({
+                              ...prev,
+                              [sub.id]: { ...prev[sub.id], youtube_url: e.target.value },
+                            }))
+                          }
+                          placeholder="https://youtube.com/watch?v=..."
+                        />
+                      </label>
+                      <label className="field" style={{ margin: 0 }}>
+                        <span className="field-label" style={{ fontSize: "0.8rem" }}>Spotify URL</span>
+                        <input
+                          className="field-input"
+                          value={songLinksEditing[sub.id]?.spotify_url ?? ""}
+                          onChange={(e) =>
+                            setSongLinksEditing((prev) => ({
+                              ...prev,
+                              [sub.id]: { ...prev[sub.id], spotify_url: e.target.value },
+                            }))
+                          }
+                          placeholder="https://open.spotify.com/track/..."
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ))}
+
+                <Button type="button" onClick={saveSongLinks} disabled={songLinksSaving}>
+                  {songLinksSaving ? "Saving..." : "Save All Links"}
+                </Button>
+              </div>
+            )}
+
+            {songLinksRoundId && songLinksSubmissions.length === 0 && !songLinksLoading && (
+              <p className="muted">No submissions found for this round.</p>
             )}
           </div>
 

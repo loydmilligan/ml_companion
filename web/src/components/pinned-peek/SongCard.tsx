@@ -1,5 +1,6 @@
 import { useState } from "react";
 import clsx from "clsx";
+import { useYouTubeSidebar, extractYouTubeId } from "../youtube-sidebar";
 
 type VoteRow = {
   voter_id: string | null;
@@ -15,6 +16,8 @@ type SongCardProps = {
     link: string | null;
     artwork_url: string | null;
     submitter_name?: string | null;
+    youtube_url?: string | null;
+    spotify_url?: string | null;
   };
   votes?: VoteRow[];
   rank?: number; // 1, 2, 3 for top songs
@@ -50,6 +53,26 @@ export default function SongCard({
   onQuote,
 }: SongCardProps) {
   const [votersExpanded, setVotersExpanded] = useState(false);
+  const { openSidebar } = useYouTubeSidebar();
+
+  // Get Spotify URL - prefer spotify_url, fall back to link if it's a Spotify link
+  const spotifyUrl = song.spotify_url || (song.link?.includes("spotify") ? song.link : null);
+
+  // Handle YouTube playback - either direct URL or search
+  const handleYouTubeClick = () => {
+    if (song.youtube_url) {
+      const videoId = extractYouTubeId(song.youtube_url);
+      if (videoId) {
+        openSidebar(videoId, `${song.title} - ${song.artist || "Unknown"}`);
+        return;
+      }
+    }
+    // Fallback to search
+    window.open(
+      `https://www.youtube.com/results?search_query=${encodeURIComponent(`${song.title} ${song.artist || ""}`)}`,
+      "_blank"
+    );
+  };
 
   const totalPoints = votes.reduce((sum, v) => sum + (v.points ?? 0), 0);
   const voterNames = votes
@@ -91,9 +114,9 @@ export default function SongCard({
         )}
 
         <div className="song-card-actions">
-          {song.link && (
+          {spotifyUrl && (
             <a
-              href={song.link}
+              href={spotifyUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="song-card-action spotify"
@@ -104,17 +127,16 @@ export default function SongCard({
               </svg>
             </a>
           )}
-          <a
-            href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${song.title} ${song.artist || ""}`)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="song-card-action youtube"
-            title="Search on YouTube"
+          <button
+            type="button"
+            className={`song-card-action youtube ${song.youtube_url ? "has-link" : ""}`}
+            onClick={handleYouTubeClick}
+            title={song.youtube_url ? "Play on YouTube" : "Search on YouTube"}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
             </svg>
-          </a>
+          </button>
           {onQuote && (
             <button
               type="button"

@@ -26,6 +26,8 @@ type SubmissionRow = {
   release_year: number | null;
   genres: string | null;
   submitter_name?: string | null;
+  youtube_url?: string | null;
+  spotify_url?: string | null;
 };
 
 type VoteRow = {
@@ -147,7 +149,7 @@ export function RoundProvider({ children }: { children: ReactNode }) {
         // Get submissions
         supabase
           .from("submissions")
-          .select("id,title,artist,link,artwork_url,release_year,genres,submitter_name")
+          .select("id,title,artist,link,artwork_url,release_year,genres,submitter_name,youtube_url,spotify_url")
           .eq("round_id", roundData.id)
           .order("created_at", { ascending: true }),
         // Get awards if revealed

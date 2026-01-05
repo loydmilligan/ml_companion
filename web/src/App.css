@@ -3136,6 +3136,10 @@
   color: #fff;
 }
 
+.song-card-action.youtube.has-link {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
+}
+
 .song-card-action.quote {
   background: var(--blue);
   color: #fff;
