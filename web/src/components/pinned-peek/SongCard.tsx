@@ -18,6 +18,7 @@ type GuessState = {
   guessedCompetitorId: string | null;
   result: boolean | null; // true = correct, false = incorrect, null = not revealed
   isSaving: boolean;
+  isOwnSong: boolean;
 };
 
 type SongCardProps = {

@@ -299,6 +299,79 @@ Return JSON ONLY with key: narrative`;
     );
   }
 
+  if (mode === "current_season_story") {
+    const seasonData = body?.season_data ?? {};
+    const leagueName = body?.league_name ?? "Music League";
+    const seasonNumber = body?.season_number ?? null;
+    const latestRound = body?.latest_round ?? {};
+    const minigameSummary = body?.minigame_summary ?? {};
+
+    const currentSeasonPrompt = `You are writing a short, punchy recap card for an ongoing music league season.
+
+Write THREE short paragraphs (2-3 sentences each) with distinct purposes:
+1) Season opening storylines: highlight standout starts, surprise winners, early/late submitters, and players with something to prove.
+2) Round-two riff: deliver a quippy, pun-ready take on the most recent round theme, and if a theme author is provided, tie it back to any earlier theme by the same author if possible.
+3) Minigame recap: summarize who performed best/worst, who was an easy guess, and who was a tough guess.
+
+Keep it warm, playful, and family-friendly. Avoid making up names or facts not in the data.
+
+Return JSON ONLY in this format:
+{\"season_intro\":\"...\",\"round_two_riff\":\"...\",\"minigame_summary\":\"...\"}
+
+League: ${leagueName}
+Season number: ${seasonNumber ?? "Unknown"}
+
+Season statistics and standings:
+${JSON.stringify(seasonData)}
+
+Latest round:
+${JSON.stringify(latestRound)}
+
+Minigame summary:
+${JSON.stringify(minigameSummary)}`;
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "X-Title": "TML - Current Season Story",
+      },
+      body: JSON.stringify({
+        model: textModel,
+        messages: [{ role: "user", content: currentSeasonPrompt }],
+        temperature: 0.8,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      return new Response(
+        JSON.stringify({ error: "OpenRouter request failed", detail: text }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const json = await response.json();
+    const content = json?.choices?.[0]?.message?.content ?? "";
+    let parsed: { season_intro?: string; round_two_riff?: string; minigame_summary?: string } = {};
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      parsed = {};
+    }
+
+    return new Response(
+      JSON.stringify({
+        season_intro: parsed.season_intro ?? "",
+        round_two_riff: parsed.round_two_riff ?? "",
+        minigame_summary: parsed.minigame_summary ?? "",
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   if (mode === "awards") {
     const awardsPrompt = `You are an awards judge for a music league round.
 
