@@ -5033,33 +5033,6 @@
   padding: 16px 20px;
 }
 
-.ntfy-tabs {
-  display: flex;
-  gap: 8px;
-  margin: 16px 0;
-}
-
-.ntfy-tab {
-  flex: 1;
-  padding: 10px 16px;
-  border: 2px solid rgba(10, 26, 47, 0.12);
-  background: transparent;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.ntfy-tab.active {
-  border-color: var(--accent);
-  background: rgba(var(--accent-rgb), 0.08);
-  color: var(--accent);
-}
-
-.ntfy-tab:hover:not(.active) {
-  border-color: rgba(10, 26, 47, 0.25);
-}
-
 .ntfy-instructions {
   line-height: 1.6;
 }
@@ -5095,18 +5068,16 @@
   text-decoration: underline;
 }
 
-.ntfy-screenshot-placeholder {
+.ntfy-screenshot {
   margin: 16px 0;
+  text-align: center;
 }
 
-.placeholder-box {
-  background: rgba(10, 26, 47, 0.06);
-  border: 2px dashed rgba(10, 26, 47, 0.2);
+.ntfy-screenshot img {
+  max-width: 100%;
+  max-height: 400px;
   border-radius: 12px;
-  padding: 40px 20px;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 0.9rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .ntfy-note {

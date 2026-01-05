@@ -151,7 +151,11 @@ export default function SubmitterGuess({
 
       allGuesses.forEach((g) => {
         const guesserId = g.guesser_id;
-        const profile = g.profiles as { display_name: string } | null;
+        // profiles can be object or array depending on Supabase version
+        const profileData = g.profiles as unknown;
+        const profile = Array.isArray(profileData)
+          ? (profileData[0] as { display_name: string } | undefined)
+          : (profileData as { display_name: string } | null);
         const name = profile?.display_name ?? "Unknown";
 
         if (!scores[guesserId]) {
