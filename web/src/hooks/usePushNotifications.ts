@@ -24,15 +24,25 @@ function getPlatform(): "web" | "ios" | "android" {
   return "web";
 }
 
-// Check if push notifications are supported
-function checkSupport(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    "serviceWorker" in navigator &&
-    "PushManager" in window &&
-    "Notification" in window &&
-    isFirebaseConfigured
-  );
+// Check if push notifications are supported with detailed logging
+function checkSupport(): { supported: boolean; reason?: string } {
+  const checks = {
+    window: typeof window !== "undefined",
+    serviceWorker: "serviceWorker" in navigator,
+    pushManager: "PushManager" in window,
+    notification: "Notification" in window,
+    firebaseConfigured: isFirebaseConfigured,
+  };
+
+  console.log("[FCM] Support checks:", checks);
+
+  if (!checks.window) return { supported: false, reason: "No window object" };
+  if (!checks.serviceWorker) return { supported: false, reason: "ServiceWorker not supported" };
+  if (!checks.pushManager) return { supported: false, reason: "PushManager not supported" };
+  if (!checks.notification) return { supported: false, reason: "Notification API not supported" };
+  if (!checks.firebaseConfigured) return { supported: false, reason: "Firebase not configured" };
+
+  return { supported: true };
 }
 
 // Wait for service worker to become active
@@ -92,8 +102,13 @@ export function usePushNotifications(): UsePushNotificationsReturn {
   // Initialize state - check if we have a token saved, not just permission
   useEffect(() => {
     const init = async () => {
-      const isSupported = checkSupport();
+      const supportCheck = checkSupport();
+      const isSupported = supportCheck.supported;
       const permission = isSupported ? Notification.permission : "unsupported";
+
+      if (!isSupported) {
+        console.log("[FCM] Push not supported:", supportCheck.reason);
+      }
 
       // Don't assume enabled just because permission is granted
       // We need to verify a token exists in the database
@@ -126,7 +141,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
     init();
 
     // Set up foreground message listener
-    if (checkSupport() && messaging) {
+    if (checkSupport().supported && messaging) {
       const unsubscribe = onMessage(messaging, (payload) => {
         console.log("[FCM] Foreground message received:", payload);
 

@@ -107,24 +107,6 @@ Capture Music League notification emails and turn them into structured events in
 - Log activity in the timeline.
 - Optional: mark user vote status.
 
-### 6) Someone Joined Your League
-**Trigger:** New member joins league.
-
-**Typical Subject:**
-- `{League Name} - Someone Joined Your League`
-
-**Text/HTML Signal:**
-- `User {Name} just joined your league!`
-
-**Extracted Fields:**
-- `event_type = user_joined`
-- `league_name`
-- `actor_name`
-
-**Action in App:**
-- Log activity in the timeline.
-- Optional: auto-add member to group roster.
-
 ## Parsing Strategy
 We use the raw email payload from n8n. It provides:
 - `headers.subject` (short, reliable signal for league name and event type)
