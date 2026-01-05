@@ -360,7 +360,7 @@ export default function AdminPage() {
       const { data: settingsData } = await supabase
         .from("group_settings")
         .select(
-          "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled"
+          "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled,submitter_guess_enabled"
         )
         .eq("group_id", group.id)
         .maybeSingle();
@@ -380,6 +380,7 @@ export default function AdminPage() {
         ai_validate_daily_limit: settingsData?.ai_validate_daily_limit ?? 5,
         ai_chat_enabled: settingsData?.ai_chat_enabled ?? true,
         round_challenge_enabled: settingsData?.round_challenge_enabled ?? true,
+        submitter_guess_enabled: settingsData?.submitter_guess_enabled ?? true,
       };
       setGroupSettings(fallback);
       setSettingsDraft(fallback);
@@ -883,12 +884,13 @@ export default function AdminPage() {
       ai_validate_daily_limit: settingsDraft.ai_validate_daily_limit,
       ai_chat_enabled: settingsDraft.ai_chat_enabled,
       round_challenge_enabled: settingsDraft.round_challenge_enabled,
+      submitter_guess_enabled: settingsDraft.submitter_guess_enabled,
     };
     const { data, error } = await supabase
       .from("group_settings")
       .upsert(payload, { onConflict: "group_id" })
       .select(
-        "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled"
+        "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled,submitter_guess_enabled"
       )
       .maybeSingle();
     if (!error && data) {
@@ -2956,6 +2958,25 @@ python scripts/build_track_metadata.py`}
                 </span>
               </div>
             </label>
+
+            <label className="field" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <input
+                type="checkbox"
+                checked={settingsDraft?.submitter_guess_enabled ?? true}
+                onChange={(e) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, submitter_guess_enabled: e.target.checked } : prev
+                  )
+                }
+                style={{ width: 18, height: 18 }}
+              />
+              <div>
+                <span className="field-label" style={{ margin: 0 }}>Submitter Guess</span>
+                <span className="field-helper" style={{ display: "block", marginTop: 2 }}>
+                  Guess who submitted each song during voting phase
+                </span>
+              </div>
+            </label>
           </div>
 
           <h3 style={{ margin: "24px 0 12px 0", fontSize: "1rem" }}>Model Settings</h3>
@@ -3296,6 +3317,7 @@ type GroupSettings = {
   ai_chat_enabled: boolean;
   // Minigame toggles
   round_challenge_enabled: boolean;
+  submitter_guess_enabled: boolean;
 };
 
 const MODEL_OPTIONS = [

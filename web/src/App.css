@@ -4490,6 +4490,183 @@
   color: var(--navy);
 }
 
+/* ========================================
+   Submitter Guess Section
+   ======================================== */
+
+.submitter-guess-section {
+  margin-bottom: 20px;
+}
+
+.submitter-guess-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.submitter-guess-header h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.submitter-guess-score {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--blue);
+}
+
+.submitter-guess-intro {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0 0 12px 0;
+}
+
+.submitter-guess-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.submitter-guess-card {
+  padding: 12px;
+  background: rgba(10, 26, 47, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(10, 26, 47, 0.08);
+}
+
+.submitter-guess-song {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.submitter-guess-artwork {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.submitter-guess-artwork.placeholder {
+  background: linear-gradient(135deg, var(--surface-light) 0%, var(--surface-muted) 100%);
+}
+
+.submitter-guess-song-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.submitter-guess-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin: 0 0 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.submitter-guess-artist {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.submitter-guess-form {
+  display: flex;
+  gap: 8px;
+}
+
+.submitter-guess-form select {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid rgba(10, 26, 47, 0.2);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  background: #fff;
+  color: #1a1a1a;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.submitter-guess-form select option {
+  padding: 8px;
+  color: #1a1a1a;
+  background: #fff;
+}
+
+.submitter-guess-save {
+  padding: 8px 14px;
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.submitter-guess-save:hover {
+  background: var(--surface-dark);
+}
+
+.submitter-guess-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.submitter-guess-result {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.submitter-guess-result .result-icon {
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.submitter-guess-result.correct {
+  background: rgba(46, 204, 113, 0.15);
+  color: #27ae60;
+}
+
+.submitter-guess-result.incorrect {
+  background: rgba(231, 76, 60, 0.15);
+  color: #c0392b;
+}
+
+/* Dark mode for Submitter Guess */
+[data-mode="dark"] .submitter-guess-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-mode="dark"] .submitter-guess-form select {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+[data-mode="dark"] .submitter-guess-form select option {
+  background: #2a2a3a;
+  color: #fff;
+}
+
 /* Dark mode for AI and Challenge sections */
 [data-mode="dark"] .ai-assistant-content {
   background: rgba(255, 255, 255, 0.05);

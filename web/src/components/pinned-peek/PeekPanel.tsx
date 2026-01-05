@@ -3,6 +3,7 @@ import clsx from "clsx";
 import SongCard from "./SongCard";
 import AIAssistant from "./AIAssistant";
 import RoundChallenge from "./RoundChallenge";
+import SubmitterGuess from "./SubmitterGuess";
 import ActivityTracker from "./ActivityTracker";
 
 type SubmissionRow = {
@@ -63,6 +64,7 @@ type PeekPanelProps = {
     song2: { title: string; artist: string; theme: string } | null;
   } | null;
   roundChallengeEnabled?: boolean;
+  submitterGuessEnabled?: boolean;
 };
 
 export default function PeekPanel({
@@ -80,6 +82,7 @@ export default function PeekPanel({
   narrative,
   previousRoundChallenge,
   roundChallengeEnabled = true,
+  submitterGuessEnabled = true,
 }: PeekPanelProps) {
   // Prevent body scroll when panel is open
   useEffect(() => {
@@ -210,6 +213,16 @@ export default function PeekPanel({
                   groupId={groupId}
                   currentTheme={round.theme}
                   previousRoundChallenge={previousRoundChallenge}
+                />
+              )}
+
+              {/* Submitter Guess (during voting phase or revealed, if enabled) */}
+              {(round.status === "voting" || round.status === "revealed") && submitterGuessEnabled && groupId && (
+                <SubmitterGuess
+                  roundId={round.id}
+                  groupId={groupId}
+                  submissions={submissions}
+                  isRevealed={round.status === "revealed"}
                 />
               )}
 

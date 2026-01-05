@@ -6,4 +6,5 @@ export { default as PeekButton } from "./PeekButton";
 export { default as SongCard } from "./SongCard";
 export { default as AIAssistant } from "./AIAssistant";
 export { default as RoundChallenge } from "./RoundChallenge";
+export { default as SubmitterGuess } from "./SubmitterGuess";
 export { PeekPanelProvider, usePeekPanel } from "./PeekPanelContext";

@@ -32,6 +32,7 @@ export default function TopBar() {
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
   const [logoPalette, setLogoPalette] = useState("ocean-coral");
   const [roundChallengeEnabled, setRoundChallengeEnabled] = useState(true);
+  const [submitterGuessEnabled, setSubmitterGuessEnabled] = useState(true);
 
   const displayName = profile?.display_name ?? "Family Lead";
 
@@ -64,7 +65,7 @@ export default function TopBar() {
     let active = true;
     supabase
       .from("group_settings")
-      .select("logo_palette,round_challenge_enabled")
+      .select("logo_palette,round_challenge_enabled,submitter_guess_enabled")
       .eq("group_id", group.id)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -75,6 +76,7 @@ export default function TopBar() {
         }
         setLogoPalette(data?.logo_palette ?? "ocean-coral");
         setRoundChallengeEnabled(data?.round_challenge_enabled ?? true);
+        setSubmitterGuessEnabled(data?.submitter_guess_enabled ?? true);
       });
     return () => {
       active = false;
@@ -171,6 +173,7 @@ export default function TopBar() {
         onQuoteSong={handleQuoteSong}
         previousRoundChallenge={null}
         roundChallengeEnabled={roundChallengeEnabled}
+        submitterGuessEnabled={submitterGuessEnabled}
       />
     </>
   );
