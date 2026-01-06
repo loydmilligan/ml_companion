@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -47,9 +47,17 @@ export function TimelineGameModal({
     leaderboard,
     isSubmitting,
     canPlay,
+    reload,
   } = useTimelineGame(roundId, groupId, isRevealed);
 
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
+
+  // Reload data when modal opens (in case admin reset guesses)
+  useEffect(() => {
+    if (isOpen) {
+      reload();
+    }
+  }, [isOpen, reload]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -456,9 +464,9 @@ export function TimelineGameModal({
           )}
         </div>
 
-        {(isLocked || (isRevealed && leaderboard.length > 0)) && (
+        {((isLocked && !isRevealed) || (isRevealed && (finalScore !== null || leaderboard.length > 0))) && (
           <div className="timeline-game-footer">
-            {isLocked && finalScore !== null && (
+            {isRevealed && finalScore !== null && (
               <div className="timeline-score">
                 Your Score: <span className="timeline-score-value">{finalScore}/{submissions.length}</span>
               </div>

@@ -39,6 +39,7 @@ type UseTimelineGameReturn = {
   // Actions
   setOrder: (ids: string[]) => void;
   submitOrder: () => Promise<void>;
+  reload: () => Promise<void>;
 
   // Leaderboard
   leaderboard: LeaderboardEntry[];
@@ -295,6 +296,7 @@ export function useTimelineGame(
     leaderboard,
     isSubmitting,
     canPlay,
+    reload: loadData,
   };
 }
 
