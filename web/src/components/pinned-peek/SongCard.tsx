@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import clsx from "clsx";
 import { useYouTubeSidebar, extractYouTubeId } from "../youtube-sidebar";
 import { useAuth } from "../../contexts/AuthContext";
@@ -112,7 +112,7 @@ export default function SongCard({
   const youtubeMusicUrl = song.youtube_music_url;
 
   // Get the primary music link based on user preference
-  const getPrimaryMusicLink = (): { url: string | null; provider: string; icon: JSX.Element } => {
+  const getPrimaryMusicLink = (): { url: string | null; provider: string; icon: React.ReactNode } => {
     switch (preferredProvider) {
       case "apple_music":
         return {
