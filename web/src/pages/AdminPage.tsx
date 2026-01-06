@@ -1056,6 +1056,7 @@ export default function AdminPage() {
     setTimelineReleaseYearLoading(true);
     setTimelineReleaseYearRoundId(roundId);
     try {
+      // Load submissions
       const { data } = await supabase
         .from("submissions")
         .select("id,title,artist,release_year,artwork_url")
@@ -1069,6 +1070,13 @@ export default function AdminPage() {
         editing[sub.id] = sub.release_year?.toString() ?? "";
       });
       setTimelineReleaseYearEditing(editing);
+
+      // Load guess count for reset button
+      const { count } = await supabase
+        .from("timeline_guesses")
+        .select("*", { count: "exact", head: true })
+        .eq("round_id", roundId);
+      setTimelineGuessCount(count ?? 0);
     } catch (err) {
       console.error("Error loading timeline release years:", err);
     } finally {
@@ -1097,6 +1105,9 @@ export default function AdminPage() {
     }
   };
 
+  // Timeline Game: Track guess count for reset button
+  const [timelineGuessCount, setTimelineGuessCount] = useState(0);
+
   // Timeline Game: Reset all guesses for a round
   const [timelineResetLoading, setTimelineResetLoading] = useState(false);
   const resetTimelineGuesses = async (roundId: string) => {
@@ -1109,6 +1120,8 @@ export default function AdminPage() {
         .eq("round_id", roundId);
       if (error) {
         console.error("Error resetting timeline guesses:", error);
+      } else {
+        setTimelineGuessCount(0);
       }
     } catch (err) {
       console.error("Error resetting timeline guesses:", err);
@@ -4172,10 +4185,10 @@ python scripts/build_track_metadata.py`}
                         resetTimelineGuesses(timelineReleaseYearRoundId);
                       }
                     }}
-                    disabled={timelineResetLoading}
-                    style={{ maxWidth: 200, color: "var(--error)", borderColor: "var(--error)" }}
+                    disabled={timelineResetLoading || timelineGuessCount === 0}
+                    style={{ maxWidth: 240, color: timelineGuessCount > 0 ? "var(--error)" : undefined, borderColor: timelineGuessCount > 0 ? "var(--error)" : undefined }}
                   >
-                    {timelineResetLoading ? "Resetting..." : "Reset All Guesses"}
+                    {timelineResetLoading ? "Resetting..." : `Reset Guesses (${timelineGuessCount})`}
                   </Button>
                 )}
               </div>
@@ -4229,7 +4242,14 @@ python scripts/build_track_metadata.py`}
 
               {timelineReleaseYearSubmissions.length > 0 && !timelineReleaseYearLoading && (
                 <div style={{ display: "grid", gap: 8 }}>
-                  {timelineReleaseYearSubmissions.map((sub) => {
+                  {[...timelineReleaseYearSubmissions]
+                    .sort((a, b) => {
+                      const yearA = a.release_year ?? 9999;
+                      const yearB = b.release_year ?? 9999;
+                      if (yearA === yearB) return a.title.localeCompare(b.title);
+                      return yearA - yearB;
+                    })
+                    .map((sub) => {
                     const hasYear = !!timelineReleaseYearEditing[sub.id];
                     return (
                       <div
