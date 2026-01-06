@@ -363,61 +363,48 @@ export default function AdminPage() {
     });
 
     const existing = recordMap.get(competitor.name.toLowerCase());
-    const tasks: Promise<any>[] = [];
 
     if (draft.submitted) {
-      tasks.push(
-        supabase.from("round_user_activity").upsert(
-          {
-            round_id: trackingRoundId,
-            actor_name: competitor.name,
-            profile_id: competitor.profile_id,
-            activity_type: "submitted",
-            event_id: "manual",
-            action_at: parseDateTimeLocal(draft.submittedAt) ?? new Date().toISOString(),
-          },
-          { onConflict: "round_id,actor_name,activity_type" }
-        ).then()
+      await supabase.from("round_user_activity").upsert(
+        {
+          round_id: trackingRoundId,
+          actor_name: competitor.name,
+          profile_id: competitor.profile_id,
+          activity_type: "submitted",
+          event_id: "manual",
+          action_at: parseDateTimeLocal(draft.submittedAt) ?? new Date().toISOString(),
+        },
+        { onConflict: "round_id,actor_name,activity_type" }
       );
     } else if (existing?.submitted) {
-      tasks.push(
-        supabase
-          .from("round_user_activity")
-          .delete()
-          .eq("round_id", trackingRoundId)
-          .eq("actor_name", competitor.name)
-          .eq("activity_type", "submitted")
-          .then()
-      );
+      await supabase
+        .from("round_user_activity")
+        .delete()
+        .eq("round_id", trackingRoundId)
+        .eq("actor_name", competitor.name)
+        .eq("activity_type", "submitted");
     }
 
     if (draft.voted) {
-      tasks.push(
-        supabase.from("round_user_activity").upsert(
-          {
-            round_id: trackingRoundId,
-            actor_name: competitor.name,
-            profile_id: competitor.profile_id,
-            activity_type: "voted",
-            event_id: "manual",
-            action_at: parseDateTimeLocal(draft.votedAt) ?? new Date().toISOString(),
-          },
-          { onConflict: "round_id,actor_name,activity_type" }
-        ).then()
+      await supabase.from("round_user_activity").upsert(
+        {
+          round_id: trackingRoundId,
+          actor_name: competitor.name,
+          profile_id: competitor.profile_id,
+          activity_type: "voted",
+          event_id: "manual",
+          action_at: parseDateTimeLocal(draft.votedAt) ?? new Date().toISOString(),
+        },
+        { onConflict: "round_id,actor_name,activity_type" }
       );
     } else if (existing?.voted) {
-      tasks.push(
-        supabase
-          .from("round_user_activity")
-          .delete()
-          .eq("round_id", trackingRoundId)
-          .eq("actor_name", competitor.name)
-          .eq("activity_type", "voted")
-          .then()
-      );
+      await supabase
+        .from("round_user_activity")
+        .delete()
+        .eq("round_id", trackingRoundId)
+        .eq("actor_name", competitor.name)
+        .eq("activity_type", "voted");
     }
-
-    await Promise.all(tasks);
     await loadActionTracking(trackingRoundId);
     setActionSavingId(null);
   };
@@ -4179,14 +4166,14 @@ python scripts/build_track_metadata.py`}
                 {timelineReleaseYearRoundId && (
                   <Button
                     type="button"
-                    variant="danger"
+                    variant="secondary"
                     onClick={() => {
                       if (window.confirm("Reset all Timeline Game guesses for this round? Players will be able to play again.")) {
                         resetTimelineGuesses(timelineReleaseYearRoundId);
                       }
                     }}
                     disabled={timelineResetLoading}
-                    style={{ maxWidth: 200 }}
+                    style={{ maxWidth: 200, color: "var(--error)", borderColor: "var(--error)" }}
                   >
                     {timelineResetLoading ? "Resetting..." : "Reset All Guesses"}
                   </Button>
