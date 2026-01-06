@@ -175,6 +175,11 @@ export interface RoundSubmission {
   createdAt: string;
   /** Calculated total points */
   points?: number;
+  /** Platform-specific URLs */
+  spotifyUrl?: string;
+  youtubeUrl?: string;
+  appleMusicUrl?: string;
+  youtubeMusicUrl?: string;
 }
 
 /**

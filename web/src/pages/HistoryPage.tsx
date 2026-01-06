@@ -87,6 +87,10 @@ type SubmissionRow = {
   genres: string | null;
   source_uri: string | null;
   created_at: string;
+  spotify_url: string | null;
+  youtube_url: string | null;
+  apple_music_url: string | null;
+  youtube_music_url: string | null;
 };
 
 type VoteRow = {
@@ -219,7 +223,7 @@ export default function HistoryPage() {
     const { data: submissionsData } = await supabase
       .from("submissions")
       .select(
-        "id,title,artist,link,submitter_name,artwork_url,release_year,genres,source_uri,created_at,round_id"
+        "id,title,artist,link,submitter_name,artwork_url,release_year,genres,source_uri,created_at,round_id,spotify_url,youtube_url,apple_music_url,youtube_music_url"
       )
       .in("round_id", roundIds)
       .order("created_at", { ascending: true });
@@ -947,6 +951,10 @@ export default function HistoryPage() {
           createdAt: sub.created_at,
           totalPoints,
           voteCount: votes.length,
+          spotifyUrl: sub.spotify_url ?? undefined,
+          youtubeUrl: sub.youtube_url ?? undefined,
+          appleMusicUrl: sub.apple_music_url ?? undefined,
+          youtubeMusicUrl: sub.youtube_music_url ?? undefined,
         };
       });
 

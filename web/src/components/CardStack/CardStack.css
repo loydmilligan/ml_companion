@@ -459,6 +459,72 @@
   opacity: 0.9;
 }
 
+/* Platform link buttons */
+.track-links {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.track-link-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.track-link-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.track-link-btn.spotify {
+  background: #1DB954;
+  color: white;
+}
+
+.track-link-btn.spotify:hover {
+  background: #1ed760;
+  transform: scale(1.1);
+}
+
+.track-link-btn.apple_music {
+  background: linear-gradient(135deg, #fa2d48 0%, #fc5c7d 100%);
+  color: white;
+}
+
+.track-link-btn.apple_music:hover {
+  background: linear-gradient(135deg, #fc5c7d 0%, #fa2d48 100%);
+  transform: scale(1.1);
+}
+
+.track-link-btn.youtube_music {
+  background: #ff0000;
+  color: white;
+}
+
+.track-link-btn.youtube_music:hover {
+  background: #cc0000;
+  transform: scale(1.1);
+}
+
+.track-link-btn.youtube {
+  background: #ff0000;
+  color: white;
+}
+
+.track-link-btn.youtube:hover {
+  background: #cc0000;
+  transform: scale(1.1);
+}
+
 /* ========================================
    Story Panel
    ======================================== */
