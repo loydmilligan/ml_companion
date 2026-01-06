@@ -4243,6 +4243,95 @@
   text-decoration: underline;
 }
 
+/* Reply quote in message bubble */
+.chat-reply-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  margin: 4px 0 8px 0;
+  background: rgba(17, 193, 236, 0.08);
+  border-left: 3px solid var(--blue);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.chat-reply-quote .reply-author {
+  font-weight: 600;
+  color: var(--blue);
+}
+
+.chat-reply-quote .reply-text {
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Reply preview bar above compose */
+.chat-reply-preview {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--chat-compose-bg);
+  border-top: 1px solid rgba(128, 128, 128, 0.2);
+  border-bottom: none;
+}
+
+.reply-preview-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.reply-preview-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--blue);
+}
+
+.reply-preview-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reply-preview-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: rgba(128, 128, 128, 0.1);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.reply-preview-close:hover {
+  background: rgba(128, 128, 128, 0.2);
+}
+
+/* Reply button in reaction picker */
+.chat-bubble-reaction.reply-btn {
+  border-left: 1px solid rgba(128, 128, 128, 0.2);
+  margin-left: 4px;
+  padding-left: 8px;
+}
+
 /* Pull-to-refresh indicator */
 .pull-to-refresh-indicator {
   position: absolute;

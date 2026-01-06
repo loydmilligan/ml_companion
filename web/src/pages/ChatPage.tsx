@@ -17,9 +17,19 @@ type ChatMessage = {
   body: string;
   author_id: string | null;
   created_at: string;
+  reply_to_id: string | null;
   profiles?: {
     display_name: string | null;
     avatar_url: string | null;
+  } | null;
+  // Nested reply-to message (fetched separately)
+  reply_to?: {
+    id: string;
+    body: string;
+    author_id: string | null;
+    profiles?: {
+      display_name: string | null;
+    } | null;
   } | null;
 };
 
@@ -140,6 +150,7 @@ export default function ChatPage() {
   const [emojiDrawerOpen, setEmojiDrawerOpen] = useState(false);
   const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null);
   const [defaultEmoji, setDefaultEmoji] = useState(() => localStorage.getItem("tml_default_emoji") ?? "👍");
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const composeRef = useRef<HTMLDivElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
@@ -208,13 +219,26 @@ export default function ChatPage() {
     // Fetch most recent PAGE_SIZE messages (descending, then reverse for display)
     const { data } = await supabase
       .from("group_messages")
-      .select("id,body,author_id,created_at, profiles(display_name,avatar_url)")
+      .select("id,body,author_id,created_at,reply_to_id, profiles(display_name,avatar_url)")
       .eq("group_id", group.id)
       .order("created_at", { ascending: false })
       .limit(PAGE_SIZE);
 
     // Reverse to get chronological order for display
-    const msgs = ((data as unknown as ChatMessage[]) ?? []).reverse();
+    let msgs = ((data as unknown as ChatMessage[]) ?? []).reverse();
+
+    // Fetch reply_to messages if any
+    const replyToIds = msgs.filter(m => m.reply_to_id).map(m => m.reply_to_id) as string[];
+    if (replyToIds.length > 0) {
+      const { data: replyData } = await supabase
+        .from("group_messages")
+        .select("id,body,author_id,profiles(display_name)")
+        .in("id", replyToIds);
+
+      const replyMap = new Map((replyData ?? []).map((r: any) => [r.id, r]));
+      msgs = msgs.map(m => m.reply_to_id ? { ...m, reply_to: replyMap.get(m.reply_to_id) } : m);
+    }
+
     setMessages(msgs);
     setHasMoreMessages((totalCount ?? 0) > PAGE_SIZE);
 
@@ -256,13 +280,25 @@ export default function ChatPage() {
     // Fetch messages older than the oldest current message
     const { data } = await supabase
       .from("group_messages")
-      .select("id,body,author_id,created_at, profiles(display_name,avatar_url)")
+      .select("id,body,author_id,created_at,reply_to_id, profiles(display_name,avatar_url)")
       .eq("group_id", group.id)
       .lt("created_at", oldestMessage.created_at)
       .order("created_at", { ascending: false })
       .limit(PAGE_SIZE);
 
-    const olderMsgs = ((data as unknown as ChatMessage[]) ?? []).reverse();
+    let olderMsgs = ((data as unknown as ChatMessage[]) ?? []).reverse();
+
+    // Fetch reply_to messages if any
+    const replyToIds = olderMsgs.filter(m => m.reply_to_id).map(m => m.reply_to_id) as string[];
+    if (replyToIds.length > 0) {
+      const { data: replyData } = await supabase
+        .from("group_messages")
+        .select("id,body,author_id,profiles(display_name)")
+        .in("id", replyToIds);
+
+      const replyMap = new Map((replyData ?? []).map((r: any) => [r.id, r]));
+      olderMsgs = olderMsgs.map(m => m.reply_to_id ? { ...m, reply_to: replyMap.get(m.reply_to_id) } : m);
+    }
 
     if (olderMsgs.length > 0) {
       // Fetch reactions for these messages
@@ -339,11 +375,24 @@ export default function ChatPage() {
     if (msgCount !== currentMessages.length || reactionCount !== currentReactionCount) {
       const { data } = await supabase
         .from("group_messages")
-        .select("id,body,author_id,created_at, profiles(display_name,avatar_url)")
+        .select("id,body,author_id,created_at,reply_to_id, profiles(display_name,avatar_url)")
         .eq("group_id", group.id)
         .order("created_at", { ascending: true });
 
-      const msgs = (data as unknown as ChatMessage[]) ?? [];
+      let msgs = (data as unknown as ChatMessage[]) ?? [];
+
+      // Fetch reply_to messages if any
+      const replyToIds = msgs.filter(m => m.reply_to_id).map(m => m.reply_to_id) as string[];
+      if (replyToIds.length > 0) {
+        const { data: replyData } = await supabase
+          .from("group_messages")
+          .select("id,body,author_id,profiles(display_name)")
+          .in("id", replyToIds);
+
+        const replyMap = new Map((replyData ?? []).map((r: any) => [r.id, r]));
+        msgs = msgs.map(m => m.reply_to_id ? { ...m, reply_to: replyMap.get(m.reply_to_id) } : m);
+      }
+
       setMessages(msgs);
 
       if (msgs.length > 0) {
@@ -454,10 +503,21 @@ export default function ChatPage() {
     if (!error) {
       const { data } = await supabase
         .from("group_messages")
-        .select("id,body,author_id,created_at, profiles(display_name,avatar_url)")
+        .select("id,body,author_id,created_at,reply_to_id, profiles(display_name,avatar_url)")
         .eq("group_id", group.id)
         .order("created_at", { ascending: true });
-      setMessages((data as unknown as ChatMessage[]) ?? []);
+
+      let msgs = (data as unknown as ChatMessage[]) ?? [];
+      const replyToIds = msgs.filter(m => m.reply_to_id).map(m => m.reply_to_id) as string[];
+      if (replyToIds.length > 0) {
+        const { data: replyData } = await supabase
+          .from("group_messages")
+          .select("id,body,author_id,profiles(display_name)")
+          .in("id", replyToIds);
+        const replyMap = new Map((replyData ?? []).map((r: any) => [r.id, r]));
+        msgs = msgs.map(m => m.reply_to_id ? { ...m, reply_to: replyMap.get(m.reply_to_id) } : m);
+      }
+      setMessages(msgs);
     }
     setSending(false);
   };
@@ -559,16 +619,29 @@ export default function ChatPage() {
       group_id: group.id,
       author_id: profile.id,
       body: trimmedMessage,
+      reply_to_id: replyingTo?.id ?? null,
     });
 
     if (!error) {
       setMessage("");
+      setReplyingTo(null);
       const { data } = await supabase
         .from("group_messages")
-        .select("id,body,author_id,created_at, profiles(display_name,avatar_url)")
+        .select("id,body,author_id,created_at,reply_to_id, profiles(display_name,avatar_url)")
         .eq("group_id", group.id)
         .order("created_at", { ascending: true });
-      setMessages((data as unknown as ChatMessage[]) ?? []);
+
+      let msgs = (data as unknown as ChatMessage[]) ?? [];
+      const replyToIds = msgs.filter(m => m.reply_to_id).map(m => m.reply_to_id) as string[];
+      if (replyToIds.length > 0) {
+        const { data: replyData } = await supabase
+          .from("group_messages")
+          .select("id,body,author_id,profiles(display_name)")
+          .in("id", replyToIds);
+        const replyMap = new Map((replyData ?? []).map((r: any) => [r.id, r]));
+        msgs = msgs.map(m => m.reply_to_id ? { ...m, reply_to: replyMap.get(m.reply_to_id) } : m);
+      }
+      setMessages(msgs);
 
       // Handle @AI mention
       if (hasAIMention && round) {
@@ -595,10 +668,21 @@ export default function ChatPage() {
           // Refresh messages to show AI response
           const { data: updatedData } = await supabase
             .from("group_messages")
-            .select("id,body,author_id,created_at, profiles(display_name,avatar_url)")
+            .select("id,body,author_id,created_at,reply_to_id, profiles(display_name,avatar_url)")
             .eq("group_id", group.id)
             .order("created_at", { ascending: true });
-          setMessages((updatedData as unknown as ChatMessage[]) ?? []);
+
+          let aiMsgs = (updatedData as unknown as ChatMessage[]) ?? [];
+          const aiReplyIds = aiMsgs.filter(m => m.reply_to_id).map(m => m.reply_to_id) as string[];
+          if (aiReplyIds.length > 0) {
+            const { data: aiReplyData } = await supabase
+              .from("group_messages")
+              .select("id,body,author_id,profiles(display_name)")
+              .in("id", aiReplyIds);
+            const aiReplyMap = new Map((aiReplyData ?? []).map((r: any) => [r.id, r]));
+            aiMsgs = aiMsgs.map(m => m.reply_to_id ? { ...m, reply_to: aiReplyMap.get(m.reply_to_id) } : m);
+          }
+          setMessages(aiMsgs);
         }
         setAiTyping(false);
       }
@@ -708,6 +792,13 @@ export default function ChatPage() {
               </div>
               <span className="chat-author">{item.profiles?.display_name ?? "Family"}</span>
             </div>
+            {/* Quoted message (reply) */}
+            {item.reply_to && (
+              <div className="chat-reply-quote" onClick={(e) => e.stopPropagation()}>
+                <span className="reply-author">{item.reply_to.profiles?.display_name ?? "Family"}</span>
+                <span className="reply-text">{item.reply_to.body.length > 80 ? item.reply_to.body.slice(0, 80) + "..." : item.reply_to.body}</span>
+              </div>
+            )}
             <p>{renderMessageBody(item.body, openPanel)}</p>
             {(() => {
               const videoId = extractYouTubeId(item.body);
@@ -753,6 +844,17 @@ export default function ChatPage() {
                     {emoji}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  className="chat-bubble-reaction reply-btn"
+                  onClick={() => {
+                    setReplyingTo(item);
+                    setReactionPickerFor(null);
+                  }}
+                  title="Reply"
+                >
+                  ↩️
+                </button>
               </div>
             )}
           </div>
@@ -761,6 +863,23 @@ export default function ChatPage() {
         <div ref={chatEndRef} />
       </div>
       <div className="chat-compose" ref={composeRef}>
+        {/* Reply preview bar */}
+        {replyingTo && (
+          <div className="chat-reply-preview">
+            <div className="reply-preview-content">
+              <span className="reply-preview-label">Replying to {replyingTo.profiles?.display_name ?? "Family"}</span>
+              <span className="reply-preview-text">{replyingTo.body.length > 50 ? replyingTo.body.slice(0, 50) + "..." : replyingTo.body}</span>
+            </div>
+            <button
+              type="button"
+              className="reply-preview-close"
+              onClick={() => setReplyingTo(null)}
+              aria-label="Cancel reply"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         {/* Emoji drawer */}
         <div className={`chat-emoji-drawer ${emojiDrawerOpen ? "open" : ""}`}>
           {allEmojis.map((emoji) => (
