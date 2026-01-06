@@ -595,6 +595,7 @@ async function processUserSubmitted(
       profile_id: competitor?.profile_id || null,
       activity_type: "submitted",
       event_id: event.id,
+      action_at: event.received_at ?? new Date().toISOString(),
     }, {
       onConflict: "round_id,actor_name,activity_type",
     });
@@ -645,6 +646,7 @@ async function processUserVoted(
       profile_id: competitor?.profile_id || null,
       activity_type: "voted",
       event_id: event.id,
+      action_at: event.received_at ?? new Date().toISOString(),
     }, {
       onConflict: "round_id,actor_name,activity_type",
     });

@@ -90,6 +90,20 @@ create table round_awards (
   created_at timestamptz default now()
 );
 
+create table round_user_activity (
+  id uuid primary key default gen_random_uuid(),
+  round_id uuid references rounds(id) on delete cascade,
+  actor_name text not null,
+  profile_id uuid references profiles(id),
+  activity_type text check (activity_type in ('submitted','voted')) not null,
+  event_id text,
+  action_at timestamptz,
+  created_at timestamptz default now()
+);
+
+alter table round_user_activity
+  add constraint round_user_activity_unique unique (round_id, actor_name, activity_type);
+
 create table player_connections (
   id uuid primary key default gen_random_uuid(),
   group_id uuid references family_groups(id) on delete cascade,

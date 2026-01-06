@@ -86,6 +86,23 @@ type BonusPointEntry = {
   rounds: { theme: string } | null;
 };
 
+type ActionRecord = {
+  id: string;
+  round_id: string;
+  actor_name: string;
+  activity_type: "submitted" | "voted";
+  profile_id: string | null;
+  action_at: string | null;
+  created_at: string;
+};
+
+type ActionDraft = {
+  submitted: boolean;
+  submittedAt: string;
+  voted: boolean;
+  votedAt: string;
+};
+
 type RoundImportRow = {
   id: string;
   external_round_id: string;
@@ -237,6 +254,12 @@ export default function AdminPage() {
   const [ytPlaylistStatus, setYtPlaylistStatus] = useState<string | null>(null);
   const [ytPlaylistPreview, setYtPlaylistPreview] = useState<{ videos: { videoId: string; title: string; artist: string | null }[]; count: number } | null>(null);
   const [ytPlaylistUrl, setYtPlaylistUrl] = useState<string | null>(null);
+  // User Action Tracking state
+  const [trackingRoundId, setTrackingRoundId] = useState<string | null>(null);
+  const [actionRecords, setActionRecords] = useState<ActionRecord[]>([]);
+  const [actionDrafts, setActionDrafts] = useState<Record<string, ActionDraft>>({});
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionSavingId, setActionSavingId] = useState<string | null>(null);
 
   // Timeline Game state
   const [timelineTesters, setTimelineTesters] = useState<Set<string>>(new Set());
@@ -259,6 +282,145 @@ export default function AdminPage() {
       fetchRoundImports(group.id, selectedLeagueId);
     }
   }, [selectedLeagueId, leagues, roundSeasonNumber]);
+
+  const formatDateTimeLocal = (value: string | null) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  };
+
+  const parseDateTimeLocal = (value: string) => {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toISOString();
+  };
+
+  const loadActionTracking = async (roundId: string) => {
+    setActionLoading(true);
+    const { data } = await supabase
+      .from("round_user_activity")
+      .select("id,round_id,actor_name,activity_type,profile_id,action_at,created_at")
+      .eq("round_id", roundId)
+      .order("created_at", { ascending: true });
+
+    const records = (data as ActionRecord[]) ?? [];
+    setActionRecords(records);
+
+    const recordMap = new Map<string, { submitted?: ActionRecord; voted?: ActionRecord }>();
+    records.forEach((record) => {
+      const key = record.actor_name.toLowerCase();
+      if (!recordMap.has(key)) {
+        recordMap.set(key, {});
+      }
+      const entry = recordMap.get(key)!;
+      entry[record.activity_type] = record;
+    });
+
+    const drafts: Record<string, ActionDraft> = {};
+    seasonCompetitors.forEach((competitor) => {
+      const entry = recordMap.get(competitor.name.toLowerCase());
+      const submittedRecord = entry?.submitted;
+      const votedRecord = entry?.voted;
+      drafts[competitor.id] = {
+        submitted: Boolean(submittedRecord),
+        submittedAt: formatDateTimeLocal(submittedRecord?.action_at ?? submittedRecord?.created_at ?? null),
+        voted: Boolean(votedRecord),
+        votedAt: formatDateTimeLocal(votedRecord?.action_at ?? votedRecord?.created_at ?? null),
+      };
+    });
+
+    setActionDrafts(drafts);
+    setActionLoading(false);
+  };
+
+  const handleTrackingRoundChange = (roundId: string) => {
+    setTrackingRoundId(roundId || null);
+    if (roundId) {
+      loadActionTracking(roundId);
+    } else {
+      setActionRecords([]);
+      setActionDrafts({});
+    }
+  };
+
+  const saveActionTracking = async (competitor: SeasonCompetitor) => {
+    if (!trackingRoundId) return;
+    const draft = actionDrafts[competitor.id];
+    if (!draft) return;
+
+    setActionSavingId(competitor.id);
+
+    const recordMap = new Map<string, { submitted?: ActionRecord; voted?: ActionRecord }>();
+    actionRecords.forEach((record) => {
+      const key = record.actor_name.toLowerCase();
+      if (!recordMap.has(key)) {
+        recordMap.set(key, {});
+      }
+      recordMap.get(key)![record.activity_type] = record;
+    });
+
+    const existing = recordMap.get(competitor.name.toLowerCase());
+    const tasks: Promise<any>[] = [];
+
+    if (draft.submitted) {
+      tasks.push(
+        supabase.from("round_user_activity").upsert(
+          {
+            round_id: trackingRoundId,
+            actor_name: competitor.name,
+            profile_id: competitor.profile_id,
+            activity_type: "submitted",
+            event_id: "manual",
+            action_at: parseDateTimeLocal(draft.submittedAt) ?? new Date().toISOString(),
+          },
+          { onConflict: "round_id,actor_name,activity_type" }
+        ).then()
+      );
+    } else if (existing?.submitted) {
+      tasks.push(
+        supabase
+          .from("round_user_activity")
+          .delete()
+          .eq("round_id", trackingRoundId)
+          .eq("actor_name", competitor.name)
+          .eq("activity_type", "submitted")
+          .then()
+      );
+    }
+
+    if (draft.voted) {
+      tasks.push(
+        supabase.from("round_user_activity").upsert(
+          {
+            round_id: trackingRoundId,
+            actor_name: competitor.name,
+            profile_id: competitor.profile_id,
+            activity_type: "voted",
+            event_id: "manual",
+            action_at: parseDateTimeLocal(draft.votedAt) ?? new Date().toISOString(),
+          },
+          { onConflict: "round_id,actor_name,activity_type" }
+        ).then()
+      );
+    } else if (existing?.voted) {
+      tasks.push(
+        supabase
+          .from("round_user_activity")
+          .delete()
+          .eq("round_id", trackingRoundId)
+          .eq("actor_name", competitor.name)
+          .eq("activity_type", "voted")
+          .then()
+      );
+    }
+
+    await Promise.all(tasks);
+    await loadActionTracking(trackingRoundId);
+    setActionSavingId(null);
+  };
 
   const fetchCompetitors = async (groupId: string) => {
     const { data: competitorData } = await supabase
@@ -436,6 +598,12 @@ export default function AdminPage() {
 
     fetchData();
   }, [group]);
+
+  useEffect(() => {
+    if (!trackingRoundId) return;
+    if (!seasonCompetitors.length) return;
+    loadActionTracking(trackingRoundId);
+  }, [trackingRoundId, seasonCompetitors]);
 
   const fetchRoundImports = async (groupId: string, leagueId?: string | null) => {
     if (!leagueId && !selectedLeagueId) {
@@ -939,6 +1107,26 @@ export default function AdminPage() {
       console.error("Error saving timeline release years:", err);
     } finally {
       setTimelineReleaseYearSaving(false);
+    }
+  };
+
+  // Timeline Game: Reset all guesses for a round
+  const [timelineResetLoading, setTimelineResetLoading] = useState(false);
+  const resetTimelineGuesses = async (roundId: string) => {
+    if (!roundId) return;
+    setTimelineResetLoading(true);
+    try {
+      const { error } = await supabase
+        .from("timeline_guesses")
+        .delete()
+        .eq("round_id", roundId);
+      if (error) {
+        console.error("Error resetting timeline guesses:", error);
+      }
+    } catch (err) {
+      console.error("Error resetting timeline guesses:", err);
+    } finally {
+      setTimelineResetLoading(false);
     }
   };
 
@@ -3123,6 +3311,131 @@ python scripts/build_track_metadata.py`}
             </Button>
           </Card>
           <Card className="dashboard-card">
+            <h2>User Action Tracking</h2>
+            <p className="muted">
+              Manually track submissions and votes when email ingestion misses an action. Times default to the stored activity time.
+            </p>
+            <select
+              className="field-input"
+              value={trackingRoundId ?? ""}
+              onChange={(event) => handleTrackingRoundChange(event.target.value)}
+            >
+              <option value="">Select round</option>
+              {rounds.map((round) => (
+                <option key={round.id} value={round.id}>
+                  S{round.season_number ?? "?"} R{round.round_number ?? "?"}: {round.theme}
+                </option>
+              ))}
+            </select>
+            {trackingRoundId && actionLoading ? (
+              <p className="muted">Loading action status...</p>
+            ) : null}
+            {trackingRoundId && !actionLoading ? (
+              <div className="admin-list" style={{ marginTop: 12 }}>
+                {seasonCompetitors.length ? (
+                  seasonCompetitors.map((competitor) => {
+                    const draft = actionDrafts[competitor.id] ?? {
+                      submitted: false,
+                      submittedAt: "",
+                      voted: false,
+                      votedAt: "",
+                    };
+                    return (
+                      <div key={competitor.id} className="admin-list-row">
+                        <div>
+                          <strong>{competitor.name}</strong>
+                          <span className="muted">Track submissions and votes for this round.</span>
+                        </div>
+                        <div className="admin-row-meta" style={{ flex: 1 }}>
+                          <div className="admin-form" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+                            <label className="field" style={{ margin: 0 }}>
+                              <span className="field-label">Submitted</span>
+                              <input
+                                type="checkbox"
+                                checked={draft.submitted}
+                                onChange={(event) =>
+                                  setActionDrafts((prev) => ({
+                                    ...prev,
+                                    [competitor.id]: {
+                                      ...draft,
+                                      submitted: event.target.checked,
+                                    },
+                                  }))
+                                }
+                              />
+                            </label>
+                            <label className="field" style={{ margin: 0 }}>
+                              <span className="field-label">Submitted time</span>
+                              <input
+                                type="datetime-local"
+                                className="field-input"
+                                value={draft.submittedAt}
+                                onChange={(event) =>
+                                  setActionDrafts((prev) => ({
+                                    ...prev,
+                                    [competitor.id]: {
+                                      ...draft,
+                                      submittedAt: event.target.value,
+                                    },
+                                  }))
+                                }
+                              />
+                            </label>
+                            <label className="field" style={{ margin: 0 }}>
+                              <span className="field-label">Voted</span>
+                              <input
+                                type="checkbox"
+                                checked={draft.voted}
+                                onChange={(event) =>
+                                  setActionDrafts((prev) => ({
+                                    ...prev,
+                                    [competitor.id]: {
+                                      ...draft,
+                                      voted: event.target.checked,
+                                    },
+                                  }))
+                                }
+                              />
+                            </label>
+                            <label className="field" style={{ margin: 0 }}>
+                              <span className="field-label">Vote time</span>
+                              <input
+                                type="datetime-local"
+                                className="field-input"
+                                value={draft.votedAt}
+                                onChange={(event) =>
+                                  setActionDrafts((prev) => ({
+                                    ...prev,
+                                    [competitor.id]: {
+                                      ...draft,
+                                      votedAt: event.target.value,
+                                    },
+                                  }))
+                                }
+                              />
+                            </label>
+                          </div>
+                        </div>
+                        <div className="admin-row-actions">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => saveActionTracking(competitor)}
+                            disabled={actionSavingId === competitor.id}
+                          >
+                            {actionSavingId === competitor.id ? "Saving..." : "Save"}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="muted">No competitors available yet.</p>
+                )}
+              </div>
+            ) : null}
+          </Card>
+          <Card className="dashboard-card">
             <h2>Song platform links</h2>
             <p className="muted">
               Fetch Apple Music, YouTube, and YouTube Music links for all submissions using song.link API.
@@ -3859,9 +4172,26 @@ python scripts/build_track_metadata.py`}
                 </select>
               </label>
 
-              <Button type="button" variant="secondary" onClick={saveSettings} disabled={!settingsDraft} style={{ maxWidth: 200 }}>
-                Save Timeline Settings
-              </Button>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Button type="button" variant="secondary" onClick={saveSettings} disabled={!settingsDraft} style={{ maxWidth: 200 }}>
+                  Save Timeline Settings
+                </Button>
+                {timelineReleaseYearRoundId && (
+                  <Button
+                    type="button"
+                    variant="danger"
+                    onClick={() => {
+                      if (window.confirm("Reset all Timeline Game guesses for this round? Players will be able to play again.")) {
+                        resetTimelineGuesses(timelineReleaseYearRoundId);
+                      }
+                    }}
+                    disabled={timelineResetLoading}
+                    style={{ maxWidth: 200 }}
+                  >
+                    {timelineResetLoading ? "Resetting..." : "Reset All Guesses"}
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Testers Section */}

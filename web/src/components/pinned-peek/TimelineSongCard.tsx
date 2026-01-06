@@ -3,24 +3,26 @@ import { CSS } from "@dnd-kit/utilities";
 
 type TimelineSongCardProps = {
   id: string;
-  title: string;
-  artist: string | null;
   artworkUrl: string | null;
   releaseYear?: number | null;
   showYear?: boolean;
   isCorrect?: boolean | null;
   disabled?: boolean;
+  size?: number;
+  isSelected?: boolean;
+  onSelect?: () => void;
 };
 
 export function TimelineSongCard({
   id,
-  title,
-  artist,
   artworkUrl,
   releaseYear,
   showYear = false,
   isCorrect,
   disabled = false,
+  size = 56,
+  isSelected = false,
+  onSelect,
 }: TimelineSongCardProps) {
   const {
     attributes,
@@ -31,99 +33,90 @@ export function TimelineSongCard({
     isDragging,
   } = useSortable({ id, disabled });
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 999 : 1,
-  };
-
   const getBorderColor = () => {
+    if (isSelected) return "var(--accent)";
     if (isCorrect === true) return "var(--success)";
     if (isCorrect === false) return "var(--error)";
     return "var(--border)";
   };
 
+  const cardStyle: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 999 : 1,
+    width: `${size}px`,
+    height: `${size}px`,
+    borderColor: getBorderColor(),
+    cursor: disabled ? "default" : isDragging ? "grabbing" : "grab",
+    boxShadow: isDragging
+      ? "0 4px 16px rgba(0, 0, 0, 0.3)"
+      : isSelected
+        ? "0 0 0 2px var(--accent), 0 4px 12px rgba(0, 0, 0, 0.2)"
+        : undefined,
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isDragging && onSelect) {
+      onSelect();
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={cardStyle}
       {...attributes}
       {...listeners}
       className="timeline-song-card"
       data-dragging={isDragging}
       data-disabled={disabled}
+      data-selected={isSelected}
+      onClick={handleClick}
     >
       <style>{`
         .timeline-song-card {
-          display: grid;
-          grid-template-columns: 48px 1fr ${showYear ? "50px" : ""};
-          gap: 12px;
-          align-items: center;
-          padding: 10px 12px;
+          position: relative;
+          flex-shrink: 0;
           background: var(--bg-secondary);
-          border: 2px solid ${getBorderColor()};
-          border-radius: 10px;
-          cursor: ${disabled ? "default" : "grab"};
+          border: 3px solid var(--border);
+          border-radius: 8px;
           touch-action: none;
           user-select: none;
-          transition: box-shadow 0.15s ease, border-color 0.15s ease;
+          overflow: hidden;
         }
-        .timeline-song-card:hover:not([data-disabled="true"]) {
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        }
-        .timeline-song-card[data-dragging="true"] {
-          cursor: grabbing;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+        .timeline-song-card:hover:not([data-disabled="true"]):not([data-dragging="true"]) {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
         .timeline-song-card[data-disabled="true"] {
-          opacity: 0.7;
+          opacity: 0.8;
         }
         .timeline-song-artwork {
-          width: 48px;
-          height: 48px;
-          border-radius: 6px;
+          width: 100%;
+          height: 100%;
           object-fit: cover;
           background: var(--bg-tertiary);
-          flex-shrink: 0;
+          display: block;
         }
-        .timeline-song-info {
-          min-width: 0;
-          overflow: hidden;
-        }
-        .timeline-song-title {
-          font-weight: 500;
-          font-size: 0.95rem;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          color: var(--text-primary);
-        }
-        .timeline-song-artist {
-          font-size: 0.8rem;
-          color: var(--text-muted);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .timeline-song-year {
-          font-size: 0.85rem;
-          color: var(--text-muted);
-          text-align: center;
+        .timeline-song-year-badge {
+          position: absolute;
+          bottom: 2px;
+          right: 2px;
+          background: rgba(0, 0, 0, 0.75);
+          color: white;
+          font-size: 0.65rem;
+          font-weight: 600;
+          padding: 2px 4px;
+          border-radius: 4px;
           font-variant-numeric: tabular-nums;
         }
-        .timeline-drag-handle {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-          padding: 4px;
-        }
-        .timeline-drag-handle span {
-          display: block;
-          width: 18px;
-          height: 2px;
-          background: var(--text-muted);
-          border-radius: 1px;
+        .timeline-correct-indicator {
+          position: absolute;
+          top: 2px;
+          right: 2px;
+          font-size: 0.9rem;
+          line-height: 1;
         }
       `}</style>
 
@@ -133,13 +126,14 @@ export function TimelineSongCard({
         <div className="timeline-song-artwork" />
       )}
 
-      <div className="timeline-song-info">
-        <div className="timeline-song-title">{title}</div>
-        {artist && <div className="timeline-song-artist">{artist}</div>}
-      </div>
-
       {showYear && releaseYear && (
-        <div className="timeline-song-year">{releaseYear}</div>
+        <div className="timeline-song-year-badge">{releaseYear}</div>
+      )}
+
+      {isCorrect !== null && isCorrect !== undefined && (
+        <div className="timeline-correct-indicator">
+          {isCorrect ? "\u2713" : "\u2717"}
+        </div>
       )}
     </div>
   );
