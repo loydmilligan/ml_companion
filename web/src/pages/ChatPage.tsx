@@ -150,6 +150,12 @@ export default function ChatPage() {
   const touchStartY = useRef(0);
   const isPulling = useRef(false);
 
+  // Pagination state
+  const PAGE_SIZE = 50;
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const isInitialLoad = useRef(true);
+
   // Listen for localStorage changes (when settings change)
   useEffect(() => {
     const handleStorage = () => {
@@ -187,18 +193,30 @@ export default function ChatPage() {
     return result;
   }, []);
 
-  // Initial load - shows loading state
+  // Initial load - shows loading state, loads most recent messages
   const loadMessages = useCallback(async () => {
     if (!group) return;
     setLoading(true);
+    isInitialLoad.current = true;
+
+    // First get total count to know if there are more messages
+    const { count: totalCount } = await supabase
+      .from("group_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("group_id", group.id);
+
+    // Fetch most recent PAGE_SIZE messages (descending, then reverse for display)
     const { data } = await supabase
       .from("group_messages")
       .select("id,body,author_id,created_at, profiles(display_name,avatar_url)")
       .eq("group_id", group.id)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false })
+      .limit(PAGE_SIZE);
 
-    const msgs = (data as unknown as ChatMessage[]) ?? [];
+    // Reverse to get chronological order for display
+    const msgs = ((data as unknown as ChatMessage[]) ?? []).reverse();
     setMessages(msgs);
+    setHasMoreMessages((totalCount ?? 0) > PAGE_SIZE);
 
     // Fetch reactions for all messages in one query
     if (msgs.length > 0) {
@@ -221,6 +239,68 @@ export default function ChatPage() {
 
     setLoading(false);
   }, [group, groupReactionsByMessage]);
+
+  // Load earlier messages (pagination)
+  const loadEarlierMessages = useCallback(async () => {
+    if (!group || loadingMore || messages.length === 0) return;
+
+    const oldestMessage = messages[0];
+    if (!oldestMessage) return;
+
+    setLoadingMore(true);
+
+    // Get scroll position before adding messages
+    const thread = threadRef.current;
+    const previousScrollHeight = thread?.scrollHeight ?? 0;
+
+    // Fetch messages older than the oldest current message
+    const { data } = await supabase
+      .from("group_messages")
+      .select("id,body,author_id,created_at, profiles(display_name,avatar_url)")
+      .eq("group_id", group.id)
+      .lt("created_at", oldestMessage.created_at)
+      .order("created_at", { ascending: false })
+      .limit(PAGE_SIZE);
+
+    const olderMsgs = ((data as unknown as ChatMessage[]) ?? []).reverse();
+
+    if (olderMsgs.length > 0) {
+      // Fetch reactions for these messages
+      const msgIds = olderMsgs.map(m => m.id);
+      const { data: reactionData } = await supabase
+        .from("message_reactions")
+        .select("id,message_id,reactor_id,emoji")
+        .in("message_id", msgIds);
+
+      // Merge new reactions with existing
+      const newReactions = groupReactionsByMessage((reactionData as MessageReaction[]) ?? []);
+      setReactions(prev => {
+        const merged = new Map(prev);
+        for (const [msgId, counts] of newReactions) {
+          merged.set(msgId, counts);
+        }
+        return merged;
+      });
+
+      // Prepend older messages
+      setMessages(prev => [...olderMsgs, ...prev]);
+
+      // Check if there are even more messages
+      setHasMoreMessages(olderMsgs.length === PAGE_SIZE);
+
+      // Restore scroll position after DOM update
+      requestAnimationFrame(() => {
+        if (thread) {
+          const newScrollHeight = thread.scrollHeight;
+          thread.scrollTop = newScrollHeight - previousScrollHeight;
+        }
+      });
+    } else {
+      setHasMoreMessages(false);
+    }
+
+    setLoadingMore(false);
+  }, [group, loadingMore, messages, groupReactionsByMessage]);
 
   // Use refs to track current state for silent refresh (avoids dependency issues)
   const messagesRef = useRef(messages);
@@ -336,7 +416,16 @@ export default function ChatPage() {
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length === 0) return;
+
+    // Use instant scroll on initial load, smooth scroll for new messages
+    const behavior = isInitialLoad.current ? "instant" : "smooth";
+    chatEndRef.current?.scrollIntoView({ behavior });
+
+    // Reset initial load flag after first scroll
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+    }
   }, [messages]);
 
   // Handle quoted song from peek panel
@@ -565,6 +654,17 @@ export default function ChatPage() {
         {!loading && !messages.length ? (
           <p className="muted">No messages yet. Start the conversation.</p>
         ) : null}
+        {/* Load earlier messages button */}
+        {!loading && hasMoreMessages && (
+          <button
+            type="button"
+            className="load-earlier-btn"
+            onClick={loadEarlierMessages}
+            disabled={loadingMore}
+          >
+            {loadingMore ? "Loading..." : "Load earlier messages"}
+          </button>
+        )}
         {/* AI typing indicator */}
         {aiTyping && (
           <div className="chat-bubble ai-typing">
