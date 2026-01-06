@@ -230,6 +230,13 @@ export default function AdminPage() {
   const [backfillStatus, setBackfillStatus] = useState<string | null>(null);
   const [backfillResults, setBackfillResults] = useState<{ success: number; failed: number; remaining: boolean } | null>(null);
 
+  // YouTube Playlist Generator state
+  const [ytPlaylistRoundId, setYtPlaylistRoundId] = useState<string | null>(null);
+  const [ytPlaylistLoading, setYtPlaylistLoading] = useState(false);
+  const [ytPlaylistStatus, setYtPlaylistStatus] = useState<string | null>(null);
+  const [ytPlaylistPreview, setYtPlaylistPreview] = useState<{ videos: { videoId: string; title: string; artist: string | null }[]; count: number } | null>(null);
+  const [ytPlaylistUrl, setYtPlaylistUrl] = useState<string | null>(null);
+
   useEffect(() => {
     if (!selectedLeagueId) return;
     const league = leagues.find((row) => row.id === selectedLeagueId);
@@ -2005,6 +2012,62 @@ export default function AdminPage() {
     }
   };
 
+  // YouTube Playlist functions
+  const previewYouTubePlaylist = async (roundId: string) => {
+    setYtPlaylistRoundId(roundId);
+    setYtPlaylistLoading(true);
+    setYtPlaylistStatus("Loading videos...");
+    setYtPlaylistPreview(null);
+    setYtPlaylistUrl(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("youtube-playlist", {
+        body: { mode: "preview", round_id: roundId },
+      });
+
+      if (error) {
+        setYtPlaylistStatus(`Error: ${error.message}`);
+        return;
+      }
+
+      setYtPlaylistPreview({ videos: data.videos, count: data.count });
+      setYtPlaylistStatus(`Found ${data.count} videos ready for playlist`);
+    } catch (err) {
+      setYtPlaylistStatus(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setYtPlaylistLoading(false);
+    }
+  };
+
+  const createYouTubePlaylist = async () => {
+    if (!ytPlaylistRoundId) return;
+
+    setYtPlaylistLoading(true);
+    setYtPlaylistStatus("Creating YouTube playlist...");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("youtube-playlist", {
+        body: { mode: "create", round_id: ytPlaylistRoundId },
+      });
+
+      if (error) {
+        setYtPlaylistStatus(`Error: ${error.message}`);
+        return;
+      }
+
+      if (data.success) {
+        setYtPlaylistUrl(data.playlistUrl);
+        setYtPlaylistStatus(`Playlist created! ${data.videosAdded}/${data.totalVideos} videos added.`);
+      } else {
+        setYtPlaylistStatus(`Failed: ${data.error}`);
+      }
+    } catch (err) {
+      setYtPlaylistStatus(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setYtPlaylistLoading(false);
+    }
+  };
+
   if (!isLead) {
     return (
       <div className="page">
@@ -2979,6 +3042,78 @@ python scripts/build_track_metadata.py`}
               <p className="muted" style={{ fontSize: "0.85rem" }}>
                 Click again to process the next batch.
               </p>
+            )}
+          </Card>
+          <Card className="dashboard-card">
+            <h2>YouTube Playlist Generator</h2>
+            <p className="muted">
+              Generate a YouTube playlist from a round's video submissions.
+            </p>
+
+            <div style={{ display: "flex", gap: 8, marginBottom: 16, marginTop: 12 }}>
+              <select
+                className="field-input"
+                value={ytPlaylistRoundId ?? ""}
+                onChange={(e) => e.target.value && previewYouTubePlaylist(e.target.value)}
+                style={{ flex: 1 }}
+              >
+                <option value="">Select a round...</option>
+                {rounds.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    S{r.season_number ?? "?"} R{r.round_number ?? "?"}: {r.theme}
+                    {r.youtube_playlist_url ? " ✓" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {ytPlaylistLoading && (
+              <p className="muted">Loading...</p>
+            )}
+
+            {ytPlaylistPreview && !ytPlaylistLoading && (
+              <div style={{ marginBottom: 16 }}>
+                <p className="muted" style={{ marginBottom: 8 }}>{ytPlaylistStatus}</p>
+                <div style={{
+                  maxHeight: 150,
+                  overflow: "auto",
+                  background: "var(--bg-secondary)",
+                  borderRadius: 8,
+                  padding: 12,
+                  marginBottom: 12
+                }}>
+                  {ytPlaylistPreview.videos.map((v, i) => (
+                    <div key={v.videoId} style={{ fontSize: "0.85rem", marginBottom: 4 }}>
+                      {i + 1}. {v.title} {v.artist && <span className="muted">- {v.artist}</span>}
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  onClick={createYouTubePlaylist}
+                  disabled={ytPlaylistLoading}
+                >
+                  {ytPlaylistLoading ? "Creating..." : "Create YouTube Playlist"}
+                </Button>
+              </div>
+            )}
+
+            {ytPlaylistUrl && (
+              <div style={{ marginTop: 12, padding: 12, background: "var(--success-bg)", borderRadius: 8 }}>
+                <p style={{ margin: 0, marginBottom: 8, color: "var(--success)" }}>Playlist created!</p>
+                <a
+                  href={ytPlaylistUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "var(--accent)", wordBreak: "break-all" }}
+                >
+                  {ytPlaylistUrl}
+                </a>
+              </div>
+            )}
+
+            {ytPlaylistStatus && !ytPlaylistPreview && !ytPlaylistLoading && !ytPlaylistUrl && (
+              <p className="muted" style={{ color: "var(--error)" }}>{ytPlaylistStatus}</p>
             )}
           </Card>
         </div>
