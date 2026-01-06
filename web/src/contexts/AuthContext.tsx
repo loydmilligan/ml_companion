@@ -21,6 +21,9 @@ type Profile = {
   ntfy_notify_enabled: boolean | null;
   can_toggle_push_notify: boolean | null;
   can_toggle_ntfy_notify: boolean | null;
+  // Music link preferences
+  preferred_music_provider: "spotify" | "apple_music" | "youtube_music" | null;
+  show_youtube_video: boolean | null;
 };
 
 type Group = {
@@ -43,7 +46,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 async function ensureProfile(userId: string, email?: string | null) {
   const { data: existing, error } = await supabase
     .from("profiles")
-    .select("id,email,display_name,avatar_url,season1_competitor_id,music_league_username,ntfy_topic,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify,reaction_notify_enabled,can_toggle_reaction_notify,push_notify_enabled,ntfy_notify_enabled,can_toggle_push_notify,can_toggle_ntfy_notify")
+    .select("id,email,display_name,avatar_url,season1_competitor_id,music_league_username,ntfy_topic,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify,reaction_notify_enabled,can_toggle_reaction_notify,push_notify_enabled,ntfy_notify_enabled,can_toggle_push_notify,can_toggle_ntfy_notify,preferred_music_provider,show_youtube_video")
     .eq("id", userId)
     .maybeSingle();
 
@@ -56,7 +59,7 @@ async function ensureProfile(userId: string, email?: string | null) {
     const { data, error: insertError } = await supabase
       .from("profiles")
       .insert({ id: userId, email: email ?? null, display_name: fallbackName })
-      .select("id,email,display_name,avatar_url,season1_competitor_id,music_league_username,ntfy_topic,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify,reaction_notify_enabled,can_toggle_reaction_notify,push_notify_enabled,ntfy_notify_enabled,can_toggle_push_notify,can_toggle_ntfy_notify")
+      .select("id,email,display_name,avatar_url,season1_competitor_id,music_league_username,ntfy_topic,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify,reaction_notify_enabled,can_toggle_reaction_notify,push_notify_enabled,ntfy_notify_enabled,can_toggle_push_notify,can_toggle_ntfy_notify,preferred_music_provider,show_youtube_video")
       .single();
 
     if (insertError) {

@@ -3303,8 +3303,19 @@
   opacity: 0.9;
 }
 
-.song-card-action.spotify {
+.song-card-action.spotify,
+.song-card-action.music-provider.spotify {
   background: #1db954;
+  color: #fff;
+}
+
+.song-card-action.music-provider.apple_music {
+  background: linear-gradient(135deg, #fa2d48, #fb5c74);
+  color: #fff;
+}
+
+.song-card-action.music-provider.youtube_music {
+  background: #ff0000;
   color: #fff;
 }
 

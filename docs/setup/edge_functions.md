@@ -18,6 +18,7 @@ This project uses Supabase Edge Functions for:
 | `notify` | Legacy notifications via ntfy and email |
 | `send-push-notification` | FCM v1 API push notifications |
 | `process-email-events` | Email event processing and activity tracking |
+| `song-links` | Convert Spotify URIs to multi-platform links via song.link API |
 
 ## 1) Install Supabase CLI
 - Follow Supabase CLI install instructions for your OS.
@@ -53,7 +54,7 @@ supabase secrets set SMTP_USERNAME=... SMTP_PASSWORD=... SMTP_FROM_EMAIL=...
 ## 4) Deploy the Functions
 ```bash
 # Deploy all functions at once (recommended)
-supabase functions deploy ai-assistant openrouter-round-story openrouter-compare round-challenge notify send-push-notification process-email-events --no-verify-jwt
+supabase functions deploy ai-assistant openrouter-round-story openrouter-compare round-challenge notify send-push-notification process-email-events song-links --no-verify-jwt
 
 # Or deploy individually
 supabase functions deploy openrouter-compare --no-verify-jwt
@@ -63,6 +64,7 @@ supabase functions deploy ai-assistant --no-verify-jwt
 supabase functions deploy notify --no-verify-jwt
 supabase functions deploy send-push-notification --no-verify-jwt
 supabase functions deploy process-email-events --no-verify-jwt
+supabase functions deploy song-links --no-verify-jwt
 ```
 
 **Note:** All functions implement JWT authentication internally. The `--no-verify-jwt` flag is used because Supabase's default verification is bypassed in favor of custom auth handling.
@@ -190,7 +192,35 @@ The `process-email-events` function handles Music League email ingestion and act
 - `round_user_activity` - Tracks user submission/voting activity
 - `season_competitors` - Maps actor names to profiles
 
-## 12) Create the Avatars Storage Bucket
+## 12) Song Links Function
+
+The `song-links` function converts Spotify URIs to multi-platform links using the song.link API.
+
+**Modes:**
+- `convert` - Convert a single Spotify URI to platform links
+- `convert_batch` - Convert multiple URIs (max 10 per request)
+- `backfill_round` - Fetch links for all submissions in a round and update DB
+- `backfill_all` - Fetch links for all submissions missing links (max 100 per request)
+
+**Returns:**
+- Spotify URL
+- Apple Music URL
+- YouTube URL
+- YouTube Music URL
+- Universal song.link page URL
+
+**Database Updates:**
+- `submissions.spotify_url` - Direct Spotify track URL
+- `submissions.apple_music_url` - Direct Apple Music track URL
+- `submissions.youtube_url` - Direct YouTube video URL
+- `submissions.youtube_music_url` - Direct YouTube Music track URL
+- `submissions.song_link_url` - Universal song.link page
+
+**User Preferences (profiles table):**
+- `preferred_music_provider` - User's preferred service: spotify, apple_music, or youtube_music
+- `show_youtube_video` - Whether to show YouTube video button alongside music provider
+
+## 13) Create the Avatars Storage Bucket
 In Supabase → Storage:
 - Create a bucket named `avatars` (public bucket).
 - Add a policy to allow authenticated users to upload.

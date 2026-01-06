@@ -29,6 +29,12 @@ export default function SettingsPage() {
   const [chatNotifyEnabled, setChatNotifyEnabled] = useState(profile?.chat_notify_enabled ?? true);
   const [reactionNotifyEnabled, setReactionNotifyEnabled] = useState(profile?.reaction_notify_enabled ?? true);
 
+  // Music link preferences
+  const [preferredMusicProvider, setPreferredMusicProvider] = useState<"spotify" | "apple_music" | "youtube_music">(
+    profile?.preferred_music_provider ?? "spotify"
+  );
+  const [showYoutubeVideo, setShowYoutubeVideo] = useState(profile?.show_youtube_video ?? true);
+
   // Test notification
   const [message, setMessage] = useState("Test notification from Talking Music League.");
   const [status, setStatus] = useState<string | null>(null);
@@ -41,6 +47,8 @@ export default function SettingsPage() {
     setNtfyTopic(profile?.ntfy_topic ?? "");
     setChatNotifyEnabled(profile?.chat_notify_enabled ?? true);
     setReactionNotifyEnabled(profile?.reaction_notify_enabled ?? true);
+    setPreferredMusicProvider(profile?.preferred_music_provider ?? "spotify");
+    setShowYoutubeVideo(profile?.show_youtube_video ?? true);
   }, [profile]);
 
   // Apply theme
@@ -87,6 +95,19 @@ export default function SettingsPage() {
     if (!profile) return;
     setReactionNotifyEnabled(enabled);
     await supabase.from("profiles").update({ reaction_notify_enabled: enabled }).eq("id", profile.id);
+  };
+
+  // Save music link preferences
+  const saveMusicProvider = async (provider: "spotify" | "apple_music" | "youtube_music") => {
+    if (!profile) return;
+    setPreferredMusicProvider(provider);
+    await supabase.from("profiles").update({ preferred_music_provider: provider }).eq("id", profile.id);
+  };
+
+  const saveYoutubeToggle = async (enabled: boolean) => {
+    if (!profile) return;
+    setShowYoutubeVideo(enabled);
+    await supabase.from("profiles").update({ show_youtube_video: enabled }).eq("id", profile.id);
   };
 
   // Test notifications
@@ -227,6 +248,40 @@ export default function SettingsPage() {
             ))}
           </div>
         </div>
+      </Card>
+
+      {/* Music Links Card */}
+      <Card>
+        <h2>Music Links</h2>
+        <p className="muted">Choose your preferred music service and YouTube options.</p>
+
+        <label className="field">
+          <span className="field-label">Preferred music service</span>
+          <select
+            className="field-input"
+            value={preferredMusicProvider}
+            onChange={(e) => saveMusicProvider(e.target.value as "spotify" | "apple_music" | "youtube_music")}
+          >
+            <option value="spotify">Spotify</option>
+            <option value="apple_music">Apple Music</option>
+            <option value="youtube_music">YouTube Music</option>
+          </select>
+        </label>
+        <span className="field-helper" style={{ marginTop: "-8px", marginBottom: "16px", display: "block" }}>
+          Song links will open in your preferred music app.
+        </span>
+
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={showYoutubeVideo}
+            onChange={(e) => saveYoutubeToggle(e.target.checked)}
+          />
+          <span>Show YouTube video link</span>
+        </label>
+        <span className="field-helper">
+          When enabled, a separate YouTube video button will appear alongside your music service link.
+        </span>
       </Card>
 
       {/* Notification Types Card */}
