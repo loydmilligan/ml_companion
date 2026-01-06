@@ -94,13 +94,14 @@ export function TimelineGameModal({
 
   // Calculate thumbnail size based on number of songs (aim to fit without scrolling)
   // Mobile viewport ~640px, minus header/instructions/controls/footer ~200px = ~440px for songs
+  // Increased sizes by ~10% for better visibility
   const thumbnailSize = useMemo(() => {
     const count = submissions.length;
-    if (count <= 5) return 60;
-    if (count <= 7) return 52;
-    if (count <= 9) return 46;
-    if (count <= 11) return 40;
-    return 36; // 12+ songs
+    if (count <= 5) return 66;
+    if (count <= 7) return 58;
+    if (count <= 9) return 50;
+    if (count <= 11) return 44;
+    return 40; // 12+ songs
   }, [submissions.length]);
 
   if (!isOpen) return null;
@@ -111,7 +112,7 @@ export function TimelineGameModal({
         .timeline-game-overlay {
           position: fixed;
           inset: 0;
-          background: var(--bg-primary);
+          background: #1a1a2e;
           display: flex;
           flex-direction: column;
           z-index: 1000;
@@ -218,7 +219,7 @@ export function TimelineGameModal({
         }
         .timeline-songs-container {
           flex: 1;
-          padding: 8px 12px 8px 6px;
+          padding: 8px 12px 100px 6px;
           display: flex;
           flex-direction: column;
           gap: 4px;

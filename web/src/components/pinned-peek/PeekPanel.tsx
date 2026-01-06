@@ -351,7 +351,10 @@ export default function PeekPanel({
                   <button
                     type="button"
                     className="timeline-game-button"
-                    onClick={() => setIsTimelineGameOpen(true)}
+                    onClick={() => {
+                      setIsTimelineGameOpen(true);
+                      onClose(); // Close peek panel when opening game
+                    }}
                   >
                     <span className="timeline-game-icon">🎵</span>
                     <span>Play Song Timeline</span>
