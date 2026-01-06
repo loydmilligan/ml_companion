@@ -161,13 +161,13 @@ Deno.serve(async (req) => {
   // Get round details
   const { data: round, error: roundError } = await supabase
     .from("rounds")
-    .select("id, theme, season_id, seasons(name, league_id, leagues(name))")
+    .select("id, theme, season_number, league_id, leagues(name)")
     .eq("id", roundId)
     .single();
 
   if (roundError || !round) {
     return new Response(
-      JSON.stringify({ error: "Round not found" }),
+      JSON.stringify({ error: `Round not found: ${roundError?.message || "unknown"}` }),
       { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
@@ -215,8 +215,8 @@ Deno.serve(async (req) => {
         round: {
           id: round.id,
           theme: round.theme,
-          season: round.seasons?.name,
-          league: round.seasons?.leagues?.name,
+          seasonNumber: round.season_number,
+          league: round.leagues?.name,
         },
         videos,
         count: videos.length,
@@ -231,12 +231,12 @@ Deno.serve(async (req) => {
       const accessToken = await getAccessToken();
 
       // Build playlist title and description
-      const leagueName = round.seasons?.leagues?.name ?? "Music League";
-      const seasonName = round.seasons?.name ?? "Season";
+      const leagueName = round.leagues?.name ?? "Music League";
+      const seasonNum = round.season_number ?? "";
       const theme = round.theme ?? "Round";
 
       const playlistTitle = `${theme} - ${leagueName}`;
-      const playlistDescription = `${seasonName} - ${theme}\n\nGenerated from Talking Music League`;
+      const playlistDescription = `Season ${seasonNum} - ${theme}\n\nGenerated from Talking Music League`;
 
       // Create the playlist
       const playlistId = await createPlaylist(accessToken, playlistTitle, playlistDescription);
