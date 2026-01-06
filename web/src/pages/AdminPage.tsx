@@ -225,6 +225,10 @@ export default function AdminPage() {
   const [songLinksEditing, setSongLinksEditing] = useState<Record<string, { youtube_url: string; spotify_url: string; submitter_comment: string }>>({});
   const [songLinksLoading, setSongLinksLoading] = useState(false);
   const [songLinksSaving, setSongLinksSaving] = useState(false);
+  // Song Links Backfill state
+  const [backfillLoading, setBackfillLoading] = useState(false);
+  const [backfillStatus, setBackfillStatus] = useState<string | null>(null);
+  const [backfillResults, setBackfillResults] = useState<{ success: number; failed: number; remaining: boolean } | null>(null);
 
   useEffect(() => {
     if (!selectedLeagueId) return;
@@ -1965,6 +1969,38 @@ export default function AdminPage() {
     await navigator.clipboard.writeText(cmd);
   };
 
+  const runSongLinksBackfill = async () => {
+    setBackfillLoading(true);
+    setBackfillStatus("Fetching platform links...");
+    setBackfillResults(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("song-links", {
+        body: { mode: "backfill_all", limit: 50 },
+      });
+
+      if (error) {
+        setBackfillStatus(`Error: ${error.message}`);
+        return;
+      }
+
+      const successCount = data?.results?.filter((r: { success: boolean }) => r.success).length ?? 0;
+      const failedCount = data?.results?.filter((r: { success: boolean }) => !r.success).length ?? 0;
+      const remaining = data?.remaining ?? false;
+
+      setBackfillResults({ success: successCount, failed: failedCount, remaining });
+      setBackfillStatus(
+        remaining
+          ? `Processed batch: ${successCount} success, ${failedCount} failed. More submissions remaining.`
+          : `Complete: ${successCount} success, ${failedCount} failed. All done!`
+      );
+    } catch (err) {
+      setBackfillStatus(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setBackfillLoading(false);
+    }
+  };
+
   if (!isLead) {
     return (
       <div className="page">
@@ -2916,6 +2952,30 @@ python scripts/build_track_metadata.py`}
             <Button type="button" variant="secondary" onClick={createRoundsFromImports} disabled={!roundImports.length}>
               Create rounds from unmatched
             </Button>
+          </Card>
+          <Card className="dashboard-card">
+            <h2>Song platform links</h2>
+            <p className="muted">
+              Fetch Apple Music, YouTube, and YouTube Music links for all submissions using song.link API.
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={runSongLinksBackfill}
+              disabled={backfillLoading}
+            >
+              {backfillLoading ? "Processing..." : "Backfill platform links"}
+            </Button>
+            {backfillStatus && (
+              <p className={`muted ${backfillResults?.remaining ? "" : "success-text"}`} style={{ marginTop: "8px" }}>
+                {backfillStatus}
+              </p>
+            )}
+            {backfillResults?.remaining && (
+              <p className="muted" style={{ fontSize: "0.85rem" }}>
+                Click again to process the next batch.
+              </p>
+            )}
           </Card>
         </div>
       ) : null}
