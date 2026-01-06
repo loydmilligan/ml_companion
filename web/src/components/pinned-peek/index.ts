@@ -8,4 +8,7 @@ export { default as AIAssistant } from "./AIAssistant";
 export { default as RoundChallenge } from "./RoundChallenge";
 export { default as SubmitterGuess } from "./SubmitterGuess";
 export { default as ExpandableSection } from "./ExpandableSection";
+export { default as TimelineGameModal } from "./TimelineGameModal";
+export { TimelineSongCard } from "./TimelineSongCard";
+export { useTimelineGame } from "./useTimelineGame";
 export { PeekPanelProvider, usePeekPanel } from "./PeekPanelContext";

@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 import SongCard from "./SongCard";
 import AIAssistant from "./AIAssistant";
 import RoundChallenge from "./RoundChallenge";
 import ExpandableSection from "./ExpandableSection";
 import ActivityTracker from "./ActivityTracker";
+import TimelineGameModal from "./TimelineGameModal";
 import { useYouTubeSidebar } from "../youtube-sidebar";
 import { useSubmitterGuess } from "./useSubmitterGuess";
 
@@ -81,6 +82,9 @@ type PeekPanelProps = {
   } | null;
   roundChallengeEnabled?: boolean;
   submitterGuessEnabled?: boolean;
+  timelineGameEnabled?: boolean;
+  timelineGamePhase?: "voting" | "revealed" | "both";
+  isTimelineTester?: boolean;
 };
 
 export default function PeekPanel({
@@ -99,12 +103,27 @@ export default function PeekPanel({
   previousRoundChallenge,
   roundChallengeEnabled = true,
   submitterGuessEnabled = true,
+  timelineGameEnabled = false,
+  timelineGamePhase = "voting",
+  isTimelineTester = false,
 }: PeekPanelProps) {
   const { openPlaylist } = useYouTubeSidebar();
+  const [isTimelineGameOpen, setIsTimelineGameOpen] = useState(false);
 
   // Submitter guess state
   const isRevealed = round?.status === "revealed";
   const showGuessUI = submitterGuessEnabled && (round?.status === "voting" || round?.status === "revealed");
+
+  // Timeline game visibility
+  const showTimelineGame =
+    timelineGameEnabled &&
+    isTimelineTester &&
+    round &&
+    (
+      (timelineGamePhase === "voting" && round.status === "voting") ||
+      (timelineGamePhase === "revealed" && round.status === "revealed") ||
+      (timelineGamePhase === "both" && (round.status === "voting" || round.status === "revealed"))
+    );
   const {
     competitors: guessCompetitors,
     guessStates,
@@ -326,6 +345,48 @@ export default function PeekPanel({
                 </div>
               )}
 
+              {/* Timeline Game Button */}
+              {showTimelineGame && (
+                <div className="peek-panel-section">
+                  <button
+                    type="button"
+                    className="timeline-game-button"
+                    onClick={() => setIsTimelineGameOpen(true)}
+                  >
+                    <span className="timeline-game-icon">🎵</span>
+                    <span>Play Song Timeline</span>
+                  </button>
+                  <style>{`
+                    .timeline-game-button {
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      gap: 8px;
+                      width: 100%;
+                      padding: 12px 16px;
+                      background: linear-gradient(135deg, var(--accent), var(--accent-secondary, var(--accent)));
+                      color: white;
+                      border: none;
+                      border-radius: 10px;
+                      font-size: 0.95rem;
+                      font-weight: 600;
+                      cursor: pointer;
+                      transition: transform 0.15s ease, box-shadow 0.15s ease;
+                    }
+                    .timeline-game-button:hover {
+                      transform: scale(1.02);
+                      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                    }
+                    .timeline-game-button:active {
+                      transform: scale(0.98);
+                    }
+                    .timeline-game-icon {
+                      font-size: 1.2rem;
+                    }
+                  `}</style>
+                </div>
+              )}
+
               {/* Top 3 Results (if voting complete) */}
               {isVotingComplete && top3.length > 0 && (
                 <div className="peek-panel-section">
@@ -446,6 +507,15 @@ export default function PeekPanel({
           )}
         </div>
       </aside>
+
+      {/* Timeline Game Modal */}
+      <TimelineGameModal
+        isOpen={isTimelineGameOpen}
+        onClose={() => setIsTimelineGameOpen(false)}
+        roundId={round?.id ?? null}
+        groupId={groupId}
+        isRevealed={isRevealed ?? false}
+      />
     </>
   );
 }

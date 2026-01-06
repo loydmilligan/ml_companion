@@ -34,6 +34,9 @@ export default function TopBar() {
   const [logoPalette, setLogoPalette] = useState("ocean-coral");
   const [roundChallengeEnabled, setRoundChallengeEnabled] = useState(true);
   const [submitterGuessEnabled, setSubmitterGuessEnabled] = useState(true);
+  const [timelineGameEnabled, setTimelineGameEnabled] = useState(false);
+  const [timelineGamePhase, setTimelineGamePhase] = useState<"voting" | "revealed" | "both">("voting");
+  const [isTimelineTester, setIsTimelineTester] = useState(false);
 
   const displayName = profile?.display_name ?? "Family Lead";
 
@@ -66,7 +69,7 @@ export default function TopBar() {
     let active = true;
     supabase
       .from("group_settings")
-      .select("logo_palette,round_challenge_enabled,submitter_guess_enabled")
+      .select("logo_palette,round_challenge_enabled,submitter_guess_enabled,timeline_game_enabled,timeline_game_phase")
       .eq("group_id", group.id)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -78,11 +81,31 @@ export default function TopBar() {
         setLogoPalette(data?.logo_palette ?? "ocean-coral");
         setRoundChallengeEnabled(data?.round_challenge_enabled ?? true);
         setSubmitterGuessEnabled(data?.submitter_guess_enabled ?? true);
+        setTimelineGameEnabled(data?.timeline_game_enabled ?? false);
+        setTimelineGamePhase(data?.timeline_game_phase ?? "voting");
       });
     return () => {
       active = false;
     };
   }, [group?.id]);
+
+  // Check if current user is a timeline tester
+  useEffect(() => {
+    if (!profile?.id) return;
+    let active = true;
+    supabase
+      .from("profiles")
+      .select("timeline_game_tester")
+      .eq("id", profile.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!active) return;
+        setIsTimelineTester(data?.timeline_game_tester ?? false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [profile?.id]);
 
   useEffect(() => {
     document.documentElement.dataset.logoPalette = logoPalette;
@@ -176,6 +199,9 @@ export default function TopBar() {
         previousRoundChallenge={null}
         roundChallengeEnabled={roundChallengeEnabled}
         submitterGuessEnabled={submitterGuessEnabled}
+        timelineGameEnabled={timelineGameEnabled}
+        timelineGamePhase={timelineGamePhase}
+        isTimelineTester={isTimelineTester}
       />
     </>
   );

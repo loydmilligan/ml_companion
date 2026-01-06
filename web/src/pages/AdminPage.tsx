@@ -39,6 +39,7 @@ type UserRow = {
     can_toggle_ntfy_notify: boolean | null;
     can_toggle_push_notify: boolean | null;
     ntfy_topic: string | null;
+    timeline_game_tester: boolean | null;
   } | null;
 };
 
@@ -237,6 +238,17 @@ export default function AdminPage() {
   const [ytPlaylistPreview, setYtPlaylistPreview] = useState<{ videos: { videoId: string; title: string; artist: string | null }[]; count: number } | null>(null);
   const [ytPlaylistUrl, setYtPlaylistUrl] = useState<string | null>(null);
 
+  // Timeline Game state
+  const [timelineTesters, setTimelineTesters] = useState<Set<string>>(new Set());
+  const [timelineTestersLoading, setTimelineTestersLoading] = useState(false);
+  const [timelineReleaseYearRoundId, setTimelineReleaseYearRoundId] = useState<string | null>(null);
+  const [timelineReleaseYearSubmissions, setTimelineReleaseYearSubmissions] = useState<
+    { id: string; title: string; artist: string | null; release_year: number | null; artwork_url: string | null }[]
+  >([]);
+  const [timelineReleaseYearEditing, setTimelineReleaseYearEditing] = useState<Record<string, string>>({});
+  const [timelineReleaseYearLoading, setTimelineReleaseYearLoading] = useState(false);
+  const [timelineReleaseYearSaving, setTimelineReleaseYearSaving] = useState(false);
+
   useEffect(() => {
     if (!selectedLeagueId) return;
     const league = leagues.find((row) => row.id === selectedLeagueId);
@@ -361,12 +373,20 @@ export default function AdminPage() {
       const { data: userData } = await supabase
         .from("group_members")
         .select(
-          "member_id, role, profiles(id,display_name,email,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify,reaction_notify_enabled,can_toggle_reaction_notify,can_toggle_ntfy_notify,can_toggle_push_notify,ntfy_topic)"
+          "member_id, role, profiles(id,display_name,email,chat_notify_enabled,email_notify_enabled,can_toggle_chat_notify,can_toggle_email_notify,reaction_notify_enabled,can_toggle_reaction_notify,can_toggle_ntfy_notify,can_toggle_push_notify,ntfy_topic,timeline_game_tester)"
         )
         .eq("group_id", group.id)
         .order("created_at", { ascending: true });
 
       setUsers((userData as unknown as UserRow[]) ?? []);
+      // Build timeline testers set from profiles
+      const testers = new Set<string>();
+      (userData as unknown as UserRow[] | null)?.forEach((u) => {
+        if (u.profiles?.timeline_game_tester && u.profiles?.id) {
+          testers.add(u.profiles.id);
+        }
+      });
+      setTimelineTesters(testers);
 
       const { data: connectionData } = await supabase
         .from("player_connections")
@@ -386,7 +406,7 @@ export default function AdminPage() {
       const { data: settingsData } = await supabase
         .from("group_settings")
         .select(
-          "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled,submitter_guess_enabled"
+          "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled,submitter_guess_enabled,timeline_game_enabled,timeline_game_phase"
         )
         .eq("group_id", group.id)
         .maybeSingle();
@@ -407,6 +427,8 @@ export default function AdminPage() {
         ai_chat_enabled: settingsData?.ai_chat_enabled ?? true,
         round_challenge_enabled: settingsData?.round_challenge_enabled ?? true,
         submitter_guess_enabled: settingsData?.submitter_guess_enabled ?? true,
+        timeline_game_enabled: settingsData?.timeline_game_enabled ?? false,
+        timeline_game_phase: settingsData?.timeline_game_phase ?? "voting",
       };
       setGroupSettings(fallback);
       setSettingsDraft(fallback);
@@ -848,6 +870,84 @@ export default function AdminPage() {
     }
   };
 
+  // Timeline Game: Toggle tester status for a user
+  const toggleTimelineTester = async (profileId: string, enabled: boolean) => {
+    setTimelineTestersLoading(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ timeline_game_tester: enabled })
+        .eq("id", profileId);
+      if (!error) {
+        setTimelineTesters((prev) => {
+          const next = new Set(prev);
+          if (enabled) {
+            next.add(profileId);
+          } else {
+            next.delete(profileId);
+          }
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error("Error toggling timeline tester:", err);
+    } finally {
+      setTimelineTestersLoading(false);
+    }
+  };
+
+  // Timeline Game: Load release years for a round
+  const loadTimelineReleaseYears = async (roundId: string) => {
+    setTimelineReleaseYearLoading(true);
+    setTimelineReleaseYearRoundId(roundId);
+    try {
+      const { data } = await supabase
+        .from("submissions")
+        .select("id,title,artist,release_year,artwork_url")
+        .eq("round_id", roundId)
+        .order("created_at", { ascending: true });
+      const submissions = (data as typeof timelineReleaseYearSubmissions) ?? [];
+      setTimelineReleaseYearSubmissions(submissions);
+      // Initialize editing state
+      const editing: Record<string, string> = {};
+      submissions.forEach((sub) => {
+        editing[sub.id] = sub.release_year?.toString() ?? "";
+      });
+      setTimelineReleaseYearEditing(editing);
+    } catch (err) {
+      console.error("Error loading timeline release years:", err);
+    } finally {
+      setTimelineReleaseYearLoading(false);
+    }
+  };
+
+  // Timeline Game: Save release years
+  const saveTimelineReleaseYears = async () => {
+    if (!timelineReleaseYearRoundId) return;
+    setTimelineReleaseYearSaving(true);
+    try {
+      const updates = Object.entries(timelineReleaseYearEditing).map(([id, yearStr]) => {
+        const year = yearStr ? parseInt(yearStr, 10) : null;
+        return supabase
+          .from("submissions")
+          .update({ release_year: year && !isNaN(year) ? year : null })
+          .eq("id", id);
+      });
+      await Promise.all(updates);
+      await loadTimelineReleaseYears(timelineReleaseYearRoundId);
+    } catch (err) {
+      console.error("Error saving timeline release years:", err);
+    } finally {
+      setTimelineReleaseYearSaving(false);
+    }
+  };
+
+  // Calculate how many rounds have missing release years
+  const roundsMissingReleaseYears = useMemo(() => {
+    // This would need to be calculated from a separate query; for now, track selected round
+    return timelineReleaseYearSubmissions.filter((s) => !timelineReleaseYearEditing[s.id]).length;
+  }, [timelineReleaseYearSubmissions, timelineReleaseYearEditing]);
+
   // Generate round challenge (bonus game)
   const generateRoundChallenge = async (round: RoundSummary) => {
     if (!group) return;
@@ -975,12 +1075,14 @@ export default function AdminPage() {
       ai_chat_enabled: settingsDraft.ai_chat_enabled,
       round_challenge_enabled: settingsDraft.round_challenge_enabled,
       submitter_guess_enabled: settingsDraft.submitter_guess_enabled,
+      timeline_game_enabled: settingsDraft.timeline_game_enabled,
+      timeline_game_phase: settingsDraft.timeline_game_phase,
     };
     const { data, error } = await supabase
       .from("group_settings")
       .upsert(payload, { onConflict: "group_id" })
       .select(
-        "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled,submitter_guess_enabled"
+        "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled,submitter_guess_enabled,timeline_game_enabled,timeline_game_phase"
       )
       .maybeSingle();
     if (!error && data) {
@@ -3713,6 +3815,185 @@ python scripts/build_track_metadata.py`}
             )}
           </div>
 
+          {/* Timeline Game Settings */}
+          <div className="admin-form" style={{ marginBottom: 24, padding: 16, background: "var(--bg-tertiary)", borderRadius: 8 }}>
+            <h3 style={{ margin: "0 0 12px 0", fontSize: "1rem", display: "flex", alignItems: "center", gap: 8 }}>
+              Timeline Game Settings
+              {roundsMissingReleaseYears > 0 && (
+                <span style={{ background: "var(--error)", color: "white", padding: "2px 8px", borderRadius: 12, fontSize: "0.75rem" }}>
+                  {roundsMissingReleaseYears} missing
+                </span>
+              )}
+            </h3>
+
+            {/* Enable Toggle and Phase */}
+            <div style={{ display: "grid", gap: 12, marginBottom: 16 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={settingsDraft?.timeline_game_enabled ?? false}
+                  onChange={(e) =>
+                    setSettingsDraft((prev) =>
+                      prev ? { ...prev, timeline_game_enabled: e.target.checked } : prev
+                    )
+                  }
+                />
+                <span>Enable Timeline Game</span>
+              </label>
+
+              <label className="field" style={{ margin: 0 }}>
+                <span className="field-label" style={{ fontSize: "0.8rem" }}>Available during:</span>
+                <select
+                  className="field-input"
+                  value={settingsDraft?.timeline_game_phase ?? "voting"}
+                  onChange={(e) =>
+                    setSettingsDraft((prev) =>
+                      prev ? { ...prev, timeline_game_phase: e.target.value as "voting" | "revealed" | "both" } : prev
+                    )
+                  }
+                  style={{ maxWidth: 200 }}
+                >
+                  <option value="voting">Voting phase only</option>
+                  <option value="revealed">After results only</option>
+                  <option value="both">Both phases</option>
+                </select>
+              </label>
+
+              <Button type="button" variant="secondary" onClick={saveSettings} disabled={!settingsDraft} style={{ maxWidth: 200 }}>
+                Save Timeline Settings
+              </Button>
+            </div>
+
+            {/* Testers Section */}
+            <div style={{ marginBottom: 16 }}>
+              <span className="field-label" style={{ fontSize: "0.8rem", display: "block", marginBottom: 8 }}>Testers (can see game):</span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                {users.map((u) => (
+                  <label key={u.member_id} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={timelineTesters.has(u.profiles?.id ?? "")}
+                      onChange={(e) => {
+                        if (u.profiles?.id) {
+                          toggleTimelineTester(u.profiles.id, e.target.checked);
+                        }
+                      }}
+                      disabled={timelineTestersLoading}
+                    />
+                    <span>{u.profiles?.display_name ?? "Unknown"}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Release Year Editor */}
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 16 }}>
+              <span className="field-label" style={{ fontSize: "0.8rem", display: "block", marginBottom: 8 }}>Release Year Data:</span>
+
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <select
+                  className="field-input"
+                  value={timelineReleaseYearRoundId ?? ""}
+                  onChange={(e) => e.target.value && loadTimelineReleaseYears(e.target.value)}
+                  style={{ flex: 1 }}
+                >
+                  <option value="">Select a round...</option>
+                  {rounds.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      S{r.season_number ?? "?"} R{r.round_number ?? "?"}: {r.theme}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {timelineReleaseYearLoading && (
+                <div style={{ padding: 16, color: "var(--text-muted)" }}>Loading songs...</div>
+              )}
+
+              {timelineReleaseYearSubmissions.length > 0 && !timelineReleaseYearLoading && (
+                <div style={{ display: "grid", gap: 8 }}>
+                  {timelineReleaseYearSubmissions.map((sub) => {
+                    const hasYear = !!timelineReleaseYearEditing[sub.id];
+                    return (
+                      <div
+                        key={sub.id}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "40px 1fr 80px 24px",
+                          gap: 12,
+                          alignItems: "center",
+                          padding: 8,
+                          background: hasYear ? "var(--bg-secondary)" : "var(--bg-warning)",
+                          borderRadius: 6,
+                        }}
+                      >
+                        {sub.artwork_url ? (
+                          <img
+                            src={sub.artwork_url}
+                            alt=""
+                            style={{ width: 40, height: 40, borderRadius: 4, objectFit: "cover" }}
+                          />
+                        ) : (
+                          <div style={{ width: 40, height: 40, borderRadius: 4, background: "var(--bg-tertiary)" }} />
+                        )}
+                        <div style={{ overflow: "hidden" }}>
+                          <div style={{ fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {sub.title}
+                          </div>
+                          {sub.artist && (
+                            <div className="muted" style={{ fontSize: "0.8rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {sub.artist}
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          className="field-input"
+                          type="number"
+                          min="1900"
+                          max={new Date().getFullYear()}
+                          value={timelineReleaseYearEditing[sub.id] ?? ""}
+                          onChange={(e) =>
+                            setTimelineReleaseYearEditing((prev) => ({
+                              ...prev,
+                              [sub.id]: e.target.value,
+                            }))
+                          }
+                          placeholder="Year"
+                          style={{ width: 80, textAlign: "center" }}
+                        />
+                        <span style={{ fontSize: "1.2rem" }}>{hasYear ? "✓" : "⚠️"}</span>
+                      </div>
+                    );
+                  })}
+
+                  <Button type="button" onClick={saveTimelineReleaseYears} disabled={timelineReleaseYearSaving}>
+                    {timelineReleaseYearSaving ? "Saving..." : "Save Release Years"}
+                  </Button>
+
+                  {(() => {
+                    const missing = timelineReleaseYearSubmissions.filter((s) => !timelineReleaseYearEditing[s.id]).length;
+                    if (missing > 0) {
+                      return (
+                        <p style={{ color: "var(--warning)", margin: "8px 0 0 0", fontSize: "0.85rem" }}>
+                          ⚠️ {missing} song{missing !== 1 ? "s" : ""} missing release year - game disabled until all years are filled in
+                        </p>
+                      );
+                    }
+                    return (
+                      <p style={{ color: "var(--success)", margin: "8px 0 0 0", fontSize: "0.85rem" }}>
+                        ✓ All songs have release years
+                      </p>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {timelineReleaseYearRoundId && timelineReleaseYearSubmissions.length === 0 && !timelineReleaseYearLoading && (
+                <p className="muted">No submissions found for this round.</p>
+              )}
+            </div>
+          </div>
+
           {/* Recent Points Awarded */}
           <h3 style={{ margin: "0 0 12px 0", fontSize: "1rem" }}>Recent Points Awarded</h3>
           <div className="admin-list">
@@ -3756,6 +4037,9 @@ type GroupSettings = {
   // Minigame toggles
   round_challenge_enabled: boolean;
   submitter_guess_enabled: boolean;
+  // Timeline Game settings
+  timeline_game_enabled: boolean;
+  timeline_game_phase: "voting" | "revealed" | "both";
 };
 
 const MODEL_OPTIONS = [
