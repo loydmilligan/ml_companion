@@ -147,9 +147,11 @@ Deno.serve(async (req) => {
   const mode = body?.mode ?? "preview";
   const roundId = body?.round_id;
 
+  console.log("youtube-playlist request:", { mode, roundId, bodyKeys: Object.keys(body || {}) });
+
   if (!roundId) {
     return new Response(
-      JSON.stringify({ error: "Missing round_id" }),
+      JSON.stringify({ error: "Missing round_id", receivedBody: body }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
@@ -158,18 +160,34 @@ Deno.serve(async (req) => {
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  // Get round details
+  // Get round details (simplified query without join)
   const { data: round, error: roundError } = await supabase
     .from("rounds")
-    .select("id, theme, season_number, league_id, leagues(name)")
+    .select("id, theme, season_number, league_id")
     .eq("id", roundId)
     .single();
 
   if (roundError || !round) {
+    console.error("Round query error:", roundError, "roundId:", roundId);
     return new Response(
-      JSON.stringify({ error: `Round not found: ${roundError?.message || "unknown"}` }),
+      JSON.stringify({
+        error: `Round not found: ${roundError?.message || "no data returned"}`,
+        roundId,
+        roundError: roundError ? { message: roundError.message, code: roundError.code, details: roundError.details } : null
+      }),
       { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+  }
+
+  // Get league name separately
+  let leagueName = "Music League";
+  if (round.league_id) {
+    const { data: league } = await supabase
+      .from("leagues")
+      .select("name")
+      .eq("id", round.league_id)
+      .single();
+    if (league?.name) leagueName = league.name;
   }
 
   // Get submissions with YouTube URLs
@@ -216,7 +234,7 @@ Deno.serve(async (req) => {
           id: round.id,
           theme: round.theme,
           seasonNumber: round.season_number,
-          league: round.leagues?.name,
+          league: leagueName,
         },
         videos,
         count: videos.length,
@@ -231,7 +249,6 @@ Deno.serve(async (req) => {
       const accessToken = await getAccessToken();
 
       // Build playlist title and description
-      const leagueName = round.leagues?.name ?? "Music League";
       const seasonNum = round.season_number ?? "";
       const theme = round.theme ?? "Round";
 
@@ -275,11 +292,13 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } catch (err) {
+      console.error("YouTube playlist creation error:", err);
       return new Response(
         JSON.stringify({
+          success: false,
           error: err instanceof Error ? err.message : "Failed to create playlist",
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
   }

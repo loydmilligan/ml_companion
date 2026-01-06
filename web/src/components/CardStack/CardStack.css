@@ -991,6 +991,21 @@ details.preseason-block .preseason-text {
   transform: scale(1.1);
 }
 
+/* YouTube button - next to Spotify */
+.hero-action-btn.youtube-btn {
+  left: auto;
+  right: 52px;
+  background: #ff0000;
+  border-color: #ff0000;
+  text-decoration: none;
+}
+
+.hero-action-btn.youtube-btn:hover {
+  background: #cc0000;
+  border-color: #cc0000;
+  transform: scale(1.1);
+}
+
 /* Season narrative */
 .recap-narrative {
   margin-bottom: 20px;

@@ -71,8 +71,12 @@ export interface RoundCardData {
   narrative: string | null;
   /** Quick stats */
   stats: RoundStats;
-  /** Spotify playlist URL */
+  /** Spotify playlist URL (legacy field) */
   playlistUrl: string | null;
+  /** Spotify playlist URL */
+  spotifyPlaylistUrl?: string | null;
+  /** YouTube playlist URL */
+  youtubePlaylistUrl?: string | null;
   /** Submitter guess minigame results (top guessers) */
   minigameResults?: MinigameGuesser[];
 }

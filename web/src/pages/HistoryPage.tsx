@@ -74,6 +74,8 @@ type RoundRow = {
   voting_deadline: string | null;
   narrative: string | null;
   playlist_url: string | null;
+  external_playlist_url: string | null;
+  youtube_playlist_url: string | null;
 };
 
 type SubmissionRow = {
@@ -194,7 +196,7 @@ export default function HistoryPage() {
       const { data } = await supabase
         .from("rounds")
         .select(
-          "id,theme,theme_description,theme_author,external_round_id,theme_image_url,winners_image_url,winners_image_visible,season_number,round_number,status,created_at,submission_deadline,voting_deadline,narrative,playlist_url"
+          "id,theme,theme_description,theme_author,external_round_id,theme_image_url,winners_image_url,winners_image_visible,season_number,round_number,status,created_at,submission_deadline,voting_deadline,narrative,playlist_url,external_playlist_url,youtube_playlist_url"
         )
         .in("league_id", leagueIds)
         .in("status", ["revealed", "archived"])
@@ -1009,6 +1011,8 @@ export default function HistoryPage() {
           players: Math.max(uniqueVoters.size, submissions.length),
         },
         playlistUrl: round.playlist_url,
+        spotifyPlaylistUrl: round.external_playlist_url,
+        youtubePlaylistUrl: round.youtube_playlist_url,
         minigameResults,
       };
     };
