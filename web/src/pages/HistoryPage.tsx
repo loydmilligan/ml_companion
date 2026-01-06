@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import { usePeekPanel, PeekButton } from "../components/pinned-peek";
 import { uploadBase64Image } from "../lib/imageUpload";
 import CardStack from "../components/CardStack/CardStack";
 import type {
@@ -143,6 +144,7 @@ type SeasonStatsRow = {
 export default function HistoryPage() {
   const { group } = useAuth();
   const isLead = group?.role === "lead";
+  const { openPanel } = usePeekPanel();
 
   // Data state
   const [leagues, setLeagues] = useState<LeagueRow[]>([]);
@@ -1151,15 +1153,18 @@ export default function HistoryPage() {
   }
 
   return (
-    <CardStack
-      cards={cardData}
-      onCardChange={handleCardChange}
-      onCardTap={handleCardTap}
-      onThemeClick={handleThemeClick}
-      swipeEnabled={true}
-      isLead={isLead}
-      adminCallbacks={adminCallbacks}
-      generationState={generationState}
-    />
+    <div className="history-page">
+      <PeekButton onClick={openPanel} variant="chat" />
+      <CardStack
+        cards={cardData}
+        onCardChange={handleCardChange}
+        onCardTap={handleCardTap}
+        onThemeClick={handleThemeClick}
+        swipeEnabled={true}
+        isLead={isLead}
+        adminCallbacks={adminCallbacks}
+        generationState={generationState}
+      />
+    </div>
   );
 }
