@@ -340,8 +340,8 @@ export default function PeekPanel({
                           onClose();
                         }}
                       >
-                        <span className="timeline-game-icon">🎵</span>
-                        <span>Play Song Timeline</span>
+                        <span className="timeline-game-icon">📅</span>
+                        <span>Timeline Game</span>
                       </button>
                     </div>
                   )}
@@ -350,7 +350,7 @@ export default function PeekPanel({
                   {showGuessUI && groupId && (
                     <div className="minigame-item submitter-guess-header-section">
                       <div className="submitter-guess-header">
-                        <h4>Guess the Submitter</h4>
+                        <h4><span className="submitter-guess-icon">🔍</span> Guess the Submitter</h4>
                         {maxPossibleGuesses > 0 && (
                           <span className="submitter-guess-score">
                             {isRevealed
