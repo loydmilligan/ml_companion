@@ -4165,6 +4165,7 @@
 
 .chat-page .chat-thread {
   flex: 1;
+  max-height: none; /* Override generic .chat-thread max-height */
   overflow-y: auto;
   padding: 1rem;
   padding-top: 56px; /* Space for peek button */
