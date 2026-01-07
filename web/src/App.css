@@ -3098,6 +3098,138 @@
   letter-spacing: 0.5px;
 }
 
+/* Round Title Row with Status Badge */
+.peek-panel-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.peek-panel-round-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  line-height: 1.3;
+}
+
+.peek-panel-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.peek-panel-status-badge.status-open {
+  background: var(--success, #22c55e);
+  color: white;
+}
+
+.peek-panel-status-badge.status-voting {
+  background: var(--accent, #6366f1);
+  color: white;
+}
+
+.peek-panel-status-badge.status-revealed {
+  background: var(--text-muted, #6b7280);
+  color: white;
+}
+
+/* Theme Info */
+.peek-panel-theme-info {
+  padding-bottom: 8px;
+}
+
+.peek-panel-theme-info .theme-description {
+  margin: 0 0 4px 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.peek-panel-theme-info .theme-author {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* Playlist Link Buttons (inside collapsible) */
+.playlist-link-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Minigame Items */
+.minigame-item {
+  margin-bottom: 12px;
+}
+
+.minigame-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Timeline Game Button */
+.timeline-game-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-secondary, var(--accent)));
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.timeline-game-button:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.timeline-game-button:active {
+  transform: scale(0.98);
+}
+
+.timeline-game-icon {
+  font-size: 1.2rem;
+}
+
+/* Songs Subsections */
+.songs-subsection {
+  margin-bottom: 16px;
+}
+
+.songs-subsection:last-child {
+  margin-bottom: 0;
+}
+
+.songs-subsection-title {
+  margin: 0 0 10px 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 /* Playlist Links */
 .playlist-link-section {
   display: flex;
