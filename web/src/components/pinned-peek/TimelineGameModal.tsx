@@ -132,28 +132,54 @@ export function TimelineGameModal({
           overflow: hidden;
         }
         .timeline-game-header {
+          position: relative;
+          height: 120px;
+          flex-shrink: 0;
+          overflow: hidden;
+        }
+        .timeline-game-banner {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .timeline-game-header-content {
+          position: relative;
+          z-index: 1;
           display: flex;
           justify-content: space-between;
-          align-items: center;
+          align-items: flex-end;
+          height: 100%;
           padding: 12px 16px;
-          border-bottom: 1px solid var(--border);
-          background: var(--bg-secondary);
+          background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);
         }
         .timeline-game-title {
-          font-size: 1rem;
-          font-weight: 600;
+          font-size: 1.2rem;
+          font-weight: 700;
+          color: white;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
         .timeline-game-close {
-          background: none;
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          background: rgba(0,0,0,0.5);
           border: none;
-          font-size: 1.5rem;
+          border-radius: 50%;
+          width: 32px;
+          height: 32px;
+          font-size: 1.3rem;
           cursor: pointer;
-          color: var(--text-muted);
-          padding: 4px;
+          color: white;
           line-height: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2;
         }
         .timeline-game-close:hover {
-          color: var(--text-primary);
+          background: rgba(0,0,0,0.7);
         }
         .timeline-game-instructions {
           padding: 12px 16px;
@@ -379,17 +405,24 @@ export function TimelineGameModal({
 
       <div className="timeline-game-modal" onClick={(e) => e.stopPropagation()}>
         <div className="timeline-game-header">
-          <div className="timeline-game-title">
-            Song Timeline
-            {!isLocked && attemptNumber <= 2 && (
-              <span className="timeline-attempt-badge">
-                {attemptNumber}/2
-              </span>
-            )}
-          </div>
+          <img
+            src="/images/minigames/timeline-banner.jpg"
+            alt=""
+            className="timeline-game-banner"
+          />
           <button className="timeline-game-close" onClick={onClose}>
             &times;
           </button>
+          <div className="timeline-game-header-content">
+            <div className="timeline-game-title">
+              Timeline Game
+              {!isLocked && attemptNumber <= 2 && (
+                <span className="timeline-attempt-badge">
+                  {attemptNumber}/2
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
         {!loading && canPlay && (

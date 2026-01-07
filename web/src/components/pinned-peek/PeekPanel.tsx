@@ -319,7 +319,21 @@ export default function PeekPanel({
 
                   {/* Round Challenge (only during open phase, if enabled) */}
                   {round.status === "open" && roundChallengeEnabled && (
-                    <div className="minigame-item">
+                    <div className="minigame-item minigame-with-card">
+                      <div className="minigame-card-header">
+                        <img
+                          src="/images/minigames/round-challenge.png"
+                          srcSet="/images/minigames/round-challenge.png 1x,
+                                  /images/minigames/round-challenge@2x.png 2x,
+                                  /images/minigames/round-challenge@3x.png 3x"
+                          alt=""
+                          className="minigame-card-bg"
+                        />
+                        <div className="minigame-card-content">
+                          <span className="minigame-card-title">Round Challenge</span>
+                          <span className="minigame-card-subtitle">Guess which round these songs are from</span>
+                        </div>
+                      </div>
                       <RoundChallenge
                         roundId={round.id}
                         groupId={groupId}
@@ -356,22 +370,32 @@ export default function PeekPanel({
 
                   {/* Submitter Guess Header */}
                   {showGuessUI && groupId && (
-                    <div className="minigame-item submitter-guess-header-section">
-                      <div className="submitter-guess-header">
-                        <h4><span className="submitter-guess-icon">🔍</span> Guess the Submitter</h4>
-                        {maxPossibleGuesses > 0 && (
-                          <span className="submitter-guess-score">
+                    <div className="minigame-item minigame-with-card">
+                      <div className="minigame-card-header">
+                        <img
+                          src="/images/minigames/guess-submitter.png"
+                          srcSet="/images/minigames/guess-submitter.png 1x,
+                                  /images/minigames/guess-submitter@2x.png 2x,
+                                  /images/minigames/guess-submitter@3x.png 3x"
+                          alt=""
+                          className="minigame-card-bg"
+                        />
+                        <div className="minigame-card-content">
+                          <span className="minigame-card-title">Guess the Submitter</span>
+                          <span className="minigame-card-subtitle">
                             {isRevealed
-                              ? `${correctCount}/${maxPossibleGuesses} correct`
-                              : `${totalGuessed}/${maxPossibleGuesses} guessed`}
+                              ? "Results are in! See how you did."
+                              : "Who submitted each song?"}
+                          </span>
+                        </div>
+                        {maxPossibleGuesses > 0 && (
+                          <span className="minigame-card-badge">
+                            {isRevealed
+                              ? `${correctCount}/${maxPossibleGuesses}`
+                              : `${totalGuessed}/${maxPossibleGuesses}`}
                           </span>
                         )}
                       </div>
-                      <p className="submitter-guess-intro">
-                        {isRevealed
-                          ? "Results are in! See how you did."
-                          : "Who submitted each song? Guess below!"}
-                      </p>
                       {isRevealed && leaderboard.length > 0 && (
                         <div className="submitter-guess-leaderboard">
                           <h5>Top Guessers</h5>
