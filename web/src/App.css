@@ -1074,7 +1074,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 72px;
+  height: var(--bottomnav-height, 72px);
   display: flex;
   align-items: stretch;
   justify-content: space-around;
@@ -3964,7 +3964,7 @@
   top: var(--topbar-height, 96px);
   left: 0;
   right: 0;
-  bottom: 72px; /* Bottom nav height */
+  bottom: var(--bottomnav-height, 72px);
   display: flex;
   flex-direction: column;
   background: var(--chat-bg);
@@ -3973,6 +3973,11 @@
 
 /* Light mode chat colors (default) */
 :root {
+  /* Global layout variables */
+  --topbar-height: 96px;
+  --bottomnav-height: 72px;
+
+  /* Chat variables */
   --chat-bg: #f0f2f5;
   --chat-bubble-bg: #fff;
   --chat-bubble-own-bg: var(--blue, #11c1ec);
