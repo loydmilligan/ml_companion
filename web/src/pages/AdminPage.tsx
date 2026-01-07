@@ -218,11 +218,12 @@ export default function AdminPage() {
   const [bonusPointsDraft, setBonusPointsDraft] = useState<Record<string, { points: string; reason: string }>>({});
   const [roundAwardCounts, setRoundAwardCounts] = useState<Record<string, number>>({});
   const [seasonAwardCounts, setSeasonAwardCounts] = useState<Record<string, number>>({});
-  // Round Challenge state
-  const [challengeSongs, setChallengeSongs] = useState<{
+  // Round Challenge state (legacy V1 - kept for reference)
+  const [_challengeSongs, _setChallengeSongs] = useState<{
     song1: { title: string; artist: string; spotify_url: string; youtube_url: string; theme: string };
     song2: { title: string; artist: string; spotify_url: string; youtube_url: string; theme: string };
   } | null>(null);
+  void _challengeSongs; void _setChallengeSongs;
   const [challengeRoundId, setChallengeRoundId] = useState<string | null>(null);
   const [challengeLinksEditing, setChallengeLinksEditing] = useState<{
     song1_spotify_url: string;
@@ -230,11 +231,23 @@ export default function AdminPage() {
     song2_spotify_url: string;
     song2_youtube_url: string;
   }>({ song1_spotify_url: "", song1_youtube_url: "", song2_spotify_url: "", song2_youtube_url: "" });
-  const [challengeLoading, setChallengeLoading] = useState(false);
-  const [challengeSaving, setChallengeSaving] = useState(false);
+  const [_challengeLoading, _setChallengeLoading] = useState(false);
+  void _challengeLoading; void _setChallengeLoading;
+  const [_challengeSaving, _setChallengeSaving] = useState(false);
+  void _challengeSaving; void _setChallengeSaving;
   const [roundChallengeExists, setRoundChallengeExists] = useState<Record<string, boolean>>({});
   const [challengeGenLoadingId, setChallengeGenLoadingId] = useState<string | null>(null);
   const [challengeStatusByRound, setChallengeStatusByRound] = useState<Record<string, string>>({});
+  // Round Challenge V2 state
+  const [challengeV2RoundId, setChallengeV2RoundId] = useState<string | null>(null);
+  const [challengeV2Data, setChallengeV2Data] = useState<{
+    songs: { id: string; title: string; artist: string; category_id: string }[];
+    correct_answers: Record<string, string>;
+    player_count: number;
+    scores: { display_name: string; score: number }[];
+  } | null>(null);
+  const [challengeV2Loading, setChallengeV2Loading] = useState(false);
+  const [challengeV2Categories, setChallengeV2Categories] = useState<{ id: string; title: string }[]>([]);
   // Song Links state (for Submitter Guess minigame)
   const [songLinksRoundId, setSongLinksRoundId] = useState<string | null>(null);
   const [songLinksSubmissions, setSongLinksSubmissions] = useState<
@@ -903,10 +916,10 @@ export default function AdminPage() {
     );
   };
 
-  // Load round challenge for a specific round
-  const loadRoundChallenge = async (roundId: string) => {
+  // Load round challenge for a specific round (legacy V1 - kept for reference)
+  const _loadRoundChallenge = async (roundId: string) => {
     if (!group) return;
-    setChallengeLoading(true);
+    _setChallengeLoading(true);
     setChallengeRoundId(roundId);
     try {
       const { data } = await supabase.functions.invoke("round-challenge", {
@@ -918,7 +931,7 @@ export default function AdminPage() {
         },
       });
       if (data?.songs && data.songs.length >= 2) {
-        setChallengeSongs({
+        _setChallengeSongs({
           song1: data.songs[0],
           song2: data.songs[1],
         });
@@ -932,14 +945,15 @@ export default function AdminPage() {
     } catch (err) {
       console.error("Error loading challenge:", err);
     } finally {
-      setChallengeLoading(false);
+      _setChallengeLoading(false);
     }
   };
+  void _loadRoundChallenge;
 
-  // Save updated challenge links
-  const saveChallengeLinks = async () => {
+  // Save updated challenge links (legacy V1 - kept for reference)
+  const _saveChallengeLinks = async () => {
     if (!group || !challengeRoundId) return;
-    setChallengeSaving(true);
+    _setChallengeSaving(true);
     try {
       await supabase.functions.invoke("round-challenge", {
         body: {
@@ -953,11 +967,82 @@ export default function AdminPage() {
         },
       });
       // Reload to confirm changes
-      await loadRoundChallenge(challengeRoundId);
+      await _loadRoundChallenge(challengeRoundId);
     } catch (err) {
       console.error("Error saving challenge links:", err);
     } finally {
-      setChallengeSaving(false);
+      _setChallengeSaving(false);
+    }
+  };
+  void _saveChallengeLinks;
+
+  // Load Round Challenge V2 data for answer key
+  const loadChallengeV2 = async (roundId: string) => {
+    if (!group) return;
+    setChallengeV2Loading(true);
+    setChallengeV2RoundId(roundId);
+    try {
+      // Load category names from JSON
+      if (challengeV2Categories.length === 0) {
+        const response = await fetch("/data/round_challenge_song_list.json");
+        if (response.ok) {
+          const jsonData = await response.json();
+          setChallengeV2Categories(
+            jsonData.categories.map((c: { id: string; revised_title: string }) => ({
+              id: c.id,
+              title: c.revised_title,
+            }))
+          );
+        }
+      }
+
+      // Load challenge data from round_challenge_v2 table
+      const { data: challengeData } = await supabase
+        .from("round_challenge_v2")
+        .select("songs, correct_answers")
+        .eq("round_id", roundId)
+        .eq("group_id", group.id)
+        .maybeSingle();
+
+      if (!challengeData) {
+        setChallengeV2Data(null);
+        return;
+      }
+
+      // Load player guesses and scores
+      const { data: guessesData } = await supabase
+        .from("round_challenge_guesses")
+        .select("user_id, is_correct, profiles!inner(display_name)")
+        .eq("round_id", roundId)
+        .eq("group_id", group.id);
+
+      // Aggregate scores by user
+      const scoresByUser: Record<string, { display_name: string; score: number }> = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (guessesData ?? []).forEach((g: any) => {
+        const displayName = g.profiles?.display_name ?? "Unknown";
+        if (!scoresByUser[g.user_id]) {
+          scoresByUser[g.user_id] = { display_name: displayName, score: 0 };
+        }
+        if (g.is_correct) {
+          scoresByUser[g.user_id].score += 1;
+        }
+      });
+
+      const scores = Object.values(scoresByUser).sort((a, b) => b.score - a.score);
+      const playerCount = Object.keys(scoresByUser).length;
+
+      setChallengeV2Data({
+        songs: challengeData.songs as { id: string; title: string; artist: string; category_id: string }[],
+        correct_answers: challengeData.correct_answers as Record<string, string>,
+        player_count: playerCount,
+        scores,
+      });
+    } catch (err) {
+      console.error("Error loading V2 challenge:", err);
+      setChallengeV2Data(null);
+    } finally {
+      setChallengeV2Loading(false);
     }
   };
 
@@ -2385,7 +2470,7 @@ export default function AdminPage() {
           { id: "competitors", label: "Current competitors" },
           { id: "imports", label: "Imports" },
           { id: "ai-settings", label: "AI settings" },
-          { id: "bonus", label: "Bonus Points" },
+          { id: "bonus", label: "Minigames" },
         ] as const).map((tab) => (
           <button
             key={tab.id}
@@ -3829,8 +3914,8 @@ python scripts/build_track_metadata.py`}
 
       {activeTab === "bonus" ? (
         <Card className="dashboard-card">
-          <h2>Bonus Points</h2>
-          <p className="muted">Award bonus points for Round Challenge correct guesses and other achievements.</p>
+          <h2>Minigames</h2>
+          <p className="muted">Award bonus points for minigame achievements and view Round Challenge answer keys.</p>
 
           {/* Award Form */}
           <div className="admin-form" style={{ marginBottom: 24 }}>
@@ -3867,6 +3952,7 @@ python scripts/build_track_metadata.py`}
                 <option value="">Reason...</option>
                 <option value="Round Challenge - 1 correct">Round Challenge - 1 correct</option>
                 <option value="Round Challenge - 2 correct">Round Challenge - 2 correct</option>
+                <option value="Round Challenge - 3 correct">Round Challenge - 3 correct</option>
                 <option value="Perfect Round">Perfect Round</option>
                 <option value="Bonus Award">Bonus Award</option>
               </select>
@@ -3917,16 +4003,16 @@ python scripts/build_track_metadata.py`}
             </div>
           </div>
 
-          {/* Round Challenge Song Links */}
+          {/* Round Challenge V2 Answer Key */}
           <div className="admin-form" style={{ marginBottom: 24 }}>
-            <h3 style={{ margin: "0 0 12px 0", fontSize: "1rem" }}>Edit Round Challenge Links</h3>
-            <p className="muted" style={{ marginBottom: 12 }}>Select a round to view/edit the bonus challenge song links.</p>
+            <h3 style={{ margin: "0 0 12px 0", fontSize: "1rem" }}>Round Challenge Answer Key</h3>
+            <p className="muted" style={{ marginBottom: 12 }}>View the 3 challenge songs and their correct themes for each round.</p>
 
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
               <select
                 className="field-input"
-                value={challengeRoundId ?? ""}
-                onChange={(e) => e.target.value && loadRoundChallenge(e.target.value)}
+                value={challengeV2RoundId ?? ""}
+                onChange={(e) => e.target.value && loadChallengeV2(e.target.value)}
                 style={{ flex: 1 }}
               >
                 <option value="">Select a round...</option>
@@ -3938,71 +4024,52 @@ python scripts/build_track_metadata.py`}
               </select>
             </div>
 
-            {challengeLoading && (
+            {challengeV2Loading && (
               <div style={{ padding: 16, color: "var(--text-muted)" }}>Loading challenge...</div>
             )}
 
-            {challengeSongs && !challengeLoading && (
+            {!challengeV2Loading && challengeV2RoundId && !challengeV2Data && (
+              <div style={{ padding: 16, color: "var(--text-muted)", background: "var(--bg-secondary)", borderRadius: 8 }}>
+                No Round Challenge created for this round yet.
+              </div>
+            )}
+
+            {challengeV2Data && !challengeV2Loading && (
               <div style={{ display: "grid", gap: 16 }}>
-                {/* Song 1 */}
-                <div style={{ padding: 12, background: "var(--bg-secondary)", borderRadius: 8 }}>
-                  <div style={{ marginBottom: 8 }}>
-                    <strong>Song 1:</strong> {challengeSongs.song1.title} - {challengeSongs.song1.artist}
-                    <span className="muted" style={{ marginLeft: 8 }}>({challengeSongs.song1.theme})</span>
-                  </div>
-                  <div style={{ display: "grid", gap: 8 }}>
-                    <label className="field" style={{ margin: 0 }}>
-                      <span className="field-label" style={{ fontSize: "0.8rem" }}>Spotify URL</span>
-                      <input
-                        className="field-input"
-                        value={challengeLinksEditing.song1_spotify_url}
-                        onChange={(e) => setChallengeLinksEditing((prev) => ({ ...prev, song1_spotify_url: e.target.value }))}
-                        placeholder="https://open.spotify.com/track/..."
-                      />
-                    </label>
-                    <label className="field" style={{ margin: 0 }}>
-                      <span className="field-label" style={{ fontSize: "0.8rem" }}>YouTube URL</span>
-                      <input
-                        className="field-input"
-                        value={challengeLinksEditing.song1_youtube_url}
-                        onChange={(e) => setChallengeLinksEditing((prev) => ({ ...prev, song1_youtube_url: e.target.value }))}
-                        placeholder="https://youtube.com/watch?v=..."
-                      />
-                    </label>
-                  </div>
-                </div>
+                {/* Songs with correct answers */}
+                {challengeV2Data.songs.map((song, idx) => {
+                  const correctThemeId = challengeV2Data.correct_answers[song.id];
+                  const correctTheme = challengeV2Categories.find((c) => c.id === correctThemeId);
+                  return (
+                    <div key={song.id} style={{ padding: 12, background: "var(--bg-secondary)", borderRadius: 8 }}>
+                      <div style={{ marginBottom: 4 }}>
+                        <strong>Song {idx + 1}:</strong> {song.title} - {song.artist}
+                      </div>
+                      <div style={{ color: "var(--color-success)", fontSize: "0.9rem" }}>
+                        Correct theme: {correctTheme?.title ?? correctThemeId}
+                      </div>
+                    </div>
+                  );
+                })}
 
-                {/* Song 2 */}
-                <div style={{ padding: 12, background: "var(--bg-secondary)", borderRadius: 8 }}>
-                  <div style={{ marginBottom: 8 }}>
-                    <strong>Song 2:</strong> {challengeSongs.song2.title} - {challengeSongs.song2.artist}
-                    <span className="muted" style={{ marginLeft: 8 }}>({challengeSongs.song2.theme})</span>
+                {/* Player Stats */}
+                {challengeV2Data.player_count > 0 && (
+                  <div style={{ padding: 12, background: "var(--bg-secondary)", borderRadius: 8 }}>
+                    <div style={{ marginBottom: 8 }}>
+                      <strong>Players:</strong> {challengeV2Data.player_count}
+                    </div>
+                    <div style={{ display: "grid", gap: 4 }}>
+                      {challengeV2Data.scores.map((s) => (
+                        <div key={s.display_name} style={{ display: "flex", justifyContent: "space-between" }}>
+                          <span>{s.display_name}</span>
+                          <span style={{ color: s.score === 3 ? "var(--color-success)" : s.score === 0 ? "var(--color-error)" : "inherit" }}>
+                            {s.score}/3
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div style={{ display: "grid", gap: 8 }}>
-                    <label className="field" style={{ margin: 0 }}>
-                      <span className="field-label" style={{ fontSize: "0.8rem" }}>Spotify URL</span>
-                      <input
-                        className="field-input"
-                        value={challengeLinksEditing.song2_spotify_url}
-                        onChange={(e) => setChallengeLinksEditing((prev) => ({ ...prev, song2_spotify_url: e.target.value }))}
-                        placeholder="https://open.spotify.com/track/..."
-                      />
-                    </label>
-                    <label className="field" style={{ margin: 0 }}>
-                      <span className="field-label" style={{ fontSize: "0.8rem" }}>YouTube URL</span>
-                      <input
-                        className="field-input"
-                        value={challengeLinksEditing.song2_youtube_url}
-                        onChange={(e) => setChallengeLinksEditing((prev) => ({ ...prev, song2_youtube_url: e.target.value }))}
-                        placeholder="https://youtube.com/watch?v=..."
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                <Button type="button" onClick={saveChallengeLinks} disabled={challengeSaving}>
-                  {challengeSaving ? "Saving..." : "Save Links"}
-                </Button>
+                )}
               </div>
             )}
           </div>
