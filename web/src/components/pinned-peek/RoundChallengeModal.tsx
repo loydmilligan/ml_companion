@@ -206,7 +206,7 @@ export function RoundChallengeModal({
     loading,
     error,
     isLocked,
-    isSubmitted,
+    isSubmitted: _isSubmitted,
     canPlay,
     results,
     correctAnswers,
@@ -217,6 +217,8 @@ export function RoundChallengeModal({
     reload,
     isSubmitting,
   } = useRoundChallenge(roundId, groupId, isRevealed);
+
+  void _isSubmitted; // Reserved for future badge display
 
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [selectedTheme, setSelectedTheme] = useState<ChallengeTheme | null>(null);

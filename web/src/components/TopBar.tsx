@@ -196,7 +196,6 @@ export default function TopBar() {
         competitors={competitors}
         isVotingComplete={isVotingComplete}
         onQuoteSong={handleQuoteSong}
-        previousRoundChallenge={null}
         roundChallengeEnabled={roundChallengeEnabled}
         submitterGuessEnabled={submitterGuessEnabled}
         timelineGameEnabled={timelineGameEnabled}

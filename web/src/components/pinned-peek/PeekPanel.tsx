@@ -76,10 +76,6 @@ type PeekPanelProps = {
   isVotingComplete: boolean;
   onQuoteSong: (song: SubmissionRow) => void;
   narrative?: string | null;
-  previousRoundChallenge?: {
-    song1: { title: string; artist: string; theme: string } | null;
-    song2: { title: string; artist: string; theme: string } | null;
-  } | null;
   roundChallengeEnabled?: boolean;
   submitterGuessEnabled?: boolean;
   timelineGameEnabled?: boolean;
@@ -100,7 +96,6 @@ export default function PeekPanel({
   isVotingComplete,
   onQuoteSong,
   narrative,
-  previousRoundChallenge,
   roundChallengeEnabled = true,
   submitterGuessEnabled = true,
   timelineGameEnabled = false,
