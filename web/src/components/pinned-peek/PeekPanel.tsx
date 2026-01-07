@@ -384,8 +384,8 @@ export default function PeekPanel({
                           <span className="minigame-card-title">Guess the Submitter</span>
                           <span className="minigame-card-subtitle">
                             {isRevealed
-                              ? "Results are in! See how you did."
-                              : "Who submitted each song?"}
+                              ? "Results are in! See how you did below."
+                              : "Choose who submitted each song below"}
                           </span>
                         </div>
                         {maxPossibleGuesses > 0 && (
