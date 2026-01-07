@@ -10,63 +10,72 @@
       "original_title": "Dance IF nobody's watching",
       "revised_title": "Dance IF nobody's watching",
       "description": "Certified Cheese. Pop bangers you jam to in private but deny in public.",
-      "keyword_hints": ["Cheese", "Pop", "Guilty Pleasure"]
+      "keyword_hints": ["Cheese", "Pop", "Guilty Pleasure"],
+      "icon": "assets/icons/round_1_cheese.png"
     },
     {
       "id": "round_2",
       "original_title": "Movie Stars",
       "revised_title": "Movie Stars",
       "description": "Cinema Bangers. Songs inextricably linked to a specific movie scene or soundtrack.",
-      "keyword_hints": ["Soundtrack", "Score", "Movie"]
+      "keyword_hints": ["Soundtrack", "Score", "Movie"],
+      "icon": "assets/icons/round_2_movie.png"
     },
     {
       "id": "round_3",
       "original_title": "Hit then quit it",
       "revised_title": "Hit then quit it",
       "description": "One & Done. The definitive One-Hit Wonders who conquered then vanished.",
-      "keyword_hints": ["One Hit Wonder", "Novelty"]
+      "keyword_hints": ["One Hit Wonder", "Novelty"],
+      "icon": "assets/icons/round_3_match.png"
     },
     {
       "id": "round_4",
       "original_title": "Finding Emos",
       "revised_title": "Finding Emos",
       "description": "It was never a phase. Pop-punk and Emo anthems from the Hot Topic era.",
-      "keyword_hints": ["Emo", "Pop Punk", "Eyeliner"]
+      "keyword_hints": ["Emo", "Pop Punk", "Eyeliner"],
+      "icon": "assets/icons/round_4_skull.png"
     },
     {
       "id": "round_5",
       "original_title": "I like big butts and a can of limes",
       "revised_title": "I like big butts and a can of limes",
       "description": "Mondegreens. Songs famous for lyrics that are universally misheard.",
-      "keyword_hints": ["Misheard", "Lyrics", "Confusing"]
+      "keyword_hints": ["Misheard", "Lyrics", "Confusing"],
+      "icon": "assets/icons/round_5_limes.png"
     },
     {
       "id": "round_6",
       "original_title": "Turn that Sh!# down!",
       "revised_title": "Turn that Sh!# down!",
       "description": "Ear Bleeders. Songs that are universally annoying, overplayed, or despised.",
-      "keyword_hints": ["Annoying", "Viral", "Hated"]
+      "keyword_hints": ["Annoying", "Viral", "Hated"],
+      "icon": "assets/icons/round_6_mute.png"
     },
     {
       "id": "round_7",
       "original_title": "Most likely to....",
       "revised_title": "Most likely to....",
       "description": "Superlatives. Songs about being the Best, the Greatest, or Winning, even if the title doesn't say so explicitly.",
-      "keyword_hints": ["Best", "Worst", "Greatest", "Most", "Winning", "Success"]
+      "keyword_hints": ["Best", "Worst", "Greatest", "Most", "Winning", "Success"],
+      "icon": "assets/icons/round_7_trophy.png"
     },
     {
       "id": "round_8",
       "original_title": "Nada de ingles",
       "revised_title": "Nada de ingles",
       "description": "Rosetta Stoned. Major hits sung primarily in a language other than English.",
-      "keyword_hints": ["Foreign", "Non-English", "International"]
+      "keyword_hints": ["Foreign", "Non-English", "International"],
+      "icon": "assets/icons/round_8_globe.png"
     },
     {
       "id": "round_9",
       "original_title": "Eh for effort",
       "revised_title": "Eh for effort",
       "description": "Critical Darlings. Songs that take 'effort' to enjoy. Critics love them; regular people are confused.",
-      "keyword_hints": ["Pretentious", "Avant-garde", "Experimental"]
+      "keyword_hints": ["Pretentious", "Avant-garde", "Experimental"],
+      "icon": "assets/icons/round_9_monocle.png"
     }
   ],
   "songs": [
