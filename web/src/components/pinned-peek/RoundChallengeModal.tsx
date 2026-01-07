@@ -69,6 +69,21 @@ function DraggableSongCard({
         <span className="rc-song-title">{song.title}</span>
         <span className="rc-song-artist">{song.artist}</span>
       </div>
+      {song.youtube_url && (
+        <a
+          href={song.youtube_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rc-play-btn"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          title="Listen on YouTube"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
+        </a>
+      )}
       {!disabled && !isAssigned && (
         <div className="rc-drag-handle">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -171,6 +186,20 @@ function DroppableThemeCard({
               <span className="rc-assigned-song-title">{assignedSong.title}</span>
               <span className="rc-assigned-song-artist">{assignedSong.artist}</span>
             </div>
+            {assignedSong.youtube_url && (
+              <a
+                href={assignedSong.youtube_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rc-play-btn rc-play-btn-small"
+                onClick={(e) => e.stopPropagation()}
+                title="Listen on YouTube"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+              </a>
+            )}
             {!disabled && (
               <button type="button" className="rc-remove-btn" onClick={onRemoveSong}>
                 ✕
@@ -448,6 +477,30 @@ export function RoundChallengeModal({
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+        }
+        .rc-play-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          background: #ff0000;
+          border-radius: 50%;
+          color: white;
+          text-decoration: none;
+          transition: transform 0.15s ease, background 0.15s ease;
+          flex-shrink: 0;
+        }
+        .rc-play-btn:hover {
+          transform: scale(1.1);
+          background: #cc0000;
+        }
+        .rc-play-btn:active {
+          transform: scale(0.95);
+        }
+        .rc-play-btn-small {
+          width: 22px;
+          height: 22px;
         }
         .rc-drag-handle {
           display: flex;

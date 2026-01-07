@@ -16,6 +16,7 @@ type Song = {
   artist: string;
   category_id: string;
   note?: string;
+  youtube_url?: string;
 };
 
 type SongListData = {
@@ -34,6 +35,7 @@ export type ChallengeSong = {
   artist: string;
   category_id: string;
   artwork_url: string | null;
+  youtube_url: string | null;
 };
 
 export type ChallengeTheme = {
@@ -215,6 +217,7 @@ export function useRoundChallenge(
           artist: s.artist,
           category_id: s.category_id,
           artwork_url: null, // Will be fetched later or use placeholder
+          youtube_url: s.youtube_url ?? null,
         }));
 
         // Update correctMap with new IDs
