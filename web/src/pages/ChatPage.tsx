@@ -52,7 +52,28 @@ type NotifyProfile = {
   email_notify_enabled: boolean | null;
 };
 
-function extractYouTubeId(text: string) {
+function parseYouTubeTime(url: string): number | null {
+  // Parse time parameter from YouTube URL (supports ?t=123 or ?t=1m30s format)
+  const timeMatch = url.match(/[?&]t=([^&]+)/);
+  if (!timeMatch) return null;
+
+  const timeStr = timeMatch[1];
+  // Check if it's in seconds format (just a number)
+  if (/^\d+$/.test(timeStr)) {
+    return parseInt(timeStr, 10);
+  }
+  // Check if it's in 1m30s format
+  const durationMatch = timeStr.match(/(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/);
+  if (durationMatch) {
+    const hours = parseInt(durationMatch[1] || "0", 10);
+    const minutes = parseInt(durationMatch[2] || "0", 10);
+    const seconds = parseInt(durationMatch[3] || "0", 10);
+    return hours * 3600 + minutes * 60 + seconds;
+  }
+  return null;
+}
+
+function extractYouTubeInfo(text: string): { videoId: string; startTime: number | null } | null {
   // Find all URLs in the text
   const urls = text.match(/https?:\/\/[^\s)]+/g) ?? [];
 
@@ -60,11 +81,11 @@ function extractYouTubeId(text: string) {
   for (const url of urls) {
     if (url.includes("youtu.be/")) {
       const id = url.split("youtu.be/")[1]?.split(/[?&#]/)[0];
-      if (id) return id;
+      if (id) return { videoId: id, startTime: parseYouTubeTime(url) };
     }
     if (url.includes("youtube.com") || url.includes("music.youtube.com")) {
       const match = url.match(/[?&]v=([^&]+)/);
-      if (match?.[1]) return match[1];
+      if (match?.[1]) return { videoId: match[1], startTime: parseYouTubeTime(url) };
     }
   }
   return null;
@@ -801,12 +822,15 @@ export default function ChatPage() {
             )}
             <p>{renderMessageBody(item.body, openPanel)}</p>
             {(() => {
-              const videoId = extractYouTubeId(item.body);
-              if (!videoId) return null;
+              const ytInfo = extractYouTubeInfo(item.body);
+              if (!ytInfo) return null;
+              const embedUrl = ytInfo.startTime
+                ? `https://www.youtube.com/embed/${ytInfo.videoId}?start=${ytInfo.startTime}`
+                : `https://www.youtube.com/embed/${ytInfo.videoId}`;
               return (
                 <div className="chat-embed" onClick={(e) => e.stopPropagation()}>
                   <iframe
-                    src={`https://www.youtube.com/embed/${videoId}`}
+                    src={embedUrl}
                     title="YouTube playback"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
