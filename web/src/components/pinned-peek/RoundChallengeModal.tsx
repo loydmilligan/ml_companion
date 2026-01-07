@@ -78,11 +78,6 @@ function SongCard({
     }
   };
 
-  const handleLongPress = (e: React.TouchEvent) => {
-    e.preventDefault();
-    onInfoTap();
-  };
-
   return (
     <div
       ref={setNodeRef}
