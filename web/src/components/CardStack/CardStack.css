@@ -55,7 +55,7 @@
 .card-stack-header {
   padding: 16px 20px 8px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: center;
   flex-shrink: 0;
 }
@@ -986,33 +986,35 @@ details.preseason-block .preseason-text {
   left: 54px;
 }
 
-/* Spotify button - right side */
+/* Spotify button - below round badge */
 .hero-action-btn.spotify-btn {
   left: auto;
   right: 12px;
-  background: #1DB954;
-  border-color: #1DB954;
+  top: 52px;
+  background: rgba(60, 60, 60, 0.85);
+  border-color: rgba(255, 255, 255, 0.3);
   text-decoration: none;
 }
 
 .hero-action-btn.spotify-btn:hover {
-  background: #1ed760;
-  border-color: #1ed760;
+  background: rgba(80, 80, 80, 0.95);
+  border-color: rgba(255, 255, 255, 0.5);
   transform: scale(1.1);
 }
 
-/* YouTube button - next to Spotify */
+/* YouTube button - next to Spotify, below round badge */
 .hero-action-btn.youtube-btn {
   left: auto;
   right: 52px;
-  background: #ff0000;
-  border-color: #ff0000;
+  top: 52px;
+  background: rgba(60, 60, 60, 0.85);
+  border-color: rgba(255, 255, 255, 0.3);
   text-decoration: none;
 }
 
 .hero-action-btn.youtube-btn:hover {
-  background: #cc0000;
-  border-color: #cc0000;
+  background: rgba(80, 80, 80, 0.95);
+  border-color: rgba(255, 255, 255, 0.5);
   transform: scale(1.1);
 }
 
