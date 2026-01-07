@@ -36,6 +36,7 @@ export default function TopBar() {
   const [submitterGuessEnabled, setSubmitterGuessEnabled] = useState(true);
   const [timelineGameEnabled, setTimelineGameEnabled] = useState(false);
   const [timelineGamePhase, setTimelineGamePhase] = useState<"voting" | "revealed" | "both">("voting");
+  const [roundChallengePhase, setRoundChallengePhase] = useState<"open" | "voting" | "both">("open");
   const [isTimelineTester, setIsTimelineTester] = useState(false);
 
   const displayName = profile?.display_name ?? "Family Lead";
@@ -69,7 +70,7 @@ export default function TopBar() {
     let active = true;
     supabase
       .from("group_settings")
-      .select("logo_palette,round_challenge_enabled,submitter_guess_enabled,timeline_game_enabled,timeline_game_phase")
+      .select("logo_palette,round_challenge_enabled,submitter_guess_enabled,timeline_game_enabled,timeline_game_phase,round_challenge_phase")
       .eq("group_id", group.id)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -83,6 +84,7 @@ export default function TopBar() {
         setSubmitterGuessEnabled(data?.submitter_guess_enabled ?? true);
         setTimelineGameEnabled(data?.timeline_game_enabled ?? false);
         setTimelineGamePhase(data?.timeline_game_phase ?? "voting");
+        setRoundChallengePhase(data?.round_challenge_phase ?? "open");
       });
     return () => {
       active = false;
@@ -197,6 +199,7 @@ export default function TopBar() {
         isVotingComplete={isVotingComplete}
         onQuoteSong={handleQuoteSong}
         roundChallengeEnabled={roundChallengeEnabled}
+        roundChallengePhase={roundChallengePhase}
         submitterGuessEnabled={submitterGuessEnabled}
         timelineGameEnabled={timelineGameEnabled}
         timelineGamePhase={timelineGamePhase}

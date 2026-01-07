@@ -568,7 +568,7 @@ export default function AdminPage() {
       const { data: settingsData } = await supabase
         .from("group_settings")
         .select(
-          "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled,submitter_guess_enabled,timeline_game_enabled,timeline_game_phase"
+          "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled,round_challenge_phase,submitter_guess_enabled,timeline_game_enabled,timeline_game_phase"
         )
         .eq("group_id", group.id)
         .maybeSingle();
@@ -588,6 +588,7 @@ export default function AdminPage() {
         ai_validate_daily_limit: settingsData?.ai_validate_daily_limit ?? 5,
         ai_chat_enabled: settingsData?.ai_chat_enabled ?? true,
         round_challenge_enabled: settingsData?.round_challenge_enabled ?? true,
+        round_challenge_phase: settingsData?.round_challenge_phase ?? "open",
         submitter_guess_enabled: settingsData?.submitter_guess_enabled ?? true,
         timeline_game_enabled: settingsData?.timeline_game_enabled ?? false,
         timeline_game_phase: settingsData?.timeline_game_phase ?? "voting",
@@ -1347,6 +1348,7 @@ export default function AdminPage() {
       ai_validate_daily_limit: settingsDraft.ai_validate_daily_limit,
       ai_chat_enabled: settingsDraft.ai_chat_enabled,
       round_challenge_enabled: settingsDraft.round_challenge_enabled,
+      round_challenge_phase: settingsDraft.round_challenge_phase,
       submitter_guess_enabled: settingsDraft.submitter_guess_enabled,
       timeline_game_enabled: settingsDraft.timeline_game_enabled,
       timeline_game_phase: settingsDraft.timeline_game_phase,
@@ -1355,7 +1357,7 @@ export default function AdminPage() {
       .from("group_settings")
       .upsert(payload, { onConflict: "group_id" })
       .select(
-        "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled,submitter_guess_enabled,timeline_game_enabled,timeline_game_phase"
+        "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled,round_challenge_phase,submitter_guess_enabled,timeline_game_enabled,timeline_game_phase"
       )
       .maybeSingle();
     if (!error && data) {
@@ -3771,10 +3773,33 @@ python scripts/build_track_metadata.py`}
               <div>
                 <span className="field-label" style={{ margin: 0 }}>Round Challenge</span>
                 <span className="field-helper" style={{ display: "block", marginTop: 2 }}>
-                  Guess-the-theme minigame using songs from past seasons (shown during open phase)
+                  Guess-the-theme minigame using songs from past seasons
                 </span>
               </div>
             </label>
+
+            {settingsDraft?.round_challenge_enabled && (
+              <label className="field" style={{ margin: "0 0 0 30px" }}>
+                <span className="field-label" style={{ fontSize: "0.8rem" }}>Available during:</span>
+                <select
+                  className="field-input"
+                  value={settingsDraft?.round_challenge_phase ?? "open"}
+                  onChange={(e) =>
+                    setSettingsDraft((prev) =>
+                      prev ? { ...prev, round_challenge_phase: e.target.value as "open" | "voting" | "both" } : prev
+                    )
+                  }
+                  style={{ maxWidth: 200 }}
+                >
+                  <option value="open">Open phase only</option>
+                  <option value="voting">Voting phase only</option>
+                  <option value="both">Both open and voting</option>
+                </select>
+                <span className="field-helper" style={{ display: "block", marginTop: 4 }}>
+                  Answers revealed when chosen phase ends
+                </span>
+              </label>
+            )}
 
             <label className="field" style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <input
@@ -4440,6 +4465,7 @@ type GroupSettings = {
   ai_chat_enabled: boolean;
   // Minigame toggles
   round_challenge_enabled: boolean;
+  round_challenge_phase: "open" | "voting" | "both";
   submitter_guess_enabled: boolean;
   // Timeline Game settings
   timeline_game_enabled: boolean;

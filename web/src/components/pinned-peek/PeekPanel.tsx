@@ -77,6 +77,7 @@ type PeekPanelProps = {
   onQuoteSong: (song: SubmissionRow) => void;
   narrative?: string | null;
   roundChallengeEnabled?: boolean;
+  roundChallengePhase?: "open" | "voting" | "both";
   submitterGuessEnabled?: boolean;
   timelineGameEnabled?: boolean;
   timelineGamePhase?: "voting" | "revealed" | "both";
@@ -97,6 +98,7 @@ export default function PeekPanel({
   onQuoteSong,
   narrative,
   roundChallengeEnabled = true,
+  roundChallengePhase = "open",
   submitterGuessEnabled = true,
   timelineGameEnabled = false,
   timelineGamePhase = "voting",
@@ -120,6 +122,24 @@ export default function PeekPanel({
       (timelineGamePhase === "revealed" && round.status === "revealed") ||
       (timelineGamePhase === "both" && (round.status === "voting" || round.status === "revealed"))
     );
+
+  // Round Challenge visibility based on phase setting
+  const showRoundChallenge =
+    roundChallengeEnabled &&
+    round &&
+    (
+      (roundChallengePhase === "open" && round.status === "open") ||
+      (roundChallengePhase === "voting" && round.status === "voting") ||
+      (roundChallengePhase === "both" && (round.status === "open" || round.status === "voting"))
+    );
+
+  // Round Challenge answer revelation:
+  // - "open" phase: reveal when voting starts (status becomes "voting" or "revealed")
+  // - "voting" phase: reveal when voting ends (status becomes "revealed")
+  // - "both" phases: reveal when voting ends (status becomes "revealed")
+  const isRoundChallengeRevealed =
+    (roundChallengePhase === "open" && (round?.status === "voting" || round?.status === "revealed")) ||
+    ((roundChallengePhase === "voting" || roundChallengePhase === "both") && round?.status === "revealed");
   const {
     competitors: guessCompetitors,
     guessStates,
@@ -313,8 +333,8 @@ export default function PeekPanel({
                     <AIAssistant round={round} />
                   )}
 
-                  {/* Round Challenge (only during open phase, if enabled) */}
-                  {round.status === "open" && roundChallengeEnabled && (
+                  {/* Round Challenge - visibility based on phase setting */}
+                  {showRoundChallenge && (
                     <button
                       type="button"
                       className="minigame-card"
@@ -561,7 +581,7 @@ export default function PeekPanel({
         onClose={() => setIsRoundChallengeOpen(false)}
         roundId={round?.id ?? null}
         groupId={groupId}
-        isRevealed={isRevealed ?? false}
+        isRevealed={isRoundChallengeRevealed ?? false}
       />
     </>
   );
