@@ -1005,7 +1005,7 @@ details.preseason-block .preseason-text {
 /* YouTube button - next to Spotify, below round badge */
 .hero-action-btn.youtube-btn {
   left: auto;
-  right: 52px;
+  right: 56px;
   top: 52px;
   background: rgba(60, 60, 60, 0.85);
   border-color: rgba(255, 255, 255, 0.3);
