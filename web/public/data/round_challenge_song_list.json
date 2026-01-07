@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "description": "Curated dataset for Season 1 Music League Minigame",
+    "total_songs": 90,
+    "strategy": "Retains original Season 1 titles with adapted mechanics. Scrubbed of actual Season 1 submissions."
+  },
+  "categories": [
+    {
+      "id": "round_1",
+      "original_title": "Dance IF nobody's watching",
+      "revised_title": "Dance IF nobody's watching",
+      "description": "Certified Cheese. Pop bangers you jam to in private but deny in public.",
+      "keyword_hints": ["Cheese", "Pop", "Guilty Pleasure"]
+    },
+    {
+      "id": "round_2",
+      "original_title": "Movie Stars",
+      "revised_title": "Movie Stars",
+      "description": "Cinema Bangers. Songs inextricably linked to a specific movie scene or soundtrack.",
+      "keyword_hints": ["Soundtrack", "Score", "Movie"]
+    },
+    {
+      "id": "round_3",
+      "original_title": "Hit then quit it",
+      "revised_title": "Hit then quit it",
+      "description": "One & Done. The definitive One-Hit Wonders who conquered then vanished.",
+      "keyword_hints": ["One Hit Wonder", "Novelty"]
+    },
+    {
+      "id": "round_4",
+      "original_title": "Finding Emos",
+      "revised_title": "Finding Emos",
+      "description": "It was never a phase. Pop-punk and Emo anthems from the Hot Topic era.",
+      "keyword_hints": ["Emo", "Pop Punk", "Eyeliner"]
+    },
+    {
+      "id": "round_5",
+      "original_title": "I like big butts and a can of limes",
+      "revised_title": "I like big butts and a can of limes",
+      "description": "Mondegreens. Songs famous for lyrics that are universally misheard.",
+      "keyword_hints": ["Misheard", "Lyrics", "Confusing"]
+    },
+    {
+      "id": "round_6",
+      "original_title": "Turn that Sh!# down!",
+      "revised_title": "Turn that Sh!# down!",
+      "description": "Ear Bleeders. Songs that are universally annoying, overplayed, or despised.",
+      "keyword_hints": ["Annoying", "Viral", "Hated"]
+    },
+    {
+      "id": "round_7",
+      "original_title": "Most likely to....",
+      "revised_title": "Most likely to....",
+      "description": "Superlatives. Songs about being the Best, the Greatest, or Winning, even if the title doesn't say so explicitly.",
+      "keyword_hints": ["Best", "Worst", "Greatest", "Most", "Winning", "Success"]
+    },
+    {
+      "id": "round_8",
+      "original_title": "Nada de ingles",
+      "revised_title": "Nada de ingles",
+      "description": "Rosetta Stoned. Major hits sung primarily in a language other than English.",
+      "keyword_hints": ["Foreign", "Non-English", "International"]
+    },
+    {
+      "id": "round_9",
+      "original_title": "Eh for effort",
+      "revised_title": "Eh for effort",
+      "description": "Critical Darlings. Songs that take 'effort' to enjoy. Critics love them; regular people are confused.",
+      "keyword_hints": ["Pretentious", "Avant-garde", "Experimental"]
+    }
+  ],
+  "songs": [
+    { "title": "Barbie Girl", "artist": "Aqua", "category_id": "round_1" },
+    { "title": "MMMBop", "artist": "Hanson", "category_id": "round_1" },
+    { "title": "California Gurls", "artist": "Katy Perry", "category_id": "round_1" },
+    { "title": "Timber", "artist": "Pitbull ft. Ke$ha", "category_id": "round_1" },
+    { "title": "Wannabe", "artist": "Spice Girls", "category_id": "round_1" },
+    { "title": "Livin' la Vida Loca", "artist": "Ricky Martin", "category_id": "round_1" },
+    { "title": "Mambo No. 5", "artist": "Lou Bega", "category_id": "round_1" },
+    { "title": "I Want It That Way", "artist": "Backstreet Boys", "category_id": "round_1" },
+    { "title": "Friday", "artist": "Rebecca Black", "category_id": "round_1" },
+    { "title": "Ice Ice Baby", "artist": "Vanilla Ice", "category_id": "round_1" },
+
+    { "title": "I Don't Want to Miss a Thing", "artist": "Aerosmith", "category_id": "round_2" },
+    { "title": "Eye of the Tiger", "artist": "Survivor", "category_id": "round_2" },
+    { "title": "Footloose", "artist": "Kenny Loggins", "category_id": "round_2" },
+    { "title": "I Will Always Love You", "artist": "Whitney Houston", "category_id": "round_2" },
+    { "title": "Danger Zone", "artist": "Kenny Loggins", "category_id": "round_2" },
+    { "title": "Lose Yourself", "artist": "Eminem", "category_id": "round_2" },
+    { "title": "Ghostbusters", "artist": "Ray Parker Jr.", "category_id": "round_2" },
+    { "title": "Circle of Life", "artist": "Elton John", "category_id": "round_2" },
+    { "title": "Time of my Life", "artist": "Bill Medley & Jennifer Warnes", "category_id": "round_2" },
+    { "title": "Happy", "artist": "Pharrell Williams", "category_id": "round_2" },
+
+    { "title": "Tubthumping", "artist": "Chumbawamba", "category_id": "round_3" },
+    { "title": "Take On Me", "artist": "a-ha", "category_id": "round_3" },
+    { "title": "Come On Eileen", "artist": "Dexys Midnight Runners", "category_id": "round_3" },
+    { "title": "Tainted Love", "artist": "Soft Cell", "category_id": "round_3" },
+    { "title": "Stacy's Mom", "artist": "Fountains of Wayne", "category_id": "round_3" },
+    { "title": "Who Let The Dogs Out", "artist": "Baha Men", "category_id": "round_3" },
+    { "title": "Steal My Sunshine", "artist": "LEN", "category_id": "round_3" },
+    { "title": "Closing Time", "artist": "Semisonic", "category_id": "round_3" },
+    { "title": "Bitter Sweet Symphony", "artist": "The Verve", "category_id": "round_3" },
+    { "title": "The Safety Dance", "artist": "Men Without Hats", "category_id": "round_3" },
+
+    { "title": "Ocean Avenue", "artist": "Yellowcard", "category_id": "round_4" },
+    { "title": "The Rock Show", "artist": "Blink-182", "category_id": "round_4" },
+    { "title": "Fat Lip", "artist": "Sum 41", "category_id": "round_4" },
+    { "title": "Misery Business", "artist": "Paramore", "category_id": "round_4" },
+    { "title": "Sk8er Boi", "artist": "Avril Lavigne", "category_id": "round_4" },
+    { "title": "The Middle", "artist": "Jimmy Eat World", "category_id": "round_4" },
+    { "title": "Check Yes, Juliet", "artist": "We The Kings", "category_id": "round_4" },
+    { "title": "Dear Maria, Count Me In", "artist": "All Time Low", "category_id": "round_4" },
+    { "title": "Ohio Is for Lovers", "artist": "Hawthorne Heights", "category_id": "round_4" },
+    { "title": "MakeDamnSure", "artist": "Taking Back Sunday", "category_id": "round_4" },
+
+    { "title": "Rock the Casbah", "artist": "The Clash", "category_id": "round_5", "note": "Lock the taskbar" },
+    { "title": "Beast of Burden", "artist": "The Rolling Stones", "category_id": "round_5", "note": "Pizza burning" },
+    { "title": "Bad Moon Rising", "artist": "CCR", "category_id": "round_5", "note": "Bathroom on the right" },
+    { "title": "Blinded by the Light", "artist": "Manfred Mann", "category_id": "round_5", "note": "Douche" },
+    { "title": "Poker Face", "artist": "Lady Gaga", "category_id": "round_5", "note": "Po-po-po-poker face" },
+    { "title": "Waterfalls", "artist": "TLC", "category_id": "round_5", "note": "Jason Waterfalls" },
+    { "title": "Africa", "artist": "Toto", "category_id": "round_5", "note": "I guess it rains" },
+    { "title": "We Will Rock You", "artist": "Queen", "category_id": "round_5", "note": "Kicking your cat all over the place" },
+    { "title": "Empire State of Mind", "artist": "Jay-Z", "category_id": "round_5", "note": "Concrete jungle wet dream tomato" },
+    { "title": "I'm Real", "artist": "J.Lo & Ja Rule", "category_id": "round_5", "note": "Are you Ellie?" },
+
+    { "title": "Baby Shark", "artist": "Pinkfong", "category_id": "round_6" },
+    { "title": "The Gummy Bear Song", "artist": "Gummibär", "category_id": "round_6" },
+    { "title": "We Built This City", "artist": "Starship", "category_id": "round_6" },
+    { "title": "Cotton Eye Joe", "artist": "Rednex", "category_id": "round_6" },
+    { "title": "Axel F", "artist": "Crazy Frog", "category_id": "round_6" },
+    { "title": "Blue (Da Ba Dee)", "artist": "Eiffel 65", "category_id": "round_6" },
+    { "title": "It's a Small World", "artist": "Disney", "category_id": "round_6" },
+    { "title": "Fancy Like", "artist": "Walker Hayes", "category_id": "round_6" },
+    { "title": "Dance Monkey", "artist": "Tones and I", "category_id": "round_6" },
+    { "title": "Hamster Dance", "artist": "Hampton the Hamster", "category_id": "round_6" },
+
+    { "title": "All I Do Is Win", "artist": "DJ Khaled", "category_id": "round_7" },
+    { "title": "Hall of Fame", "artist": "The Script", "category_id": "round_7" },
+    { "title": "We Are The Champions", "artist": "Queen", "category_id": "round_7" },
+    { "title": "Top of the World", "artist": "The Carpenters", "category_id": "round_7" },
+    { "title": "Juicy", "artist": "The Notorious B.I.G.", "category_id": "round_7" },
+    { "title": "Started From The Bottom", "artist": "Drake", "category_id": "round_7" },
+    { "title": "On Top of the World", "artist": "Imagine Dragons", "category_id": "round_7" },
+    { "title": "Perfect", "artist": "Ed Sheeran", "category_id": "round_7" },
+    { "title": "Legend", "artist": "Drake", "category_id": "round_7" },
+    { "title": "Ace of Spades", "artist": "Motörhead", "category_id": "round_7" },
+
+    { "title": "Du Hast", "artist": "Rammstein", "category_id": "round_8" },
+    { "title": "Despacito", "artist": "Luis Fonsi", "category_id": "round_8" },
+    { "title": "Danza Kuduro", "artist": "Don Omar", "category_id": "round_8" },
+    { "title": "La Bamba", "artist": "Ritchie Valens", "category_id": "round_8" },
+    { "title": "Alors on danse", "artist": "Stromae", "category_id": "round_8" },
+    { "title": "Dragostea Din Tei", "artist": "O-Zone", "category_id": "round_8" },
+    { "title": "Macarena", "artist": "Los Del Rio", "category_id": "round_8" },
+    { "title": "Feliz Navidad", "artist": "Jose Feliciano", "category_id": "round_8" },
+    { "title": "Sukiyaki", "artist": "Kyu Sakamoto", "category_id": "round_8" },
+    { "title": "Con Te Partiro", "artist": "Andrea Bocelli", "category_id": "round_8" },
+
+    { "title": "Karma Police", "artist": "Radiohead", "category_id": "round_9" },
+    { "title": "How Soon Is Now?", "artist": "The Smiths", "category_id": "round_9" },
+    { "title": "Breezeblocks", "artist": "Alt-J", "category_id": "round_9" },
+    { "title": "Skinny Love", "artist": "Bon Iver", "category_id": "round_9" },
+    { "title": "Wuthering Heights", "artist": "Kate Bush", "category_id": "round_9" },
+    { "title": "Burning Down The House", "artist": "Talking Heads", "category_id": "round_9" },
+    { "title": "Money", "artist": "Pink Floyd", "category_id": "round_9" },
+    { "title": "Wake Up", "artist": "Arcade Fire", "category_id": "round_9" },
+    { "title": "A-Punk", "artist": "Vampire Weekend", "category_id": "round_9" },
+    { "title": "Daft Punk Is Playing At My House", "artist": "LCD Soundsystem", "category_id": "round_9" }
+  ]
+}

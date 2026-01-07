@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import clsx from "clsx";
 import SongCard from "./SongCard";
 import AIAssistant from "./AIAssistant";
-import RoundChallenge from "./RoundChallenge";
 import CollapsibleSection from "./CollapsibleSection";
 import ProgressSection from "./ProgressSection";
 import TimelineGameModal from "./TimelineGameModal";
+import RoundChallengeModal from "./RoundChallengeModal";
 import { useYouTubeSidebar } from "../youtube-sidebar";
 import { useSubmitterGuess } from "./useSubmitterGuess";
 
@@ -109,6 +109,7 @@ export default function PeekPanel({
 }: PeekPanelProps) {
   const { openPlaylist } = useYouTubeSidebar();
   const [isTimelineGameOpen, setIsTimelineGameOpen] = useState(false);
+  const [isRoundChallengeOpen, setIsRoundChallengeOpen] = useState(false);
 
   // Submitter guess state
   const isRevealed = round?.status === "revealed";
@@ -319,28 +320,27 @@ export default function PeekPanel({
 
                   {/* Round Challenge (only during open phase, if enabled) */}
                   {round.status === "open" && roundChallengeEnabled && (
-                    <div className="minigame-item minigame-with-card">
-                      <div className="minigame-card-header">
-                        <img
-                          src="/images/minigames/round-challenge.png"
-                          srcSet="/images/minigames/round-challenge.png 1x,
-                                  /images/minigames/round-challenge@2x.png 2x,
-                                  /images/minigames/round-challenge@3x.png 3x"
-                          alt=""
-                          className="minigame-card-bg"
-                        />
-                        <div className="minigame-card-content">
-                          <span className="minigame-card-title">Round Challenge</span>
-                          <span className="minigame-card-subtitle">Guess which round these songs are from</span>
-                        </div>
-                      </div>
-                      <RoundChallenge
-                        roundId={round.id}
-                        groupId={groupId}
-                        currentTheme={round.theme}
-                        previousRoundChallenge={previousRoundChallenge}
+                    <button
+                      type="button"
+                      className="minigame-card"
+                      onClick={() => {
+                        setIsRoundChallengeOpen(true);
+                        onClose();
+                      }}
+                    >
+                      <img
+                        src="/images/minigames/round-challenge.png"
+                        srcSet="/images/minigames/round-challenge.png 1x,
+                                /images/minigames/round-challenge@2x.png 2x,
+                                /images/minigames/round-challenge@3x.png 3x"
+                        alt=""
+                        className="minigame-card-bg"
                       />
-                    </div>
+                      <div className="minigame-card-content">
+                        <span className="minigame-card-title">Round Challenge</span>
+                        <span className="minigame-card-subtitle">Match songs to Season 1 themes</span>
+                      </div>
+                    </button>
                   )}
 
                   {/* Timeline Game Card */}
@@ -555,6 +555,15 @@ export default function PeekPanel({
       <TimelineGameModal
         isOpen={isTimelineGameOpen}
         onClose={() => setIsTimelineGameOpen(false)}
+        roundId={round?.id ?? null}
+        groupId={groupId}
+        isRevealed={isRevealed ?? false}
+      />
+
+      {/* Round Challenge Modal */}
+      <RoundChallengeModal
+        isOpen={isRoundChallengeOpen}
+        onClose={() => setIsRoundChallengeOpen(false)}
         roundId={round?.id ?? null}
         groupId={groupId}
         isRevealed={isRevealed ?? false}
