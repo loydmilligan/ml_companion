@@ -329,21 +329,29 @@ export default function PeekPanel({
                     </div>
                   )}
 
-                  {/* Timeline Game Button */}
+                  {/* Timeline Game Card */}
                   {showTimelineGame && (
-                    <div className="minigame-item">
-                      <button
-                        type="button"
-                        className="timeline-game-button"
-                        onClick={() => {
-                          setIsTimelineGameOpen(true);
-                          onClose();
-                        }}
-                      >
-                        <span className="timeline-game-icon">📅</span>
-                        <span>Timeline Game</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className="minigame-card"
+                      onClick={() => {
+                        setIsTimelineGameOpen(true);
+                        onClose();
+                      }}
+                    >
+                      <img
+                        src="/images/minigames/timeline-game.png"
+                        srcSet="/images/minigames/timeline-game.png 1x,
+                                /images/minigames/timeline-game@2x.png 2x,
+                                /images/minigames/timeline-game@3x.png 3x"
+                        alt=""
+                        className="minigame-card-bg"
+                      />
+                      <div className="minigame-card-content">
+                        <span className="minigame-card-title">Timeline Game</span>
+                        <span className="minigame-card-subtitle">Arrange songs by release year</span>
+                      </div>
+                    </button>
                   )}
 
                   {/* Submitter Guess Header */}
