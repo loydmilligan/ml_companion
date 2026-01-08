@@ -15,18 +15,49 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  /* Brick wall texture background */
+  background-color: #f0e8d8;
+  background-image: url('/images/textures/brick-light.png');
+  background-repeat: repeat;
+  background-size: 256px 256px;
 }
 
 .app-shell-body {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
-  padding: 24px;
+  gap: 0;
+  padding: 0;
+  /* Content area pops off the brick wall */
+  background: var(--surface);
+  box-shadow:
+    -8px 0 32px rgba(0, 0, 0, 0.15),
+    8px 0 32px rgba(0, 0, 0, 0.15),
+    0 0 64px rgba(0, 0, 0, 0.1);
+  border-left: 1px solid rgba(0, 0, 0, 0.05);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 .app-shell-main {
   min-height: calc(100vh - 120px);
   padding-bottom: 80px;
+}
+
+/* Dark mode brick background */
+[data-mode="dark"] .app-shell {
+  background-color: #0a1a2f;
+  background-image: url('/images/textures/brick-dark.png');
+}
+
+[data-mode="dark"] .app-shell-body {
+  background: var(--surface-dark);
+  box-shadow:
+    -8px 0 40px rgba(0, 0, 0, 0.4),
+    8px 0 40px rgba(0, 0, 0, 0.4),
+    0 0 80px rgba(0, 0, 0, 0.3);
+  border-left-color: rgba(255, 255, 255, 0.05);
+  border-right-color: rgba(255, 255, 255, 0.05);
 }
 
 .admin-grid {
@@ -1122,6 +1153,37 @@
 
 .bottom-nav-link.active svg {
   stroke: #f21b3f;
+}
+
+/* Image-based nav tabs (bin divider style) */
+.bottom-nav-tab {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  flex: 1;
+  padding: 0;
+  text-decoration: none;
+  transition: transform 0.2s ease, filter 0.2s ease;
+  /* Tab extends above the nav bar */
+  margin-top: -32px;
+}
+
+.bottom-nav-tab-image {
+  height: 80px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.bottom-nav-tab:hover .bottom-nav-tab-image {
+  transform: translateY(-4px);
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.25));
+}
+
+.bottom-nav-tab.active .bottom-nav-tab-image {
+  transform: translateY(-8px) scale(1.05);
+  filter: drop-shadow(0 8px 20px rgba(242, 27, 63, 0.3));
 }
 
 /* Dark mode bottom nav */

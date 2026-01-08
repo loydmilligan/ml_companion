@@ -1,33 +1,58 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 
-// SVG icons for navigation
-const ChatIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-  </svg>
-);
+type NavTabProps = {
+  to: string;
+  label: "chat" | "history";
+};
 
-const HistoryIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
-  </svg>
-);
+function NavTab({ to, label }: NavTabProps) {
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const location = useLocation();
+  const isActive = location.pathname === to ||
+    (to === "/app/chat" && location.pathname === "/app");
 
-const navItems = [
-  { to: "/app/chat", label: "Chat", icon: ChatIcon },
-  { to: "/app/history", label: "History", icon: HistoryIcon },
-];
+  useEffect(() => {
+    // Check initial mode
+    const checkMode = () => {
+      setIsDarkMode(document.documentElement.getAttribute("data-mode") === "dark");
+    };
+    checkMode();
+
+    // Watch for mode changes
+    const observer = new MutationObserver(checkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-mode"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const mode = isDarkMode ? "dark" : "light";
+  const imageSrc = `/images/nav-tabs/nav-tab-${label}-${mode}.png`;
+  const imageSrc2x = `/images/nav-tabs/nav-tab-${label}-${mode}@2x.png`;
+
+  return (
+    <NavLink
+      className={`bottom-nav-tab ${isActive ? "active" : ""}`}
+      to={to}
+    >
+      <img
+        src={imageSrc}
+        srcSet={`${imageSrc} 1x, ${imageSrc2x} 2x`}
+        alt={label}
+        className="bottom-nav-tab-image"
+      />
+    </NavLink>
+  );
+}
 
 export default function BottomNav() {
   return (
     <nav className="bottom-nav">
-      {navItems.map((item) => (
-        <NavLink key={item.to} className="bottom-nav-link" to={item.to}>
-          <item.icon />
-          <span>{item.label}</span>
-        </NavLink>
-      ))}
+      <NavTab to="/app/chat" label="chat" />
+      <NavTab to="/app/history" label="history" />
     </nav>
   );
 }
