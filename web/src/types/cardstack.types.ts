@@ -304,6 +304,8 @@ export interface AdminGenerationCallbacks {
   onGenerateStory?: (roundId: string) => Promise<void>;
   /** Generate awards for round */
   onGenerateAwards?: (roundId: string) => Promise<void>;
+  /** Generate winners image only (separate from story to avoid timeout) */
+  onGenerateWinnersImage?: (roundId: string) => Promise<void>;
 }
 
 /**
@@ -316,6 +318,8 @@ export interface AdminGenerationState {
   isStoryLoading?: boolean;
   /** Currently generating awards for this round */
   isAwardsLoading?: boolean;
+  /** Currently generating winners image for this round */
+  isWinnersImageLoading?: boolean;
   /** Status message */
   statusMessage?: string;
 }

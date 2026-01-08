@@ -538,6 +538,25 @@ ${JSON.stringify(minigameSummary)}`;
     );
   }
 
+  if (mode === "winners_image") {
+    // Image-only generation to avoid timeout when generating both text and image
+    if (!winners.length) {
+      return new Response(
+        JSON.stringify({ error: "Missing winners data" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const imagePrompt = buildWinnersPrompt(winners, round?.title ?? null);
+    const imageResult = await generateImage(imagePrompt, imageModel, "TML - Winners Image");
+    return new Response(
+      JSON.stringify({
+        image_url: imageResult.image_url,
+        image_base64: imageResult.image_base64,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   if (mode === "awards") {
     const awardsPrompt = `You are an awards judge for a music league round.
 

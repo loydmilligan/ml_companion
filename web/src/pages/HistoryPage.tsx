@@ -900,11 +900,116 @@ export default function HistoryPage() {
     }
   }, [group, allRounds, updateGenerationState]);
 
+  const handleGenerateWinnersImage = useCallback(async (roundId: string) => {
+    if (!group) return;
+    const round = allRounds.find((r) => r.id === roundId);
+    if (!round) return;
+
+    updateGenerationState(roundId, { isWinnersImageLoading: true, statusMessage: "Loading data..." });
+
+    try {
+      // Fetch submissions for this round
+      const { data: submissions } = await supabase
+        .from("submissions")
+        .select("id,title,artist,submitter_name")
+        .eq("round_id", roundId);
+
+      if (!submissions || submissions.length === 0) {
+        updateGenerationState(roundId, { isWinnersImageLoading: false, statusMessage: "No submissions found." });
+        return;
+      }
+
+      // Fetch votes for these submissions
+      const submissionIds = submissions.map((s) => s.id);
+      const { data: votes } = await supabase
+        .from("votes")
+        .select("submission_id,points")
+        .in("submission_id", submissionIds);
+
+      // Calculate totals per submission
+      const votesBySubmission = new Map<string, number>();
+      (votes ?? []).forEach((vote) => {
+        votesBySubmission.set(vote.submission_id, (votesBySubmission.get(vote.submission_id) ?? 0) + vote.points);
+      });
+
+      // Get top 3 winners
+      const ranked = submissions
+        .map((s) => ({ ...s, totalPoints: votesBySubmission.get(s.id) ?? 0 }))
+        .sort((a, b) => b.totalPoints - a.totalPoints)
+        .slice(0, 3);
+
+      // Get competitor traits for winners
+      const winnerNames = ranked.map((r) => r.submitter_name).filter(Boolean);
+      const { data: competitors } = await supabase
+        .from("season_competitors")
+        .select("name,ai_image_traits")
+        .eq("group_id", group.id)
+        .in("name", winnerNames);
+
+      const traitsByName = new Map<string, string>();
+      (competitors ?? []).forEach((c) => {
+        if (c.ai_image_traits) traitsByName.set(c.name, c.ai_image_traits);
+      });
+
+      const winners = ranked.map((r, i) => ({
+        place: i + 1,
+        name: r.submitter_name,
+        song: r.title,
+        artist: r.artist,
+        traits: traitsByName.get(r.submitter_name ?? "") ?? null,
+      }));
+
+      updateGenerationState(roundId, { statusMessage: "Generating image..." });
+
+      const { data, error } = await supabase.functions.invoke("openrouter-round-story", {
+        body: {
+          mode: "winners_image",
+          round: {
+            title: round.theme,
+          },
+          winners,
+          image_model_key: "OPENROUTER_MID_MODEL",
+        },
+      });
+
+      if (error) throw error;
+
+      const imageBase64 = data?.image_base64 ?? null;
+      const imageUrl = data?.image_url ?? null;
+
+      let finalImageUrl = imageUrl;
+      if (imageBase64) {
+        const filePath = `round-images/${roundId}/winners-${Date.now()}.png`;
+        const upload = await uploadBase64Image("round-art", filePath, imageBase64);
+        if (upload.publicUrl) {
+          finalImageUrl = upload.publicUrl;
+        }
+      }
+
+      if (finalImageUrl) {
+        await supabase.from("rounds").update({ winners_image_url: finalImageUrl }).eq("id", roundId);
+        setAllRounds((prev) =>
+          prev.map((r) =>
+            r.id === roundId
+              ? { ...r, winners_image_url: finalImageUrl }
+              : r
+          )
+        );
+        updateGenerationState(roundId, { isWinnersImageLoading: false, statusMessage: "Image saved!" });
+      } else {
+        updateGenerationState(roundId, { isWinnersImageLoading: false, statusMessage: "No image generated." });
+      }
+    } catch {
+      updateGenerationState(roundId, { isWinnersImageLoading: false, statusMessage: "Failed to generate." });
+    }
+  }, [group, allRounds, updateGenerationState]);
+
   const adminCallbacks: AdminGenerationCallbacks = useMemo(() => ({
     onGenerateThemeBanner: handleGenerateThemeBanner,
     onGenerateStory: handleGenerateStory,
     onGenerateAwards: handleGenerateAwards,
-  }), [handleGenerateThemeBanner, handleGenerateStory, handleGenerateAwards]);
+    onGenerateWinnersImage: handleGenerateWinnersImage,
+  }), [handleGenerateThemeBanner, handleGenerateStory, handleGenerateAwards, handleGenerateWinnersImage]);
 
   // Handler for regenerating current season story
   const [currentSeasonStoryLoading, setCurrentSeasonStoryLoading] = useState(false);
