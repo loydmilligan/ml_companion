@@ -361,8 +361,20 @@ export default function PeekPanel({
                 </CollapsibleSection>
               )}
 
+              {/* AI Assistance Section (only during open phase) */}
+              {round.status === "open" && (
+                <CollapsibleSection
+                  id="ai-assistance"
+                  title="AI Assistance"
+                  icon="🤖"
+                  defaultExpanded={false}
+                >
+                  <AIAssistant round={round} />
+                </CollapsibleSection>
+              )}
+
               {/* Minigames Section */}
-              {((round.status === "open" && (roundChallengeEnabled || showGuessUI)) ||
+              {((round.status === "open" && showRoundChallenge) ||
                 (round.status === "voting" && (showTimelineGame || showGuessUI)) ||
                 (round.status === "revealed" && (showTimelineGame || showGuessUI))) && (
                 <CollapsibleSection
@@ -371,11 +383,6 @@ export default function PeekPanel({
                   icon="🎮"
                   defaultExpanded={true}
                 >
-                  {/* AI Assistant (only during open phase) */}
-                  {round.status === "open" && (
-                    <AIAssistant round={round} />
-                  )}
-
                   {/* Round Challenge - visibility based on phase setting */}
                   {showRoundChallenge && (
                     <button
