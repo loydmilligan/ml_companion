@@ -12,13 +12,16 @@ This project uses Supabase Edge Functions for:
 | Function | Purpose |
 |----------|---------|
 | `openrouter-compare` | Song connection summaries |
-| `openrouter-round-story` | Round narratives, theme banners, awards, trophies, season narratives |
+| `openrouter-round-story` | Round narratives, theme banners, awards, trophies, season narratives, current season stories |
 | `round-challenge` | Bonus game - guess which Season 1 theme songs belonged to |
 | `ai-assistant` | Theme explanations, song validation, creative hints |
 | `notify` | Legacy notifications via ntfy and email |
 | `send-push-notification` | FCM v1 API push notifications |
 | `process-email-events` | Email event processing and activity tracking |
 | `song-links` | Convert Spotify URIs to multi-platform links via song.link API |
+| `send-invite-email` | Send email invitations to join groups |
+| `ingest-spotify-playlist` | Import tracks from Spotify playlists into a round |
+| `youtube-playlist` | Create YouTube playlists from round submissions |
 
 ## 1) Install Supabase CLI
 - Follow Supabase CLI install instructions for your OS.
@@ -54,7 +57,7 @@ supabase secrets set SMTP_USERNAME=... SMTP_PASSWORD=... SMTP_FROM_EMAIL=...
 ## 4) Deploy the Functions
 ```bash
 # Deploy all functions at once (recommended)
-supabase functions deploy ai-assistant openrouter-round-story openrouter-compare round-challenge notify send-push-notification process-email-events song-links --no-verify-jwt
+supabase functions deploy ai-assistant openrouter-round-story openrouter-compare round-challenge notify send-push-notification process-email-events song-links send-invite-email ingest-spotify-playlist youtube-playlist --no-verify-jwt
 
 # Or deploy individually
 supabase functions deploy openrouter-compare --no-verify-jwt
@@ -65,6 +68,9 @@ supabase functions deploy notify --no-verify-jwt
 supabase functions deploy send-push-notification --no-verify-jwt
 supabase functions deploy process-email-events --no-verify-jwt
 supabase functions deploy song-links --no-verify-jwt
+supabase functions deploy send-invite-email --no-verify-jwt
+supabase functions deploy ingest-spotify-playlist --no-verify-jwt
+supabase functions deploy youtube-playlist --no-verify-jwt
 ```
 
 **Note:** All functions implement JWT authentication internally. The `--no-verify-jwt` flag is used because Supabase's default verification is bypassed in favor of custom auth handling.
@@ -89,12 +95,56 @@ The `round-challenge` function manages the bonus trivia game where users guess w
 The `openrouter-round-story` function handles multiple AI generation modes:
 
 **Modes:**
-- `story` (default) - Generate round narrative and image prompt
+- `story` (default) - Generate round narrative and winners image prompt
 - `theme` - Generate theme banner image
 - `trophy` - Generate award trophy image
 - `awards` - Select round awards from catalog
 - `season_awards` - Select season finale awards
-- `season_narrative` - Generate season recap narrative
+- `season_narrative` - Generate season recap narrative for completed seasons
+- `current_season_story` - Generate ongoing season narrative with upcoming round preview
+- `preseason_special` - Generate pre-season special content before voting begins
+- `winners_image` - Generate winners illustration only (separate from story to avoid timeout)
+
+**Mode Details:**
+
+### `current_season_story`
+Generates a 3-section card for in-progress seasons:
+1. **Season Storylines** - Current standings, hot streaks, momentum
+2. **Up Next** - Preview upcoming theme, song suggestions, strategy based on standings
+3. **Guessing Game** - Minigame results from last revealed round
+
+Input body:
+```json
+{
+  "mode": "current_season_story",
+  "league_name": "Revenge of the Hip Jammers",
+  "season_number": 2,
+  "season_data": { "rounds_completed": 1, "leaderboard": [...] },
+  "upcoming_round": { "theme": "Easy as 1, 2, 3", "round_number": 2, ... },
+  "latest_revealed_round": { "theme": "Primetime", "round_number": 1 },
+  "minigame_summary": { "topGuessers": [...] }
+}
+```
+
+### `preseason_special`
+Generates a comprehensive pre-vote analysis with 7 sections:
+1. Season Opening Monologue
+2. The Submission Board
+3. Artist & Taste Tells
+4. Theme Fit Analysis
+5. Submission Timing & Comment Energy
+6. Pre-Vote Predictions
+7. Soft Power Rankings
+
+### `winners_image`
+Generates winners illustration separately to avoid timeouts when generating both text and image:
+```json
+{
+  "mode": "winners_image",
+  "winners": [{ "place": 1, "name": "...", "song": "...", "artist": "...", "traits": "..." }],
+  "round": { "title": "Theme Name" }
+}
+```
 
 **Environment Variables:**
 - `OPENROUTER_MODEL` - Primary text model
@@ -220,7 +270,110 @@ The `song-links` function converts Spotify URIs to multi-platform links using th
 - `preferred_music_provider` - User's preferred service: spotify, apple_music, or youtube_music
 - `show_youtube_video` - Whether to show YouTube video button alongside music provider
 
-## 13) Create the Avatars Storage Bucket
+## 13) Send Invite Email Function
+
+The `send-invite-email` function sends email invitations to join groups.
+
+**Features:**
+- Sends styled HTML email invitations via SMTP (Gmail)
+- Falls back gracefully if SMTP not configured
+- Records invite email and sent timestamp
+
+**Input:**
+```json
+{
+  "invite_id": "uuid",
+  "email": "recipient@example.com",
+  "group_name": "Family League",
+  "inviter_name": "John" // optional
+}
+```
+
+**Required Secrets:**
+```bash
+supabase secrets set SMTP_USERNAME=... SMTP_PASSWORD=... SMTP_FROM_EMAIL=...
+supabase secrets set SMTP_HOST=smtp.gmail.com SMTP_PORT=587
+```
+
+**Database Updates:**
+- `invites.invite_email` - Stores recipient email
+- `invites.email_sent_at` - Timestamp when email was sent
+
+## 14) Ingest Spotify Playlist Function
+
+The `ingest-spotify-playlist` function imports tracks from Spotify playlists into a round.
+
+**Features:**
+- Uses Spotify Client Credentials flow (no user auth required)
+- Extracts track metadata: title, artist, album, artwork, release year
+- Skips duplicate tracks already in the round
+- Handles pagination for large playlists
+
+**Input:**
+```json
+{
+  "playlist_url": "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M",
+  "round_id": "uuid"
+}
+```
+
+**Returns:**
+```json
+{
+  "status": "ok",
+  "playlist_id": "37i9dQZF1DXcBWIGoYBM5M",
+  "total_tracks": 50,
+  "inserted": 48,
+  "skipped": 2
+}
+```
+
+**Required Secrets:**
+```bash
+supabase secrets set SPOTIFY_CLIENT_ID=... SPOTIFY_CLIENT_SECRET=...
+```
+
+**Database Updates:**
+- Creates new rows in `submissions` table with Spotify metadata
+
+## 15) YouTube Playlist Function
+
+The `youtube-playlist` function creates YouTube playlists from round submissions.
+
+**Modes:**
+- `preview` - Returns list of videos without creating playlist
+- `create` - Creates actual YouTube playlist and adds videos
+
+**Input:**
+```json
+{
+  "mode": "create",
+  "round_id": "uuid"
+}
+```
+
+**Returns (create mode):**
+```json
+{
+  "success": true,
+  "playlistId": "PLxxx...",
+  "playlistUrl": "https://www.youtube.com/playlist?list=PLxxx...",
+  "videosAdded": 10,
+  "totalVideos": 12
+}
+```
+
+**Required Secrets:**
+```bash
+supabase secrets set YOUTUBE_CLIENT_ID=... YOUTUBE_CLIENT_SECRET=... YOUTUBE_REFRESH_TOKEN=...
+```
+
+**Database Updates:**
+- `rounds.youtube_playlist_url` - Stores created playlist URL
+
+**Note:** Requires OAuth2 refresh token from a YouTube account. Videos are extracted from `submissions.youtube_url` field.
+
+## 16) Create the Avatars Storage Bucket
 In Supabase → Storage:
 - Create a bucket named `avatars` (public bucket).
 - Add a policy to allow authenticated users to upload.
