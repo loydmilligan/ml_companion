@@ -538,7 +538,7 @@ ${JSON.stringify(minigameSummary)}`;
         round_two_riff: parsed.round_riff ?? "",
         minigame_summary: parsed.minigame_summary ?? "",
         section_one_title: sectionOneName,
-        round_number: roundNumber,
+        round_number: upcomingRoundNumber,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

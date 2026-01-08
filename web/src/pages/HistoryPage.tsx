@@ -1059,12 +1059,20 @@ export default function HistoryPage() {
         return;
       }
 
-      // Get all rounds for season stats
-      const { data: seasonRounds } = await supabase
+      // Get all rounds for season stats - filter by current season number to avoid mixing with previous seasons
+      const currentSeasonNumber = league.season_number;
+      let seasonRoundsQuery = supabase
         .from("rounds")
         .select("id,theme,round_number")
         .eq("league_id", leagueId)
         .in("status", ["revealed", "archived"]);
+
+      // Only count rounds from the current season
+      if (currentSeasonNumber != null) {
+        seasonRoundsQuery = seasonRoundsQuery.eq("season_number", currentSeasonNumber);
+      }
+
+      const { data: seasonRounds } = await seasonRoundsQuery;
 
       const roundIds = (seasonRounds ?? []).map((r) => r.id);
 
