@@ -30,8 +30,10 @@ function NavTab({ to, label }: NavTabProps) {
   }, []);
 
   const mode = isDarkMode ? "dark" : "light";
-  const imageSrc = `/images/nav-tabs/nav-tab-${label}-${mode}.png`;
-  const imageSrc2x = `/images/nav-tabs/nav-tab-${label}-${mode}@2x.png`;
+  // Cache bust v2: horizontal tabs with larger text
+  const cacheBust = "v2";
+  const imageSrc = `/images/nav-tabs/nav-tab-${label}-${mode}.png?${cacheBust}`;
+  const imageSrc2x = `/images/nav-tabs/nav-tab-${label}-${mode}@2x.png?${cacheBust}`;
 
   return (
     <NavLink
