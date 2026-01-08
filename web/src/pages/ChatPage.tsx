@@ -3,7 +3,7 @@ import Button from "../components/Button";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRound } from "../contexts/RoundContext";
-import { usePeekPanel, PeekButton, PeekTab } from "../components/pinned-peek";
+import { usePeekPanel, PeekTab } from "../components/pinned-peek";
 
 // AI mention detection pattern
 const AI_MENTION_PATTERN = /@AI\b/i;
