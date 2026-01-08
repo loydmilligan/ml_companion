@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
-import { usePeekPanel, PeekButton } from "../components/pinned-peek";
+import { usePeekPanel, PeekTab } from "../components/pinned-peek";
 import { uploadBase64Image } from "../lib/imageUpload";
 import CardStack from "../components/CardStack/CardStack";
 import type {
@@ -1154,7 +1154,7 @@ export default function HistoryPage() {
 
   return (
     <div className="history-page">
-      <PeekButton onClick={openPanel} variant="chat" />
+      <PeekTab onClick={openPanel} variant="cassette" />
       <CardStack
         cards={cardData}
         onCardChange={handleCardChange}

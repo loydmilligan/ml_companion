@@ -3459,6 +3459,76 @@
   height: 22px;
 }
 
+/* Peek Tab - Edge tab variant (cassette spine / bin divider) */
+.peek-tab {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) translateX(6px);
+  z-index: 40;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.peek-tab:hover,
+.peek-tab:focus {
+  transform: translateY(-50%) translateX(0);
+  outline: none;
+}
+
+.peek-tab:active {
+  transform: translateY(-50%) translateX(-4px);
+}
+
+.peek-tab-image {
+  display: block;
+  height: auto;
+  width: auto;
+  max-height: 260px;
+  filter: drop-shadow(-2px 2px 4px rgba(0, 0, 0, 0.2));
+  transition: filter 0.2s ease;
+}
+
+.peek-tab:hover .peek-tab-image {
+  filter: drop-shadow(-3px 3px 6px rgba(0, 0, 0, 0.3));
+}
+
+/* Cassette variant - taller */
+.peek-tab-cassette .peek-tab-image {
+  max-height: 280px;
+}
+
+/* Divider variant - shorter */
+.peek-tab-divider .peek-tab-image {
+  max-height: 120px;
+}
+
+/* Hide on very small screens where it might interfere */
+@media (max-height: 500px) {
+  .peek-tab-cassette .peek-tab-image {
+    max-height: 200px;
+  }
+}
+
+/* Pulse animation for first-time users (optional, controlled via class) */
+.peek-tab-pulse {
+  animation: peek-tab-pulse 2s ease-in-out infinite;
+}
+
+@keyframes peek-tab-pulse {
+  0%, 100% {
+    transform: translateY(-50%) translateX(6px);
+  }
+  50% {
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
 
 /* Song Card */
 .song-card {

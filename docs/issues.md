@@ -1,7 +1,7 @@
 # Issues & Roadmap
 
-Version: v1.8
-Date: 2026-01-05
+Version: v1.9
+Date: 2026-01-07
 
 **Legend:**
 - **Effort:** Low (< 1 day) | Medium (1-3 days) | High (1+ week)
@@ -15,6 +15,7 @@ Date: 2026-01-05
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.9 | 2026-01-07 | Added RC-002 (LOYD-175) Round Challenge UI Polish |
 | v1.8 | 2026-01-05 | Sprint planning: Added YouTube Automation epic, Chat Quote Reply, History Spotify links. Canceled EF-002 (JWT covers it) |
 | v1.7 | 2026-01-05 | Added BE-001, AI-001, ADM-001 from Linear sync |
 | v1.6 | 2026-01-04 | Major update: PN-001 complete (FCM push), INT-001 partial (email ingestion), YouTube integration, activity tracker |
@@ -117,6 +118,7 @@ Date: 2026-01-05
 | ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
 |----|--------|---------|--------|--------|---------|------|-------|
 | RC-001 | — | Round Challenge Minigame | **Complete** | Medium | High | Low | Guess which S1 theme songs belonged to. Deployed 2025-12-31 |
+| RC-002 | [LOYD-175](https://linear.app/loydmilligan/issue/LOYD-175) | UI Polish - Touch-Friendly | Planned | Medium | Medium | Low | Improve touch targets, visual feedback, consistency with Timeline |
 
 ---
 

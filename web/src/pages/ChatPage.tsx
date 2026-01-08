@@ -3,7 +3,7 @@ import Button from "../components/Button";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRound } from "../contexts/RoundContext";
-import { usePeekPanel, PeekButton } from "../components/pinned-peek";
+import { usePeekPanel, PeekButton, PeekTab } from "../components/pinned-peek";
 
 // AI mention detection pattern
 const AI_MENTION_PATTERN = /@AI\b/i;
@@ -732,8 +732,8 @@ export default function ChatPage() {
 
   return (
     <div className="chat-page">
-      {/* Peek button inside chat area - always visible */}
-      <PeekButton onClick={openPanel} variant="chat" />
+      {/* Peek tab - cassette spine on right edge */}
+      <PeekTab onClick={openPanel} variant="cassette" />
 
       <div
         className="chat-thread"
