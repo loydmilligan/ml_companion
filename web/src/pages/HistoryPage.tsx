@@ -9,7 +9,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
-import { useRound } from "../contexts/RoundContext";
 import { usePeekPanel, PeekTab } from "../components/pinned-peek";
 import { uploadBase64Image } from "../lib/imageUpload";
 import CardStack from "../components/CardStack/CardStack";
@@ -144,7 +143,6 @@ type SeasonStatsRow = {
 
 export default function HistoryPage() {
   const { group } = useAuth();
-  const { round } = useRound();
   const isLead = group?.role === "lead";
   const { openPanel } = usePeekPanel();
 
