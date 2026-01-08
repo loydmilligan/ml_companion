@@ -913,27 +913,8 @@ export default function HistoryPage() {
   const cardData = useMemo((): CardData[] => {
     const cards: CardData[] = [];
 
-    // First, check if the newest league has a preseason special to show at the very top
-    // This shows regardless of whether any rounds are revealed yet
-    const newestLeague = leagues[0]; // leagues are sorted by season_number DESC
-    if (newestLeague?.preseason_special) {
-      const ps = newestLeague.preseason_special;
-      const preseasonCard: PreseasonSpecialCardData = {
-        id: `preseason-${newestLeague.season_number ?? 0}`,
-        type: "preseason-special",
-        seasonNumber: newestLeague.season_number ?? 0,
-        leagueName: newestLeague.name ?? `Season ${newestLeague.season_number ?? 0}`,
-        roundTheme: ps.roundTheme ?? "Round 1",
-        openingMonologue: ps.openingMonologue,
-        submissionBoard: ps.submissionBoard,
-        tasteTells: ps.tasteTells,
-        themeFit: ps.themeFit,
-        timingEnergy: ps.timingEnergy,
-        predictions: ps.predictions,
-        powerRankings: ps.powerRankings,
-      };
-      cards.push(preseasonCard);
-    }
+    // Note: Preseason special card is added AFTER current season content
+    // but BEFORE previous seasons. See placement below in the season loop.
 
     // Helper to build round card (inside useMemo to use current state)
     const buildRoundCard = (round: RoundRow): RoundCardData => {
@@ -1032,18 +1013,18 @@ export default function HistoryPage() {
     // Get sorted season numbers (descending - newest first)
     const seasonNumbers = Array.from(roundsBySeason.keys()).sort((a, b) => b - a);
 
-    // Build cards: for each season, add recap card first, then round cards
-    seasonNumbers.forEach((seasonNum) => {
+    // Build cards: for each season, add current season card, round cards, then recap
+    // Order: Current Season Card → Round Cards (newest first) → Preseason Card → Season Recap
+    seasonNumbers.forEach((seasonNum, seasonIndex) => {
       const seasonRounds = roundsBySeason.get(seasonNum) ?? [];
-      const isCurrentSeason = seasonNum === seasonNumbers[0];
+      const isCurrentSeason = seasonIndex === 0;
       const currentLeague = leagues.find((l) => l.season_number === seasonNum);
 
       // Sort rounds by round_number descending within season
       seasonRounds.sort((a, b) => (b.round_number ?? 0) - (a.round_number ?? 0));
 
       if (isCurrentSeason && seasonRounds.length > 0) {
-        // Preseason special card is now added at the top level, before this loop
-
+        // Current season card (AI-generated story) - first card
         const seasonIntro =
           currentLeague?.current_story_intro ??
           "Season storylines will appear after the latest round results are in.";
@@ -1066,9 +1047,38 @@ export default function HistoryPage() {
         cards.push(currentSeasonCard);
       }
 
-      // Add season recap card first (for all seasons with data)
-      const seasonStats = pastSeasonStats.find((s) => s.seasonNumber === seasonNum);
-      if (seasonStats) {
+      // Add round cards for this season
+      seasonRounds.forEach((round) => {
+        cards.push(buildRoundCard(round));
+      });
+
+      // Add preseason special card AFTER all current season rounds
+      // but BEFORE the previous season's content (Season 1 summary)
+      // Card order: Current Season Card → Round Cards → Preseason → Season 1 Summary
+      if (isCurrentSeason && currentLeague?.preseason_special) {
+        const ps = currentLeague.preseason_special;
+        const preseasonCard: PreseasonSpecialCardData = {
+          id: `preseason-${currentLeague.season_number ?? 0}`,
+          type: "preseason-special",
+          seasonNumber: currentLeague.season_number ?? 0,
+          leagueName: currentLeague.name ?? `Season ${currentLeague.season_number ?? 0}`,
+          roundTheme: ps.roundTheme ?? "Round 1",
+          openingMonologue: ps.openingMonologue,
+          submissionBoard: ps.submissionBoard,
+          tasteTells: ps.tasteTells,
+          themeFit: ps.themeFit,
+          timingEnergy: ps.timingEnergy,
+          predictions: ps.predictions,
+          powerRankings: ps.powerRankings,
+        };
+        cards.push(preseasonCard);
+      }
+
+      // Add season recap card for PAST seasons only
+      // Current season uses the current-season card instead
+      if (!isCurrentSeason) {
+        const seasonStats = pastSeasonStats.find((s) => s.seasonNumber === seasonNum);
+        if (seasonStats) {
           // Find the league to get the narrative
           const league = leagues.find((l) => l.id === seasonStats.leagueId);
           const recapCard: SeasonRecapCardData = {
@@ -1090,12 +1100,8 @@ export default function HistoryPage() {
             playlistUrl: league?.playlist_url ?? null,
           };
           cards.push(recapCard);
+        }
       }
-
-      // Add round cards for this season
-      seasonRounds.forEach((round) => {
-        cards.push(buildRoundCard(round));
-      });
     });
 
     return cards;
