@@ -1,14 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 
 type RoundCountdownProps = {
   status: "open" | "voting" | "revealed" | "archived";
-  submissionDeadline: string | null;
-  votingDeadline: string | null;
+  revealUntil: string | null;
 };
-
-// Hours after voting closes before switching to new round
-// Triggered by "votes are in" email
-const SWITCH_DELAY_HOURS = 2;
 
 type TimeRemaining = {
   days: number;
@@ -37,62 +32,41 @@ function computeTimeRemaining(deadline: string | null): TimeRemaining {
 
 function getUrgencyLevel(remaining: number): "safe" | "warning" | "urgent" | "overdue" {
   if (remaining <= 0) return "overdue";
-  if (remaining <= 1000 * 60 * 60 * 6) return "urgent"; // 6 hours
-  if (remaining <= 1000 * 60 * 60 * 24) return "warning"; // 24 hours
+  if (remaining <= 1000 * 60 * 30) return "urgent"; // 30 minutes
+  if (remaining <= 1000 * 60 * 60) return "warning"; // 1 hour
   return "safe";
 }
 
 /**
- * Live countdown timer showing time until round switches phases.
- * - Open phase: shows time until submissions close
- * - Voting phase: shows time until voting closes
+ * Live countdown timer showing time until peek panel switches to new round.
+ * Only shown during "revealed" phase - counts down to reveal_until timestamp
+ * which is set to 2 hours after "votes are in" email is received.
  */
 export default function RoundCountdown({
   status,
-  submissionDeadline,
-  votingDeadline,
+  revealUntil,
 }: RoundCountdownProps) {
-  // Pick the relevant deadline based on status
-  // For revealed status: switch to new round 24 hours after voting closes
-  const deadline = useMemo(() => {
-    if (status === "open") return submissionDeadline;
-    if (status === "voting") return votingDeadline;
-    if (status === "revealed" && votingDeadline) {
-      // Calculate switch time: voting deadline + delay
-      const votingDate = new Date(votingDeadline);
-      const switchTime = new Date(votingDate.getTime() + SWITCH_DELAY_HOURS * 60 * 60 * 1000);
-      return switchTime.toISOString();
-    }
-    return null;
-  }, [status, submissionDeadline, votingDeadline]);
-
-  const [time, setTime] = useState(() => computeTimeRemaining(deadline));
+  const [time, setTime] = useState(() => computeTimeRemaining(revealUntil));
 
   // Update every second
   useEffect(() => {
-    if (!deadline) return;
+    if (!revealUntil) return;
 
-    const update = () => setTime(computeTimeRemaining(deadline));
+    const update = () => setTime(computeTimeRemaining(revealUntil));
     update();
 
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [deadline]);
+  }, [revealUntil]);
 
-  // Don't show for archived rounds or if no deadline
-  if (status === "archived" || !deadline) {
+  // Only show for revealed phase with valid reveal_until timestamp
+  if (status !== "revealed" || !revealUntil) {
     return null;
   }
 
   const urgency = getUrgencyLevel(time.total);
-  const label =
-    status === "open"
-      ? "Submissions close in"
-      : status === "voting"
-        ? "Voting ends in"
-        : "New round in";
-  const nextPhase =
-    status === "open" ? "Voting" : status === "voting" ? "Results" : "Next Round";
+  const label = "New round in";
+  const nextPhase = "Next Round";
 
   // Format with leading zeros
   const pad = (n: number) => n.toString().padStart(2, "0");

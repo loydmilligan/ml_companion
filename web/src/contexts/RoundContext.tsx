@@ -12,6 +12,7 @@ type RoundSummary = {
   round_number: number | null;
   submission_deadline: string | null;
   voting_deadline: string | null;
+  reveal_until: string | null;
   playlist_url: string | null;
   external_playlist_url: string | null;
   youtube_playlist_url: string | null;
@@ -134,7 +135,7 @@ export function RoundProvider({ children }: { children: ReactNode }) {
     const { data: roundData } = await supabase
       .from("rounds")
       .select(
-        "id,theme,theme_description,theme_author,status,season_number,round_number,submission_deadline,voting_deadline,playlist_url,external_playlist_url,youtube_playlist_url,theme_image_url"
+        "id,theme,theme_description,theme_author,status,season_number,round_number,submission_deadline,voting_deadline,reveal_until,playlist_url,external_playlist_url,youtube_playlist_url,theme_image_url"
       )
       .eq("league_id", leagueData.id)
       .in("status", ["open", "voting", "revealed"])

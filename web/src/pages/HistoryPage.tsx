@@ -73,6 +73,7 @@ type RoundRow = {
   created_at: string;
   submission_deadline: string | null;
   voting_deadline: string | null;
+  reveal_until: string | null;
   narrative: string | null;
   playlist_url: string | null;
   external_playlist_url: string | null;
@@ -198,7 +199,7 @@ export default function HistoryPage() {
       const { data } = await supabase
         .from("rounds")
         .select(
-          "id,theme,theme_description,theme_author,external_round_id,theme_image_url,winners_image_url,winners_image_visible,season_number,round_number,status,created_at,submission_deadline,voting_deadline,narrative,playlist_url,external_playlist_url,youtube_playlist_url"
+          "id,theme,theme_description,theme_author,external_round_id,theme_image_url,winners_image_url,winners_image_visible,season_number,round_number,status,created_at,submission_deadline,voting_deadline,reveal_until,narrative,playlist_url,external_playlist_url,youtube_playlist_url"
         )
         .in("league_id", leagueIds)
         .in("status", ["revealed", "archived"])

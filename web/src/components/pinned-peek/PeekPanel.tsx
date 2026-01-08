@@ -59,6 +59,7 @@ type RoundSummary = {
   status: "open" | "voting" | "revealed" | "archived";
   submission_deadline: string | null;
   voting_deadline: string | null;
+  reveal_until: string | null;
   playlist_url: string | null;
   external_playlist_url: string | null;
   youtube_playlist_url: string | null;
@@ -280,12 +281,11 @@ export default function PeekPanel({
           </div>
         )}
 
-        {/* Countdown Timer */}
-        {round && (round.status === "open" || round.status === "voting" || round.status === "revealed") && (
+        {/* Countdown Timer - only for revealed phase (2hr until new round) */}
+        {round && round.status === "revealed" && (
           <RoundCountdown
             status={round.status}
-            submissionDeadline={round.submission_deadline}
-            votingDeadline={round.voting_deadline}
+            revealUntil={round.reveal_until}
           />
         )}
 
