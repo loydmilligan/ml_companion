@@ -40,12 +40,15 @@ function NavTab({ to, label }: NavTabProps) {
       className={`bottom-nav-tab ${isActive ? "active" : ""}`}
       to={to}
     >
-      <img
-        src={imageSrc}
-        srcSet={`${imageSrc} 1x, ${imageSrc2x} 2x`}
-        alt={label}
-        className="bottom-nav-tab-image"
-      />
+      <div className="bottom-nav-tab-wrapper">
+        <img
+          src={imageSrc}
+          srcSet={`${imageSrc} 1x, ${imageSrc2x} 2x`}
+          alt={label}
+          className="bottom-nav-tab-image"
+        />
+        {isActive && <span className="bottom-nav-checkmark">✓</span>}
+      </div>
     </NavLink>
   );
 }
