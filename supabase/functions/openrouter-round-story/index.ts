@@ -438,21 +438,23 @@ Return JSON ONLY with key: narrative`;
     const seasonData = body?.season_data ?? {};
     const leagueName = body?.league_name ?? "Music League";
     const seasonNumber = body?.season_number ?? null;
-    const latestRound = body?.latest_round ?? {};
+    const upcomingRound = body?.upcoming_round ?? null;
+    const latestRevealedRound = body?.latest_revealed_round ?? null;
     const minigameSummary = body?.minigame_summary ?? {};
-    const roundNumber = latestRound?.round_number ?? seasonData?.rounds_completed ?? 1;
+    const roundsCompleted = seasonData?.rounds_completed ?? 0;
+    const upcomingRoundNumber = upcomingRound?.round_number ?? (roundsCompleted + 1);
 
-    // Contextual section names based on round number
-    const getSectionOneName = (rn: number) => {
-      if (rn <= 2) return "Season So Far";
-      if (rn <= 4) return "Early Season Check-In";
-      if (rn <= 7) return "Midseason Report";
+    // Contextual section names based on completed rounds
+    const getSectionOneName = (completed: number) => {
+      if (completed <= 1) return "Season So Far";
+      if (completed <= 3) return "Early Season Check-In";
+      if (completed <= 6) return "Midseason Report";
       return "Stretch Run";
     };
 
-    const sectionOneName = getSectionOneName(roundNumber);
+    const sectionOneName = getSectionOneName(roundsCompleted);
 
-    const currentSeasonPrompt = `You are writing a punchy, narrative-driven recap card for an ongoing music league season.
+    const currentSeasonPrompt = `You are writing a punchy, narrative-driven story card for an ongoing music league season.
 
 Tone: witty, insightful, lightly roasting but affectionate. Think sports broadcast meets family group chat.
 Audience: close friends and family who know each other well.
@@ -463,18 +465,19 @@ Write THREE sections (2-4 sentences each):
    - Who's leading and by how much?
    - Any hot streaks, comebacks, or players cooling off?
    - Highlight momentum, not just rankings.
-   - If early season (rounds 1-2), focus on opening storylines and who needed a strong start.
+   - If early season (1-2 rounds completed), focus on opening storylines and early surprises.
 
-2) "Round ${roundNumber} Riff": A quippy take on the most recent round.
-   - What did this theme reveal about people's taste?
-   - Any shocking landslides or photo finishes?
-   - If a theme author is provided, call them out (good or bad).
-   - Reference the winning song/player.
+2) "Up Next: Round ${upcomingRoundNumber}": Preview the UPCOMING round theme.
+   - Get people excited about the theme!
+   - Suggest 2-3 specific song ideas that fit the theme (real songs, artist + title).
+   - Based on standings, who NEEDS a big round? Who can play it safe?
+   - If a theme author is provided, give them credit (or playful blame).
+   - If no upcoming round is provided, write about anticipation for what's next.
 
-3) "Guessing Game": Summarize the submitter-guess minigame results.
-   - Who was the best guesser this round?
-   - Who was easy to guess vs impossible to guess?
-   - Any patterns or surprises?
+3) "Guessing Game Recap": Summarize the submitter-guess minigame results from the last revealed round.
+   - Who was the best guesser?
+   - Any patterns or surprises in who was easy/hard to guess?
+   - If no minigame data, write about the minigame in general or skip with a short note.
 
 Keep it warm, playful, and family-friendly. Be specific—use real names and facts from the data. No generic phrases.
 
@@ -483,15 +486,18 @@ Return JSON ONLY in this format:
 
 League: ${leagueName}
 Season: ${seasonNumber ?? "Unknown"}
-Current round: ${roundNumber}
+Rounds completed: ${roundsCompleted}
 
 Season statistics and standings:
 ${JSON.stringify(seasonData)}
 
-Latest round:
-${JSON.stringify(latestRound)}
+Upcoming round (currently active):
+${upcomingRound ? JSON.stringify(upcomingRound) : "No upcoming round data"}
 
-Minigame summary:
+Last revealed round:
+${latestRevealedRound ? JSON.stringify(latestRevealedRound) : "No revealed round data"}
+
+Minigame summary (from last revealed round):
 ${JSON.stringify(minigameSummary)}`;
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {

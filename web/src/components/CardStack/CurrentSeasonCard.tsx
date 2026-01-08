@@ -58,7 +58,7 @@ export default function CurrentSeasonCard({
         <section className="current-season-block">
           <h3 className="section-label">
             <span className="label-icon" aria-hidden="true">🎬</span>
-            Opening Storylines
+            Season Storylines
           </h3>
           <p className="current-season-text">{data.seasonIntro}</p>
         </section>
@@ -66,7 +66,7 @@ export default function CurrentSeasonCard({
         <section className="current-season-block">
           <h3 className="section-label">
             <span className="label-icon" aria-hidden="true">🎧</span>
-            Round 2 Riff
+            Up Next
           </h3>
           <p className="current-season-text">{data.roundTwoRiff}</p>
         </section>
@@ -74,7 +74,7 @@ export default function CurrentSeasonCard({
         <section className="current-season-block">
           <h3 className="section-label">
             <span className="label-icon" aria-hidden="true">🎯</span>
-            Minigame Recap
+            Guessing Game
           </h3>
           <p className="current-season-text">{data.minigameSummary}</p>
         </section>

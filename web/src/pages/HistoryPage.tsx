@@ -1033,8 +1033,18 @@ export default function HistoryPage() {
     setCurrentSeasonStoryStatus("Loading season data...");
 
     try {
-      // Get the most recent revealed round for this league
-      const { data: latestRound } = await supabase
+      // Get the current active round (open or voting) for upcoming theme riff
+      const { data: upcomingRound } = await supabase
+        .from("rounds")
+        .select("id,theme,theme_description,theme_author,round_number,season_number")
+        .eq("league_id", leagueId)
+        .in("status", ["open", "voting"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // Get the most recent revealed round for minigame stats
+      const { data: latestRevealedRound } = await supabase
         .from("rounds")
         .select("id,theme,theme_description,theme_author,round_number,season_number")
         .eq("league_id", leagueId)
@@ -1043,9 +1053,9 @@ export default function HistoryPage() {
         .limit(1)
         .maybeSingle();
 
-      if (!latestRound) {
+      if (!upcomingRound && !latestRevealedRound) {
         setCurrentSeasonStoryLoading(false);
-        setCurrentSeasonStoryStatus("No revealed rounds found.");
+        setCurrentSeasonStoryStatus("No rounds found.");
         return;
       }
 
@@ -1084,28 +1094,31 @@ export default function HistoryPage() {
         .map(([name, points]) => ({ name, points }))
         .sort((a, b) => b.points - a.points);
 
-      // Get minigame results for latest round
-      const { data: guesses } = await supabase
-        .from("submitter_guesses")
-        .select("guesser_id,is_correct,profiles!guesser_id(display_name)")
-        .eq("round_id", latestRound.id);
+      // Get minigame results for latest revealed round
+      let minigameSummary = { topGuessers: [] as { name: string; correct: number; total: number }[] };
+      if (latestRevealedRound) {
+        const { data: guesses } = await supabase
+          .from("submitter_guesses")
+          .select("guesser_id,is_correct,profiles!guesser_id(display_name)")
+          .eq("round_id", latestRevealedRound.id);
 
-      const guesserStats = new Map<string, { correct: number; total: number; name: string }>();
-      (guesses ?? []).forEach((g: any) => {
-        const profile = Array.isArray(g.profiles) ? g.profiles[0] : g.profiles;
-        const name = profile?.display_name ?? "Unknown";
-        const existing = guesserStats.get(g.guesser_id) ?? { correct: 0, total: 0, name };
-        existing.total += 1;
-        if (g.is_correct) existing.correct += 1;
-        guesserStats.set(g.guesser_id, existing);
-      });
+        const guesserStats = new Map<string, { correct: number; total: number; name: string }>();
+        (guesses ?? []).forEach((g: any) => {
+          const profile = Array.isArray(g.profiles) ? g.profiles[0] : g.profiles;
+          const name = profile?.display_name ?? "Unknown";
+          const existing = guesserStats.get(g.guesser_id) ?? { correct: 0, total: 0, name };
+          existing.total += 1;
+          if (g.is_correct) existing.correct += 1;
+          guesserStats.set(g.guesser_id, existing);
+        });
 
-      const minigameSummary = {
-        topGuessers: Array.from(guesserStats.values())
-          .sort((a, b) => b.correct - a.correct)
-          .slice(0, 3)
-          .map((g) => ({ name: g.name, correct: g.correct, total: g.total })),
-      };
+        minigameSummary = {
+          topGuessers: Array.from(guesserStats.values())
+            .sort((a, b) => b.correct - a.correct)
+            .slice(0, 3)
+            .map((g) => ({ name: g.name, correct: g.correct, total: g.total })),
+        };
+      }
 
       setCurrentSeasonStoryStatus("Generating story...");
 
@@ -1118,12 +1131,17 @@ export default function HistoryPage() {
             rounds_completed: roundIds.length,
             leaderboard: leaderboard.slice(0, 5),
           },
-          latest_round: {
-            theme: latestRound.theme,
-            theme_description: latestRound.theme_description,
-            theme_author: latestRound.theme_author,
-            round_number: latestRound.round_number,
-          },
+          upcoming_round: upcomingRound ? {
+            theme: upcomingRound.theme,
+            theme_description: upcomingRound.theme_description,
+            theme_author: upcomingRound.theme_author,
+            round_number: upcomingRound.round_number,
+            status: "open",
+          } : null,
+          latest_revealed_round: latestRevealedRound ? {
+            theme: latestRevealedRound.theme,
+            round_number: latestRevealedRound.round_number,
+          } : null,
           minigame_summary: minigameSummary,
           text_model_key: "OPENROUTER_MODEL",
         },
