@@ -1078,9 +1078,13 @@
   display: flex;
   align-items: stretch;
   justify-content: space-around;
-  background: var(--surface);
-  border-top: 1px solid rgba(10, 26, 47, 0.08);
-  box-shadow: 0 -4px 20px rgba(10, 26, 47, 0.08);
+  /* Maple wood texture for light mode (default) */
+  background-color: #f5e6d3;
+  background-image: url('/images/textures/wood-maple.png');
+  background-size: cover;
+  background-position: center;
+  border-top: 1px solid rgba(10, 26, 47, 0.12);
+  box-shadow: 0 -4px 20px rgba(10, 26, 47, 0.15);
   z-index: 40;
 }
 
@@ -1154,11 +1158,14 @@
   filter: drop-shadow(0 4px 16px rgba(242, 27, 63, 0.4));
 }
 
-/* Dark mode bottom nav */
+/* Dark mode bottom nav - walnut wood texture */
 [data-mode="dark"] .bottom-nav {
-  background: var(--surface-dark);
-  border-top-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  background-color: #3d2b1f;
+  background-image: url('/images/textures/wood-walnut.png');
+  background-size: cover;
+  background-position: center;
+  border-top-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
 }
 
 [data-mode="dark"] .bottom-nav-link:hover {
@@ -4224,7 +4231,10 @@
 }
 
 [data-mode="light"] .bottom-nav {
-  background: #ffffff;
+  background-color: #f5e6d3;
+  background-image: url('/images/textures/wood-maple.png');
+  background-size: cover;
+  background-position: center;
   border-top-color: rgba(10, 26, 47, 0.08);
   box-shadow: 0 -4px 20px rgba(10, 26, 47, 0.08);
 }
