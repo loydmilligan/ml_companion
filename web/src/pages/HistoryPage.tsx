@@ -149,6 +149,7 @@ export default function HistoryPage() {
 
   // Data state
   const [leagues, setLeagues] = useState<LeagueRow[]>([]);
+  const [leaguesLoaded, setLeaguesLoaded] = useState(false);
   const [, setCurrentLeagueId] = useState<string | null>(null);
   const [allRounds, setAllRounds] = useState<RoundRow[]>([]);
   const [allSubmissions, setAllSubmissions] = useState<Map<string, SubmissionRow[]>>(new Map());
@@ -180,6 +181,7 @@ export default function HistoryPage() {
       const list = (data as LeagueRow[]) ?? [];
       setLeagues(list);
       setCurrentLeagueId(list[0]?.id ?? null);
+      setLeaguesLoaded(true);
     };
 
     loadLeagues();
@@ -187,7 +189,14 @@ export default function HistoryPage() {
 
   // Load completed rounds from all leagues
   useEffect(() => {
-    if (leagues.length === 0) return;
+    // Wait for leagues to be loaded first
+    if (!leaguesLoaded) return;
+
+    // No leagues = nothing to load
+    if (leagues.length === 0) {
+      setIsLoading(false);
+      return;
+    }
 
     const loadRounds = async () => {
       setIsLoading(true);
@@ -218,7 +227,7 @@ export default function HistoryPage() {
     };
 
     loadRounds();
-  }, [leagues]);
+  }, [leagues, leaguesLoaded]);
 
   // Load submissions, votes, and awards for all rounds
   const loadRoundDetails = async (rounds: RoundRow[]) => {
