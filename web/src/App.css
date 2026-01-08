@@ -643,7 +643,7 @@
   align-items: center;
   padding: 12px 24px;
   background-color: var(--surface);
-  background-image: url('/images/textures/header-dark.png');
+  background-image: url('/images/textures/header-dark.png?v2');
   background-size: cover;
   background-position: center;
   border-bottom: 1px solid rgba(10, 26, 47, 0.08);
@@ -4456,7 +4456,7 @@
 
 [data-mode="light"] .top-bar {
   background-color: #f8f4ef;
-  background-image: url('/images/textures/header-light.png');
+  background-image: url('/images/textures/header-light.png?v2');
   background-size: cover;
   background-position: center;
 }
