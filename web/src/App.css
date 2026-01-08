@@ -4081,9 +4081,9 @@
   bottom: var(--bottomnav-height, 72px);
   display: flex;
   flex-direction: column;
-  /* Brick wall texture background */
+  /* Brick wall texture background - v2: GPT bricks without watermark */
   background-color: #f0e8d8;
-  background-image: url('/images/textures/brick-light.png');
+  background-image: url('/images/textures/brick-light.png?v2');
   background-repeat: repeat;
   background-size: 256px 256px;
   overflow: hidden;
@@ -4182,7 +4182,7 @@
 
 [data-mode="light"] .chat-page {
   background-color: #f0e8d8;
-  background-image: url('/images/textures/brick-light.png');
+  background-image: url('/images/textures/brick-light.png?v2');
   background-repeat: repeat;
   background-size: 256px 256px;
 }
@@ -4191,10 +4191,10 @@
   background: transparent;
 }
 
-/* Dark mode brick background for chat */
+/* Dark mode brick background for chat - v2: GPT bricks without watermark */
 [data-mode="dark"] .chat-page {
   background-color: #0a1a2f;
-  background-image: url('/images/textures/brick-dark.png');
+  background-image: url('/images/textures/brick-dark.png?v2');
   background-repeat: repeat;
   background-size: 256px 256px;
 }
