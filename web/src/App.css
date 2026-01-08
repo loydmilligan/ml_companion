@@ -4144,6 +4144,7 @@
   --text-primary: #0a1a2f;
   --text-muted: #5a6b7f;
   --surface: #ffffff;
+  --bg-tertiary: rgba(10, 26, 47, 0.08);
   background-color: #f3f7fb !important;
   color: #0a1a2f !important;
 }
@@ -4281,6 +4282,7 @@
   --text-primary: #e4e4e7;
   --text-muted: #a1a1aa;
   --surface: #1a1a2e;
+  --bg-tertiary: rgba(255, 255, 255, 0.12);
   background-color: #0f0f1a;
   color: #e4e4e7;
 }
