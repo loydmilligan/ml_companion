@@ -132,7 +132,7 @@ export function RoundProvider({ children }: { children: ReactNode }) {
     }
 
     // Get current round - prioritize active rounds (open/voting) over revealed
-    // First try to find an open or voting round (highest round_number = most recent)
+    // Sort by created_at DESC to get the most recently created round
     let { data: roundData } = await supabase
       .from("rounds")
       .select(
@@ -140,12 +140,11 @@ export function RoundProvider({ children }: { children: ReactNode }) {
       )
       .eq("league_id", leagueData.id)
       .in("status", ["open", "voting"])
-      .order("round_number", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    // If no active round, fall back to revealed round (highest round_number = most recent)
+    // If no active round, fall back to revealed round (most recently created)
     if (!roundData) {
       const { data: revealedRound } = await supabase
         .from("rounds")
@@ -154,7 +153,6 @@ export function RoundProvider({ children }: { children: ReactNode }) {
         )
         .eq("league_id", leagueData.id)
         .eq("status", "revealed")
-        .order("round_number", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -257,12 +255,13 @@ export function RoundProvider({ children }: { children: ReactNode }) {
     if (!leagueData) return;
 
     // Check current round - prioritize active rounds (open/voting) over revealed
+    // Sort by created_at DESC to get the most recently created round
     let { data: roundData } = await supabase
       .from("rounds")
       .select("id,status")
       .eq("league_id", leagueData.id)
       .in("status", ["open", "voting"])
-      .order("round_number", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
@@ -273,7 +272,7 @@ export function RoundProvider({ children }: { children: ReactNode }) {
         .select("id,status")
         .eq("league_id", leagueData.id)
         .eq("status", "revealed")
-        .order("round_number", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       roundData = revealedRound;
