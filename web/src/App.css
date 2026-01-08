@@ -3623,6 +3623,75 @@
   }
 }
 
+/* Peek tab wrapper for dynamic text overlay */
+.peek-tab-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/* Date text overlay (horizontal, at top) */
+.peek-tab-date {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Caveat', cursive;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1a1510;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+  white-space: nowrap;
+  pointer-events: none;
+  letter-spacing: 0.5px;
+}
+
+[data-mode="dark"] .peek-tab-date {
+  color: #f0e8d8;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Vertical text container (league + round name) */
+.peek-tab-text-vertical {
+  position: absolute;
+  top: 42px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-90deg);
+  transform-origin: center center;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 32px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* League name styling */
+.peek-tab-league {
+  font-family: 'Caveat', cursive;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1510;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+[data-mode="dark"] .peek-tab-league {
+  color: #f0e8d8;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Round name styling (slightly smaller) */
+.peek-tab-round {
+  font-family: 'Caveat', cursive;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1510;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+[data-mode="dark"] .peek-tab-round {
+  color: #f0e8d8;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
 
 /* Song Card */
 .song-card {
