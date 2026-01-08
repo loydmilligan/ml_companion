@@ -3463,7 +3463,7 @@
 .peek-tab {
   position: fixed;
   right: 0;
-  top: 50%;
+  top: 35%;
   transform: translateY(-50%) translateX(6px);
   z-index: 40;
   padding: 0;
@@ -3526,6 +3526,13 @@
   }
   50% {
     transform: translateY(-50%) translateX(0);
+  }
+}
+
+/* Peek Tab positioning adjustment for short screens */
+@media (max-height: 700px) {
+  .peek-tab {
+    top: 30%;
   }
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import clsx from "clsx";
 import SongCard from "./SongCard";
 import AIAssistant from "./AIAssistant";
@@ -108,6 +108,36 @@ export default function PeekPanel({
   const [isTimelineGameOpen, setIsTimelineGameOpen] = useState(false);
   const [isRoundChallengeOpen, setIsRoundChallengeOpen] = useState(false);
 
+  // Swipe-to-close state
+  const panelRef = useRef<HTMLElement>(null);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const deltaX = touchEndX - touchStartX.current;
+    const deltaY = touchEndY - touchStartY.current;
+
+    // Require horizontal swipe: deltaX > 80px and more horizontal than vertical
+    const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
+    const isRightSwipe = deltaX > 80;
+
+    if (isHorizontalSwipe && isRightSwipe) {
+      onClose();
+    }
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+  }, [onClose]);
+
   // Submitter guess state
   const isRevealed = round?.status === "revealed";
   const showGuessUI = submitterGuessEnabled && (round?.status === "voting" || round?.status === "revealed");
@@ -207,11 +237,14 @@ export default function PeekPanel({
 
       {/* Panel */}
       <aside
+        ref={panelRef}
         className={clsx("peek-panel", isOpen && "open")}
         role="dialog"
         aria-modal="true"
         aria-label="Round details"
         aria-hidden={!isOpen}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         {/* Header with banner */}
         <div className="peek-panel-header">
