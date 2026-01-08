@@ -1156,13 +1156,7 @@ export default function HistoryPage() {
 
   return (
     <div className="history-page">
-      <PeekTab
-        onClick={openPanel}
-        variant="cassette"
-        leagueName={group?.name}
-        roundName={round?.theme}
-        deadline={round?.status === "open" ? round?.submission_deadline : round?.voting_deadline}
-      />
+      <PeekTab onClick={openPanel} variant="cassette" />
       <CardStack
         cards={cardData}
         onCardChange={handleCardChange}

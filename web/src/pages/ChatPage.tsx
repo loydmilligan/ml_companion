@@ -732,14 +732,8 @@ export default function ChatPage() {
 
   return (
     <div className="chat-page">
-      {/* Peek tab - cassette spine on right edge with dynamic text */}
-      <PeekTab
-        onClick={openPanel}
-        variant="cassette"
-        leagueName={group?.name}
-        roundName={round?.theme}
-        deadline={round?.status === "open" ? round?.submission_deadline : round?.voting_deadline}
-      />
+      {/* Peek tab - cassette spine on right edge */}
+      <PeekTab onClick={openPanel} variant="cassette" />
 
       <div
         className="chat-thread"
