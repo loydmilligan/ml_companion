@@ -4,6 +4,7 @@ import SongCard from "./SongCard";
 import AIAssistant from "./AIAssistant";
 import CollapsibleSection from "./CollapsibleSection";
 import ProgressSection from "./ProgressSection";
+import RoundCountdown from "./RoundCountdown";
 import TimelineGameModal from "./TimelineGameModal";
 import RoundChallengeModal from "./RoundChallengeModal";
 import { useYouTubeSidebar } from "../youtube-sidebar";
@@ -277,6 +278,15 @@ export default function PeekPanel({
                round.status === "revealed" ? "Revealed" : round.status}
             </span>
           </div>
+        )}
+
+        {/* Countdown Timer */}
+        {round && (round.status === "open" || round.status === "voting") && (
+          <RoundCountdown
+            status={round.status}
+            submissionDeadline={round.submission_deadline}
+            votingDeadline={round.voting_deadline}
+          />
         )}
 
         {/* Content */}

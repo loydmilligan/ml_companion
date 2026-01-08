@@ -1,5 +1,6 @@
 export { default as DualNeedleGauge } from "./DualNeedleGauge";
 export { default as DeadlineBar } from "./DeadlineBar";
+export { default as RoundCountdown } from "./RoundCountdown";
 export { default as PinnedBar } from "./PinnedBar";
 export { default as PeekPanel } from "./PeekPanel";
 export { default as PeekButton } from "./PeekButton";

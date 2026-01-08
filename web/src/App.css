@@ -3233,6 +3233,94 @@
   color: white;
 }
 
+/* Round Countdown Timer */
+.round-countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+}
+
+.round-countdown-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.round-countdown-timer {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+}
+
+.countdown-segment {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.countdown-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.countdown-unit {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-left: 1px;
+  margin-right: 6px;
+}
+
+.countdown-segment:last-child .countdown-unit {
+  margin-right: 0;
+}
+
+.round-countdown-overdue {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent);
+  animation: pulse-text 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-text {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Countdown urgency levels */
+.round-countdown-safe .countdown-value {
+  color: var(--success, #22c55e);
+}
+
+.round-countdown-warning .countdown-value {
+  color: var(--warning, #f59e0b);
+}
+
+.round-countdown-urgent .countdown-value {
+  color: var(--error, #ef4444);
+}
+
+.round-countdown-urgent {
+  animation: urgent-bg 1s ease-in-out infinite;
+}
+
+@keyframes urgent-bg {
+  0%, 100% { background: var(--bg-tertiary); }
+  50% { background: rgba(239, 68, 68, 0.1); }
+}
+
+.round-countdown-overdue {
+  background: rgba(239, 68, 68, 0.15);
+}
+
 /* Theme Info */
 .peek-panel-theme-info {
   padding-bottom: 8px;
