@@ -125,8 +125,8 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // Verify JWT authentication
-  const { user, error: authError } = await verifyAuth(req);
+  // Verify authentication (accepts both user JWTs and service role key for internal calls)
+  const { user, isServiceRole, error: authError } = await verifyAuth(req);
   if (authError) {
     return unauthorizedResponse(authError, corsHeaders);
   }
