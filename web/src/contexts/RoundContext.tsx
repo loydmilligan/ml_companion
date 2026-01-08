@@ -131,18 +131,36 @@ export function RoundProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Get current round (open or voting) - lowest round number first
-    const { data: roundData } = await supabase
+    // Get current round - prioritize active rounds (open/voting) over revealed
+    // First try to find an open or voting round (highest round_number = most recent)
+    let { data: roundData } = await supabase
       .from("rounds")
       .select(
         "id,theme,theme_description,theme_author,status,season_number,round_number,submission_deadline,voting_deadline,reveal_until,playlist_url,external_playlist_url,youtube_playlist_url,theme_image_url"
       )
       .eq("league_id", leagueData.id)
-      .in("status", ["open", "voting", "revealed"])
-      .order("round_number", { ascending: true, nullsFirst: false })
-      .order("created_at", { ascending: true })
+      .in("status", ["open", "voting"])
+      .order("round_number", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    // If no active round, fall back to revealed round (highest round_number = most recent)
+    if (!roundData) {
+      const { data: revealedRound } = await supabase
+        .from("rounds")
+        .select(
+          "id,theme,theme_description,theme_author,status,season_number,round_number,submission_deadline,voting_deadline,reveal_until,playlist_url,external_playlist_url,youtube_playlist_url,theme_image_url"
+        )
+        .eq("league_id", leagueData.id)
+        .eq("status", "revealed")
+        .order("round_number", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      roundData = revealedRound;
+    }
 
     setRound((roundData as RoundSummary) ?? null);
 
@@ -238,15 +256,28 @@ export function RoundProvider({ children }: { children: ReactNode }) {
 
     if (!leagueData) return;
 
-    // Check current round status/submission count - lowest round number first
-    const { data: roundData } = await supabase
+    // Check current round - prioritize active rounds (open/voting) over revealed
+    let { data: roundData } = await supabase
       .from("rounds")
       .select("id,status")
       .eq("league_id", leagueData.id)
-      .in("status", ["open", "voting", "revealed"])
-      .order("round_number", { ascending: true, nullsFirst: false })
+      .in("status", ["open", "voting"])
+      .order("round_number", { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle();
+
+    // Fall back to revealed round if no active round
+    if (!roundData) {
+      const { data: revealedRound } = await supabase
+        .from("rounds")
+        .select("id,status")
+        .eq("league_id", leagueData.id)
+        .eq("status", "revealed")
+        .order("round_number", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+      roundData = revealedRound;
+    }
 
     // If round changed or status changed, do a full reload
     if (roundData?.id !== round?.id || roundData?.status !== round?.status) {

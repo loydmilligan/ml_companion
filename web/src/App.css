@@ -3077,6 +3077,23 @@
   background: var(--blue);
 }
 
+.deadline-legend-dot.revealed {
+  background: var(--trophy-gold, #ffd700);
+}
+
+.deadline-fill-revealed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--trophy-gold, #ffd700), #fff9e0);
+  border-radius: 3px;
+}
+
+.deadline-bar-revealed {
+  box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.3);
+}
+
 .deadline-bar-wrapper {
   margin: 8px 0;
 }

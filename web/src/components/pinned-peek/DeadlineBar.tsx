@@ -59,13 +59,33 @@ export default function DeadlineBar({
   const votedPct = totalMembers > 0 ? (votedCount / totalMembers) * 100 : 0;
 
   // Show phase-appropriate content
-  const isVotingPhase = roundStatus === "voting" || roundStatus === "revealed";
+  const isVotingPhase = roundStatus === "voting";
   const isOpenPhase = roundStatus === "open";
+  const isRevealedPhase = roundStatus === "revealed";
 
   // Dynamic outline styles based on participation
   const activeOpacity = isVotingPhase
     ? votedPct > 0 ? 0.4 + (votedPct / 100) * 0.5 : 0
     : submittedPct > 0 ? 0.3 + (submittedPct / 100) * 0.5 : 0;
+
+  // During revealed phase, show minimal UI
+  if (isRevealedPhase) {
+    return (
+      <div className="deadline-bar-wrapper">
+        <div className="deadline-bar-combined deadline-bar-revealed">
+          <div className="deadline-bar-combined-inner">
+            <span className="deadline-fill-revealed" style={{ width: "100%" }} />
+          </div>
+        </div>
+        <div className="deadline-legend">
+          <span>
+            <span className="deadline-legend-dot revealed" />
+            Results revealed
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="deadline-bar-wrapper">
