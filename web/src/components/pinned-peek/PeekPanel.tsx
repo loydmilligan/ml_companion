@@ -281,7 +281,7 @@ export default function PeekPanel({
         )}
 
         {/* Countdown Timer */}
-        {round && (round.status === "open" || round.status === "voting") && (
+        {round && (round.status === "open" || round.status === "voting" || round.status === "revealed") && (
           <RoundCountdown
             status={round.status}
             submissionDeadline={round.submission_deadline}

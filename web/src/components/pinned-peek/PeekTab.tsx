@@ -70,10 +70,10 @@ export default function PeekTab({
           ? `/images/peek-tab/${prefix}-dark.png`
           : `/images/peek-tab/${prefix}-light.png`;
       }
-      // Use AI-generated image for dark mode, Python-generated for light
+      // Use AI-generated images with baked-in text
       return isDarkMode
         ? `/images/peek-tab/peek-tab-cassette-ai-dark.png`
-        : `/images/peek-tab/peek-tab-cassette-light.png`;
+        : `/images/peek-tab/peek-tab-cassette-ai-light.png`;
     }
     return isDarkMode
       ? "/images/peek-tab/peek-tab-divider-dark.png"
@@ -88,10 +88,10 @@ export default function PeekTab({
           ? `/images/peek-tab/${prefix}-dark.png 1x, /images/peek-tab/${prefix}-dark@2x.png 2x`
           : `/images/peek-tab/${prefix}-light.png 1x, /images/peek-tab/${prefix}-light@2x.png 2x`;
       }
-      // Use AI-generated image for dark mode, Python-generated for light
+      // Use AI-generated images with baked-in text
       return isDarkMode
         ? `/images/peek-tab/peek-tab-cassette-ai-dark.png 1x, /images/peek-tab/peek-tab-cassette-ai-dark@2x.png 2x`
-        : `/images/peek-tab/peek-tab-cassette-light.png 1x, /images/peek-tab/peek-tab-cassette-light@2x.png 2x`;
+        : `/images/peek-tab/peek-tab-cassette-ai-light.png 1x, /images/peek-tab/peek-tab-cassette-ai-light@2x.png 2x`;
     }
     return undefined; // Dividers don't have 2x yet
   }, [variant, isDarkMode, useDynamicText]);

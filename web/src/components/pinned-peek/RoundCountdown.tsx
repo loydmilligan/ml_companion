@@ -6,6 +6,10 @@ type RoundCountdownProps = {
   votingDeadline: string | null;
 };
 
+// Hours after voting closes before switching to new round
+// Triggered by "votes are in" email
+const SWITCH_DELAY_HOURS = 2;
+
 type TimeRemaining = {
   days: number;
   hours: number;
@@ -49,9 +53,16 @@ export default function RoundCountdown({
   votingDeadline,
 }: RoundCountdownProps) {
   // Pick the relevant deadline based on status
+  // For revealed status: switch to new round 24 hours after voting closes
   const deadline = useMemo(() => {
     if (status === "open") return submissionDeadline;
     if (status === "voting") return votingDeadline;
+    if (status === "revealed" && votingDeadline) {
+      // Calculate switch time: voting deadline + delay
+      const votingDate = new Date(votingDeadline);
+      const switchTime = new Date(votingDate.getTime() + SWITCH_DELAY_HOURS * 60 * 60 * 1000);
+      return switchTime.toISOString();
+    }
     return null;
   }, [status, submissionDeadline, votingDeadline]);
 
@@ -68,14 +79,20 @@ export default function RoundCountdown({
     return () => clearInterval(interval);
   }, [deadline]);
 
-  // Don't show for revealed/archived rounds or if no deadline
-  if (status === "revealed" || status === "archived" || !deadline) {
+  // Don't show for archived rounds or if no deadline
+  if (status === "archived" || !deadline) {
     return null;
   }
 
   const urgency = getUrgencyLevel(time.total);
-  const label = status === "open" ? "Submissions close in" : "Voting ends in";
-  const nextPhase = status === "open" ? "Voting" : "Results";
+  const label =
+    status === "open"
+      ? "Submissions close in"
+      : status === "voting"
+        ? "Voting ends in"
+        : "New round in";
+  const nextPhase =
+    status === "open" ? "Voting" : status === "voting" ? "Results" : "Next Round";
 
   // Format with leading zeros
   const pad = (n: number) => n.toString().padStart(2, "0");
