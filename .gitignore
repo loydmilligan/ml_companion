@@ -26,8 +26,9 @@ node_modules/
 # App data artifacts
 web/public/data/archive/
 web/public/data/track_metadata.csv
-generated/award-trophy-model-compare.html
-generated/logo-ideas/
+
+# Generated staging assets (AI-generated images, etc.)
+generated/
 
 # Development/prototype files
 .mcp.json
