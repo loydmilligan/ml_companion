@@ -1414,6 +1414,49 @@ details.preseason-block .preseason-text {
   color: #a1a1aa;
 }
 
+/* Light mode explicit styles - prevent system dark mode override */
+[data-mode="light"] .round-card,
+[data-mode="light"] .current-season-card,
+[data-mode="light"] .preseason-special-card,
+[data-mode="light"] .season-recap-card {
+  background: white;
+}
+
+[data-mode="light"] .card-content {
+  background: white;
+}
+
+[data-mode="light"] .story-text {
+  background: linear-gradient(135deg, rgba(45, 70, 185, 0.12) 0%, rgba(30, 215, 96, 0.12) 100%);
+  border-color: rgba(45, 70, 185, 0.15);
+}
+
+[data-mode="light"] .story-text p {
+  color: #1a1a1a;
+}
+
+[data-mode="light"] .collapsible-section.story-expanded {
+  background: linear-gradient(135deg, rgba(45, 70, 185, 0.08) 0%, rgba(30, 215, 96, 0.08) 100%);
+  border-color: rgba(45, 70, 185, 0.15);
+}
+
+[data-mode="light"] .section-label {
+  color: #1a1a1a;
+}
+
+[data-mode="light"] .current-season-text {
+  color: #333;
+}
+
+[data-mode="light"] .current-season-block {
+  background: rgba(30, 215, 96, 0.08);
+  border-color: rgba(30, 215, 96, 0.15);
+}
+
+[data-mode="light"] .recap-narrative .narrative-text {
+  color: #333;
+}
+
 [data-mode="dark"] .story-text {
   background: linear-gradient(135deg, rgba(45, 70, 185, 0.2) 0%, rgba(30, 215, 96, 0.15) 100%);
   border-color: rgba(45, 70, 185, 0.25);

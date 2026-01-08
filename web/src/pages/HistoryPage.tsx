@@ -906,6 +906,152 @@ export default function HistoryPage() {
     onGenerateAwards: handleGenerateAwards,
   }), [handleGenerateThemeBanner, handleGenerateStory, handleGenerateAwards]);
 
+  // Handler for regenerating current season story
+  const [currentSeasonStoryLoading, setCurrentSeasonStoryLoading] = useState(false);
+  const [currentSeasonStoryStatus, setCurrentSeasonStoryStatus] = useState<string | null>(null);
+
+  const handleRegenerateCurrentSeasonStory = useCallback(async (leagueId: string) => {
+    if (!group) return;
+    const league = leagues.find((l) => l.id === leagueId);
+    if (!league) return;
+
+    setCurrentSeasonStoryLoading(true);
+    setCurrentSeasonStoryStatus("Loading season data...");
+
+    try {
+      // Get the most recent revealed round for this league
+      const { data: latestRound } = await supabase
+        .from("rounds")
+        .select("id,theme,theme_description,theme_author,round_number,season_number")
+        .eq("league_id", leagueId)
+        .eq("status", "revealed")
+        .order("round_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!latestRound) {
+        setCurrentSeasonStoryLoading(false);
+        setCurrentSeasonStoryStatus("No revealed rounds found.");
+        return;
+      }
+
+      // Get all rounds for season stats
+      const { data: seasonRounds } = await supabase
+        .from("rounds")
+        .select("id,theme,round_number")
+        .eq("league_id", leagueId)
+        .in("status", ["revealed", "archived"]);
+
+      const roundIds = (seasonRounds ?? []).map((r) => r.id);
+
+      // Get submissions and votes
+      const { data: submissions } = await supabase
+        .from("submissions")
+        .select("id,title,artist,submitter_name")
+        .in("round_id", roundIds);
+
+      const submissionIds = (submissions ?? []).map((s) => s.id);
+      const { data: votes } = await supabase
+        .from("votes")
+        .select("submission_id,voter_name,points")
+        .in("submission_id", submissionIds);
+
+      // Calculate standings
+      const playerPoints = new Map<string, number>();
+      (submissions ?? []).forEach((s) => {
+        if (s.submitter_name) {
+          const submissionVotes = (votes ?? []).filter((v) => v.submission_id === s.id);
+          const total = submissionVotes.reduce((sum, v) => sum + (v.points ?? 0), 0);
+          playerPoints.set(s.submitter_name, (playerPoints.get(s.submitter_name) ?? 0) + total);
+        }
+      });
+
+      const leaderboard = Array.from(playerPoints.entries())
+        .map(([name, points]) => ({ name, points }))
+        .sort((a, b) => b.points - a.points);
+
+      // Get minigame results for latest round
+      const { data: guesses } = await supabase
+        .from("submitter_guesses")
+        .select("guesser_id,is_correct,profiles!guesser_id(display_name)")
+        .eq("round_id", latestRound.id);
+
+      const guesserStats = new Map<string, { correct: number; total: number; name: string }>();
+      (guesses ?? []).forEach((g: any) => {
+        const profile = Array.isArray(g.profiles) ? g.profiles[0] : g.profiles;
+        const name = profile?.display_name ?? "Unknown";
+        const existing = guesserStats.get(g.guesser_id) ?? { correct: 0, total: 0, name };
+        existing.total += 1;
+        if (g.is_correct) existing.correct += 1;
+        guesserStats.set(g.guesser_id, existing);
+      });
+
+      const minigameSummary = {
+        topGuessers: Array.from(guesserStats.values())
+          .sort((a, b) => b.correct - a.correct)
+          .slice(0, 3)
+          .map((g) => ({ name: g.name, correct: g.correct, total: g.total })),
+      };
+
+      setCurrentSeasonStoryStatus("Generating story...");
+
+      const { data, error } = await supabase.functions.invoke("openrouter-round-story", {
+        body: {
+          mode: "current_season_story",
+          league_name: league.name,
+          season_number: league.season_number,
+          season_data: {
+            rounds_completed: roundIds.length,
+            leaderboard: leaderboard.slice(0, 5),
+          },
+          latest_round: {
+            theme: latestRound.theme,
+            theme_description: latestRound.theme_description,
+            theme_author: latestRound.theme_author,
+            round_number: latestRound.round_number,
+          },
+          minigame_summary: minigameSummary,
+          text_model_key: "OPENROUTER_MODEL",
+        },
+      });
+
+      if (error) throw error;
+
+      // Update league with new story content
+      const updates: Record<string, string | null> = {
+        current_story_intro: data?.season_intro ?? null,
+        current_round_riff: data?.round_two_riff ?? null,
+        current_minigame_summary: data?.minigame_summary ?? null,
+        current_story_updated_at: new Date().toISOString(),
+        current_story_round_id: latestRound.id,
+      };
+
+      await supabase.from("leagues").update(updates).eq("id", leagueId);
+
+      // Update local state
+      setLeagues((prev) =>
+        prev.map((l) =>
+          l.id === leagueId
+            ? {
+                ...l,
+                current_story_intro: updates.current_story_intro,
+                current_round_riff: updates.current_round_riff,
+                current_minigame_summary: updates.current_minigame_summary,
+              }
+            : l
+        )
+      );
+
+      setCurrentSeasonStoryLoading(false);
+      setCurrentSeasonStoryStatus("Story updated!");
+      setTimeout(() => setCurrentSeasonStoryStatus(null), 3000);
+    } catch (err) {
+      console.error("Failed to generate current season story:", err);
+      setCurrentSeasonStoryLoading(false);
+      setCurrentSeasonStoryStatus("Failed to generate story.");
+    }
+  }, [group, leagues]);
+
   /* ========================================
      Transform Data to CardData[]
      ======================================== */
@@ -1020,8 +1166,8 @@ export default function HistoryPage() {
       const isCurrentSeason = seasonIndex === 0;
       const currentLeague = leagues.find((l) => l.season_number === seasonNum);
 
-      // Sort rounds by round_number descending within season
-      seasonRounds.sort((a, b) => (b.round_number ?? 0) - (a.round_number ?? 0));
+      // Sort rounds by round_number ascending within season (chronological - Round 1 first)
+      seasonRounds.sort((a, b) => (a.round_number ?? 0) - (b.round_number ?? 0));
 
       if (isCurrentSeason && seasonRounds.length > 0) {
         // Current season card (AI-generated story) - first card
@@ -1040,6 +1186,7 @@ export default function HistoryPage() {
           type: "current-season",
           seasonNumber: seasonNum,
           leagueName: currentLeague?.name ?? `Season ${seasonNum}`,
+          leagueId: currentLeague?.id ?? "",
           seasonIntro,
           roundTwoRiff,
           minigameSummary,
@@ -1074,33 +1221,32 @@ export default function HistoryPage() {
         cards.push(preseasonCard);
       }
 
-      // Add season recap card for PAST seasons only
-      // Current season uses the current-season card instead
-      if (!isCurrentSeason) {
-        const seasonStats = pastSeasonStats.find((s) => s.seasonNumber === seasonNum);
-        if (seasonStats) {
-          // Find the league to get the narrative
-          const league = leagues.find((l) => l.id === seasonStats.leagueId);
-          const recapCard: SeasonRecapCardData = {
-            id: `season-${seasonStats.leagueId}`,
-            type: "season-recap",
-            seasonNumber: seasonStats.seasonNumber,
-            leagueName: seasonStats.leagueName,
-            totalRounds: seasonStats.totalRounds,
-            totalSubmissions: seasonStats.totalSubmissions,
-            totalVotes: seasonStats.totalVotes,
-            topTracks: seasonStats.topTracks,
-            roundThemes: seasonStats.roundThemes,
-            leaderboard: seasonStats.leaderboard,
-            seasonAwards: seasonStats.seasonAwards,
-            votingPatterns: seasonStats.votingPatterns,
-            genreDistribution: seasonStats.genreDistribution,
-            decadeDistribution: seasonStats.decadeDistribution,
-            seasonNarrative: league?.narrative ?? null,
-            playlistUrl: league?.playlist_url ?? null,
-          };
-          cards.push(recapCard);
-        }
+      // Add season recap card for ALL seasons (stats, leaderboard, round links)
+      // For current season: this provides stats and links to rounds
+      // For past seasons: this is the main summary card
+      const seasonStats = pastSeasonStats.find((s) => s.seasonNumber === seasonNum);
+      if (seasonStats) {
+        // Find the league to get the narrative
+        const league = leagues.find((l) => l.id === seasonStats.leagueId);
+        const recapCard: SeasonRecapCardData = {
+          id: `season-${seasonStats.leagueId}`,
+          type: "season-recap",
+          seasonNumber: seasonStats.seasonNumber,
+          leagueName: seasonStats.leagueName,
+          totalRounds: seasonStats.totalRounds,
+          totalSubmissions: seasonStats.totalSubmissions,
+          totalVotes: seasonStats.totalVotes,
+          topTracks: seasonStats.topTracks,
+          roundThemes: seasonStats.roundThemes,
+          leaderboard: seasonStats.leaderboard,
+          seasonAwards: seasonStats.seasonAwards,
+          votingPatterns: seasonStats.votingPatterns,
+          genreDistribution: seasonStats.genreDistribution,
+          decadeDistribution: seasonStats.decadeDistribution,
+          seasonNarrative: league?.narrative ?? null,
+          playlistUrl: league?.playlist_url ?? null,
+        };
+        cards.push(recapCard);
       }
     });
 
@@ -1171,6 +1317,9 @@ export default function HistoryPage() {
         isLead={isLead}
         adminCallbacks={adminCallbacks}
         generationState={generationState}
+        onRegenerateCurrentSeasonStory={handleRegenerateCurrentSeasonStory}
+        currentSeasonStoryLoading={currentSeasonStoryLoading}
+        currentSeasonStoryStatus={currentSeasonStoryStatus}
       />
     </div>
   );

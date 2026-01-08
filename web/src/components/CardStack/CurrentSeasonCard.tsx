@@ -15,6 +15,10 @@ export default function CurrentSeasonCard({
   isActive,
   dragOffset = 0,
   isDragging = false,
+  isLead = false,
+  onRegenerateStory,
+  isStoryLoading = false,
+  storyStatus,
 }: CurrentSeasonCardProps) {
   const transformStyle = useMemo(() => {
     const baseTransform = CARD_TRANSFORMS[position] || CARD_TRANSFORMS[3];
@@ -74,6 +78,39 @@ export default function CurrentSeasonCard({
           </h3>
           <p className="current-season-text">{data.minigameSummary}</p>
         </section>
+
+        {/* Admin controls */}
+        {isLead && onRegenerateStory && (
+          <div className="admin-generation-controls">
+            <div className="admin-controls-header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="admin-icon">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+              </svg>
+              <span>Admin</span>
+            </div>
+            {storyStatus && (
+              <p className="generation-status">{storyStatus}</p>
+            )}
+            <div className="admin-buttons">
+              <button
+                type="button"
+                className="admin-gen-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRegenerateStory(data.leagueId);
+                }}
+                disabled={isStoryLoading}
+                title="Regenerate current season story"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+                {isStoryLoading ? "..." : "Regenerate Story"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </article>
   );

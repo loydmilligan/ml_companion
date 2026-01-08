@@ -197,6 +197,8 @@ export interface CurrentSeasonCardData {
   seasonNumber: number;
   /** League/season name */
   leagueName: string;
+  /** League ID for admin actions */
+  leagueId: string;
   /** Season-opening narrative */
   seasonIntro: string;
   /** Round-two riff */
@@ -340,6 +342,12 @@ export interface CardStackProps {
   adminCallbacks?: AdminGenerationCallbacks;
   /** Generation state per round ID */
   generationState?: Map<string, AdminGenerationState>;
+  /** Callback to regenerate current season story */
+  onRegenerateCurrentSeasonStory?: (leagueId: string) => Promise<void>;
+  /** Is current season story being regenerated */
+  currentSeasonStoryLoading?: boolean;
+  /** Current season story status message */
+  currentSeasonStoryStatus?: string | null;
 }
 
 /**
@@ -386,6 +394,14 @@ export interface SeasonRecapCardProps extends CardComponentProps {
 export interface CurrentSeasonCardProps extends CardComponentProps {
   /** Current season story data */
   data: CurrentSeasonCardData;
+  /** Is the current user an admin (lead) */
+  isLead?: boolean;
+  /** Callback to regenerate story */
+  onRegenerateStory?: (leagueId: string) => Promise<void>;
+  /** Is story currently being regenerated */
+  isStoryLoading?: boolean;
+  /** Status message */
+  storyStatus?: string | null;
 }
 
 /**

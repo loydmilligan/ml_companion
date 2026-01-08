@@ -32,6 +32,9 @@ export default function CardStack({
   isLead = false,
   adminCallbacks,
   generationState,
+  onRegenerateCurrentSeasonStory,
+  currentSeasonStoryLoading,
+  currentSeasonStoryStatus,
 }: CardStackProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [gesture, setGesture] = useState<GestureState>({
@@ -296,6 +299,10 @@ export default function CardStack({
                 isActive={isActive}
                 dragOffset={dragOffset}
                 isDragging={isActive && gesture.isDragging}
+                isLead={isLead}
+                onRegenerateStory={onRegenerateCurrentSeasonStory}
+                isStoryLoading={currentSeasonStoryLoading}
+                storyStatus={currentSeasonStoryStatus}
               />
             );
           }
