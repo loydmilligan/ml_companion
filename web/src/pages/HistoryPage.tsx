@@ -1155,7 +1155,7 @@ export default function HistoryPage() {
         current_round_riff: data?.round_two_riff ?? null,
         current_minigame_summary: data?.minigame_summary ?? null,
         current_story_updated_at: new Date().toISOString(),
-        current_story_round_id: latestRound.id,
+        current_story_round_id: upcomingRound?.id ?? latestRevealedRound?.id ?? null,
       };
 
       await supabase.from("leagues").update(updates).eq("id", leagueId);
