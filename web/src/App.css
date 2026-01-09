@@ -2694,6 +2694,41 @@
   margin-top: 4px;
 }
 
+/* DM button in top bar */
+.top-bar-dm-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  position: relative;
+  color: var(--text);
+  transition: transform 0.2s ease;
+}
+
+.top-bar-dm-btn:hover {
+  transform: scale(1.05);
+}
+
+.top-bar-dm-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.top-bar-dm-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: var(--danger, #ef4444);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 999px;
+  min-width: 16px;
+  text-align: center;
+  line-height: 1;
+}
+
 /* Avatar button in top bar */
 .top-bar-avatar-btn {
   background: none;

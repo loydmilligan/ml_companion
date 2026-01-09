@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRound } from "../contexts/RoundContext";
@@ -9,6 +10,7 @@ import SettingsDrawer from "./SettingsDrawer";
 import { DualNeedleGauge, PinnedBar, PeekPanel, usePeekPanel } from "./pinned-peek";
 
 export default function TopBar() {
+  const navigate = useNavigate();
   const { profile, group, refresh } = useAuth();
   const {
     round,
@@ -38,6 +40,7 @@ export default function TopBar() {
   const [timelineGamePhase, setTimelineGamePhase] = useState<"voting" | "revealed" | "both">("voting");
   const [roundChallengePhase, setRoundChallengePhase] = useState<"open" | "voting" | "both">("open");
   const [isTimelineTester, setIsTimelineTester] = useState(false);
+  const [dmUnreadCount, setDmUnreadCount] = useState(0);
 
   const displayName = profile?.display_name ?? "Family Lead";
 
@@ -109,6 +112,38 @@ export default function TopBar() {
     };
   }, [profile?.id]);
 
+  // Fetch DM unread counts
+  useEffect(() => {
+    if (!profile?.id) return;
+    let active = true;
+
+    const fetchUnreadCount = async () => {
+      const { data, error } = await supabase.rpc("get_dm_unread_counts", {
+        p_user_id: profile.id,
+      });
+      if (!active) return;
+      if (error) {
+        console.error("Failed to fetch DM unread counts:", error);
+        return;
+      }
+      // Sum all unread counts
+      const total = (data ?? []).reduce(
+        (sum: number, item: { unread_count: number }) => sum + (item.unread_count || 0),
+        0
+      );
+      setDmUnreadCount(total);
+    };
+
+    fetchUnreadCount();
+
+    // Refresh every 30 seconds
+    const interval = window.setInterval(fetchUnreadCount, 30000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [profile?.id]);
+
   useEffect(() => {
     document.documentElement.dataset.logoPalette = logoPalette;
     return () => {
@@ -144,6 +179,21 @@ export default function TopBar() {
               roundStatus={round.status}
             />
           )}
+
+          {/* DM Icon - navigates to DM inbox */}
+          <button
+            type="button"
+            className="top-bar-dm-btn"
+            onClick={() => navigate("/app/dm")}
+            title="Messages"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+            </svg>
+            {dmUnreadCount > 0 && (
+              <span className="top-bar-dm-badge">{dmUnreadCount > 99 ? "99+" : dmUnreadCount}</span>
+            )}
+          </button>
 
           {/* Avatar - opens profile drawer */}
           <button
