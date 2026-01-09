@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRound } from "../contexts/RoundContext";
 import Avatar from "./Avatar";
+import DMIcon from "./DMIcon";
 import SettingsGear from "./SettingsGear";
 import ProfileDrawer from "./ProfileDrawer";
 import SettingsDrawer from "./SettingsDrawer";
@@ -181,19 +182,10 @@ export default function TopBar() {
           )}
 
           {/* DM Icon - navigates to DM inbox */}
-          <button
-            type="button"
-            className="top-bar-dm-btn"
+          <DMIcon
             onClick={() => navigate("/app/dm")}
-            title="Messages"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-            </svg>
-            {dmUnreadCount > 0 && (
-              <span className="top-bar-dm-badge">{dmUnreadCount > 99 ? "99+" : dmUnreadCount}</span>
-            )}
-          </button>
+            badgeCount={dmUnreadCount}
+          />
 
           {/* Avatar - opens profile drawer */}
           <button

@@ -586,6 +586,35 @@ export default function DMInboxPage() {
           font-weight: 500;
           color: var(--text);
         }
+
+        /* Dark mode fixes */
+        [data-mode="dark"] .dm-modal {
+          background: var(--surface, #1e293b);
+        }
+
+        [data-mode="dark"] .dm-modal-header h2,
+        [data-mode="dark"] .dm-member-name {
+          color: var(--text, #f1f5f9);
+        }
+
+        [data-mode="dark"] .dm-member-item:hover {
+          background: rgba(255, 255, 255, 0.08);
+        }
+
+        @media (prefers-color-scheme: dark) {
+          .dm-modal {
+            background: var(--surface, #1e293b);
+          }
+
+          .dm-modal-header h2,
+          .dm-member-name {
+            color: var(--text, #f1f5f9);
+          }
+
+          .dm-member-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+          }
+        }
       `}</style>
     </div>
   );
