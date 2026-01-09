@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRound } from "../contexts/RoundContext";
 import { usePeekPanel, PeekTab } from "../components/pinned-peek";
+import { useRealtimeChat, type ChatMessage, type MessageReaction } from "../hooks/useRealtimeChat";
 
 // AI mention detection pattern
 const AI_MENTION_PATTERN = /@AI\b/i;
@@ -11,34 +12,6 @@ const AI_MENTION_PATTERN = /@AI\b/i;
 // Pull-to-refresh constants
 const PULL_THRESHOLD = 80;
 const MAX_PULL = 120;
-
-type ChatMessage = {
-  id: string;
-  body: string;
-  author_id: string | null;
-  created_at: string;
-  reply_to_id: string | null;
-  profiles?: {
-    display_name: string | null;
-    avatar_url: string | null;
-  } | null;
-  // Nested reply-to message (fetched separately)
-  reply_to?: {
-    id: string;
-    body: string;
-    author_id: string | null;
-    profiles?: {
-      display_name: string | null;
-    } | null;
-  } | null;
-};
-
-type MessageReaction = {
-  id: string;
-  message_id: string;
-  reactor_id: string;
-  emoji: string;
-};
 
 type ReactionCount = {
   emoji: string;
@@ -187,6 +160,158 @@ export default function ChatPage() {
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const isInitialLoad = useRef(true);
+
+  // Profile cache to avoid repeated fetches
+  const profileCacheRef = useRef<Map<string, { display_name: string | null; avatar_url: string | null }>>(new Map());
+
+  // Handler for new messages from realtime
+  const handleRealtimeMessage = useCallback(async (newMsg: ChatMessage) => {
+    // Fetch profile data for the message author
+    let authorProfile = profileCacheRef.current.get(newMsg.author_id ?? "");
+    if (!authorProfile && newMsg.author_id) {
+      const { data } = await supabase
+        .from("profiles")
+        .select("display_name, avatar_url")
+        .eq("id", newMsg.author_id)
+        .single();
+      if (data) {
+        authorProfile = data;
+        profileCacheRef.current.set(newMsg.author_id, data);
+      }
+    }
+
+    // Fetch reply_to data if needed
+    let replyTo: ChatMessage["reply_to"] = null;
+    if (newMsg.reply_to_id) {
+      // First check if parent message is already in our messages
+      setMessages(prev => {
+        const existingParent = prev.find(m => m.id === newMsg.reply_to_id);
+        if (existingParent) {
+          replyTo = {
+            id: existingParent.id,
+            body: existingParent.body,
+            author_id: existingParent.author_id,
+            profiles: existingParent.profiles ? { display_name: existingParent.profiles.display_name } : null,
+          };
+        }
+        return prev;
+      });
+
+      // If not found locally, fetch from DB
+      if (!replyTo) {
+        const { data: replyData } = await supabase
+          .from("group_messages")
+          .select("id,body,author_id,profiles(display_name)")
+          .eq("id", newMsg.reply_to_id)
+          .single();
+        if (replyData) {
+          // Supabase returns profiles as array in join, but we need object
+          const profilesData = Array.isArray(replyData.profiles)
+            ? replyData.profiles[0]
+            : replyData.profiles;
+          replyTo = {
+            id: replyData.id,
+            body: replyData.body,
+            author_id: replyData.author_id,
+            profiles: profilesData ?? null,
+          };
+        }
+      }
+    }
+
+    // Add the message to state
+    const enrichedMsg: ChatMessage = {
+      ...newMsg,
+      profiles: authorProfile ?? null,
+      reply_to: replyTo,
+    };
+
+    setMessages(prev => {
+      // Dedupe check - don't add if already exists
+      if (prev.some(m => m.id === enrichedMsg.id)) {
+        return prev;
+      }
+      return [...prev, enrichedMsg];
+    });
+  }, []);
+
+  // Handler for new reactions from realtime
+  const handleRealtimeReaction = useCallback((reaction: MessageReaction) => {
+    setReactions(prev => {
+      const newMap = new Map(prev);
+      const msgReactions = newMap.get(reaction.message_id) ?? [];
+
+      // Check if this emoji already exists
+      const existingIdx = msgReactions.findIndex(r => r.emoji === reaction.emoji);
+      if (existingIdx >= 0) {
+        // Add to existing reaction count (if not already there)
+        const existing = msgReactions[existingIdx];
+        if (!existing.reactorIds.includes(reaction.reactor_id)) {
+          msgReactions[existingIdx] = {
+            ...existing,
+            count: existing.count + 1,
+            reactorIds: [...existing.reactorIds, reaction.reactor_id],
+          };
+        }
+      } else {
+        // New emoji reaction
+        msgReactions.push({
+          emoji: reaction.emoji,
+          count: 1,
+          reactorIds: [reaction.reactor_id],
+        });
+      }
+
+      newMap.set(reaction.message_id, msgReactions);
+      return newMap;
+    });
+  }, []);
+
+  // Handler for deleted reactions from realtime
+  const handleRealtimeReactionDelete = useCallback((reaction: MessageReaction) => {
+    setReactions(prev => {
+      const newMap = new Map(prev);
+      const msgReactions = newMap.get(reaction.message_id);
+
+      if (!msgReactions) return prev;
+
+      const existingIdx = msgReactions.findIndex(r => r.emoji === reaction.emoji);
+      if (existingIdx >= 0) {
+        const existing = msgReactions[existingIdx];
+        const newReactorIds = existing.reactorIds.filter(id => id !== reaction.reactor_id);
+
+        if (newReactorIds.length === 0) {
+          // Remove the reaction entirely
+          msgReactions.splice(existingIdx, 1);
+        } else {
+          msgReactions[existingIdx] = {
+            ...existing,
+            count: newReactorIds.length,
+            reactorIds: newReactorIds,
+          };
+        }
+
+        if (msgReactions.length === 0) {
+          newMap.delete(reaction.message_id);
+        } else {
+          newMap.set(reaction.message_id, [...msgReactions]);
+        }
+      }
+
+      return newMap;
+    });
+  }, []);
+
+  // Realtime subscription
+  const { isConnected, connectionState } = useRealtimeChat(
+    group?.id ?? null,
+    profile?.id ?? null,
+    {
+      onNewMessage: handleRealtimeMessage,
+      onNewReaction: handleRealtimeReaction,
+      onDeleteReaction: handleRealtimeReactionDelete,
+    }
+  );
 
   // Listen for localStorage changes (when settings change)
   useEffect(() => {
@@ -359,90 +484,11 @@ export default function ChatPage() {
     setLoadingMore(false);
   }, [group, loadingMore, messages, groupReactionsByMessage]);
 
-  // Use refs to track current state for silent refresh (avoids dependency issues)
-  const messagesRef = useRef(messages);
-  const reactionsRef = useRef(reactions);
-  useEffect(() => { messagesRef.current = messages; }, [messages]);
-  useEffect(() => { reactionsRef.current = reactions; }, [reactions]);
-
-  // Silent refresh - only updates if there are new messages or reactions
-  const silentRefresh = useCallback(async () => {
-    if (!group) return;
-
-    const currentMessages = messagesRef.current;
-    const currentReactions = reactionsRef.current;
-
-    // Check message count
-    const { count: msgCount } = await supabase
-      .from("group_messages")
-      .select("*", { count: "exact", head: true })
-      .eq("group_id", group.id);
-
-    // Only check reactions if we have messages
-    let reactionCount = 0;
-    if (currentMessages.length > 0) {
-      const { count } = await supabase
-        .from("message_reactions")
-        .select("*", { count: "exact", head: true })
-        .in("message_id", currentMessages.map(m => m.id));
-      reactionCount = count ?? 0;
-    }
-
-    const currentReactionCount = Array.from(currentReactions.values()).reduce(
-      (sum, counts) => sum + counts.reduce((s, c) => s + c.count, 0), 0
-    );
-
-    // Refresh if message count or reaction count changed
-    if (msgCount !== currentMessages.length || reactionCount !== currentReactionCount) {
-      const { data } = await supabase
-        .from("group_messages")
-        .select("id,body,author_id,created_at,reply_to_id, profiles(display_name,avatar_url)")
-        .eq("group_id", group.id)
-        .order("created_at", { ascending: true });
-
-      let msgs = (data as unknown as ChatMessage[]) ?? [];
-
-      // Fetch reply_to messages if any
-      const replyToIds = msgs.filter(m => m.reply_to_id).map(m => m.reply_to_id) as string[];
-      if (replyToIds.length > 0) {
-        const { data: replyData } = await supabase
-          .from("group_messages")
-          .select("id,body,author_id,profiles(display_name)")
-          .in("id", replyToIds);
-
-        const replyMap = new Map((replyData ?? []).map((r: any) => [r.id, r]));
-        msgs = msgs.map(m => m.reply_to_id ? { ...m, reply_to: replyMap.get(m.reply_to_id) } : m);
-      }
-
-      setMessages(msgs);
-
-      if (msgs.length > 0) {
-        const msgIds = msgs.map(m => m.id);
-        const { data: reactionData } = await supabase
-          .from("message_reactions")
-          .select("id,message_id,reactor_id,emoji")
-          .in("message_id", msgIds);
-        setReactions(groupReactionsByMessage((reactionData as MessageReaction[]) ?? []));
-      }
-    }
-  }, [group, groupReactionsByMessage]);
-
   // Initial load
   useEffect(() => {
     if (!group) return;
     loadMessages();
   }, [group, loadMessages]);
-
-  // Polling interval (separate from initial load to avoid re-triggering)
-  useEffect(() => {
-    if (!group) return;
-
-    const interval = window.setInterval(silentRefresh, 30000);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [group, silentRefresh]);
 
   // Pull-to-refresh handlers
   const handleTouchStart = useCallback((e: TouchEvent<HTMLDivElement>) => {
@@ -636,97 +682,108 @@ export default function ChatPage() {
     const trimmedMessage = message.trim();
     const hasAIMention = AI_MENTION_PATTERN.test(trimmedMessage);
 
-    const { error } = await supabase.from("group_messages").insert({
-      group_id: group.id,
-      author_id: profile.id,
+    // Create optimistic message with temporary ID
+    const optimisticId = `temp-${Date.now()}`;
+    const optimisticMsg: ChatMessage = {
+      id: optimisticId,
       body: trimmedMessage,
+      author_id: profile.id,
+      created_at: new Date().toISOString(),
       reply_to_id: replyingTo?.id ?? null,
-    });
+      profiles: {
+        display_name: profile.display_name,
+        avatar_url: profile.avatar_url,
+      },
+      reply_to: replyingTo ? {
+        id: replyingTo.id,
+        body: replyingTo.body,
+        author_id: replyingTo.author_id,
+        profiles: replyingTo.profiles ? { display_name: replyingTo.profiles.display_name } : null,
+      } : null,
+      _optimistic: true,
+    };
 
-    if (!error) {
-      setMessage("");
-      setReplyingTo(null);
-      const { data } = await supabase
-        .from("group_messages")
-        .select("id,body,author_id,created_at,reply_to_id, profiles(display_name,avatar_url)")
-        .eq("group_id", group.id)
-        .order("created_at", { ascending: true });
+    // Add optimistic message immediately
+    setMessages(prev => [...prev, optimisticMsg]);
+    setMessage("");
+    const savedReplyingTo = replyingTo;
+    setReplyingTo(null);
 
-      let msgs = (data as unknown as ChatMessage[]) ?? [];
-      const replyToIds = msgs.filter(m => m.reply_to_id).map(m => m.reply_to_id) as string[];
-      if (replyToIds.length > 0) {
-        const { data: replyData } = await supabase
-          .from("group_messages")
-          .select("id,body,author_id,profiles(display_name)")
-          .in("id", replyToIds);
-        const replyMap = new Map((replyData ?? []).map((r: any) => [r.id, r]));
-        msgs = msgs.map(m => m.reply_to_id ? { ...m, reply_to: replyMap.get(m.reply_to_id) } : m);
-      }
-      setMessages(msgs);
+    // Insert to database
+    const { data, error } = await supabase
+      .from("group_messages")
+      .insert({
+        group_id: group.id,
+        author_id: profile.id,
+        body: trimmedMessage,
+        reply_to_id: savedReplyingTo?.id ?? null,
+      })
+      .select("id,body,author_id,created_at,reply_to_id")
+      .single();
 
-      // Handle @AI mention
-      if (hasAIMention && round) {
-        let aiResponse: string | null = null;
-
-        if (!aiChatEnabled) {
-          // AI is disabled - show away message
-          aiResponse = "Hey there! I'm taking a quick break right now, but I'll be back soon. In the meantime, the group has all the answers! 🎵";
-        } else {
-          // AI is enabled - call the assistant
-          setAiTyping(true);
-          const query = trimmedMessage.replace(AI_MENTION_PATTERN, "").trim();
-          aiResponse = await callAIAssistant(query);
-        }
-
-        if (aiResponse) {
-          // Insert AI response as a system message
-          await supabase.from("group_messages").insert({
-            group_id: group.id,
-            author_id: null, // System/AI message
-            body: `🤖 League Bot: ${aiResponse}`,
-          });
-
-          // Refresh messages to show AI response
-          const { data: updatedData } = await supabase
-            .from("group_messages")
-            .select("id,body,author_id,created_at,reply_to_id, profiles(display_name,avatar_url)")
-            .eq("group_id", group.id)
-            .order("created_at", { ascending: true });
-
-          let aiMsgs = (updatedData as unknown as ChatMessage[]) ?? [];
-          const aiReplyIds = aiMsgs.filter(m => m.reply_to_id).map(m => m.reply_to_id) as string[];
-          if (aiReplyIds.length > 0) {
-            const { data: aiReplyData } = await supabase
-              .from("group_messages")
-              .select("id,body,author_id,profiles(display_name)")
-              .in("id", aiReplyIds);
-            const aiReplyMap = new Map((aiReplyData ?? []).map((r: any) => [r.id, r]));
-            aiMsgs = aiMsgs.map(m => m.reply_to_id ? { ...m, reply_to: aiReplyMap.get(m.reply_to_id) } : m);
-          }
-          setMessages(aiMsgs);
-        }
-        setAiTyping(false);
-      }
-
-      const { data: memberData } = await supabase
-        .from("group_members")
-        .select("profiles(email,chat_notify_enabled,email_notify_enabled)")
-        .eq("group_id", group.id);
-
-      const emails = (memberData ?? [])
-        .map((row) => row.profiles as unknown as NotifyProfile)
-        .filter((member) => member?.chat_notify_enabled !== false && member?.email_notify_enabled !== false)
-        .map((member) => member?.email)
-        .filter(Boolean) as string[];
-
-      await supabase.functions.invoke("notify", {
-        body: {
-          title: "Group chat message",
-          message: `${profile.display_name ?? "Someone"}: ${trimmedMessage}`,
-          recipients: emails,
-        },
-      });
+    if (error) {
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== optimisticId));
+      console.error("Failed to send message:", error);
+      setSending(false);
+      return;
     }
+
+    // Replace optimistic message with real one
+    setMessages(prev => prev.map(m =>
+      m.id === optimisticId
+        ? {
+            ...data,
+            profiles: optimisticMsg.profiles,
+            reply_to: optimisticMsg.reply_to,
+          }
+        : m
+    ));
+
+    // Handle @AI mention (AI response will come via realtime since author_id is null)
+    if (hasAIMention && round) {
+      let aiResponse: string | null = null;
+
+      if (!aiChatEnabled) {
+        aiResponse = "Hey there! I'm taking a quick break right now, but I'll be back soon. In the meantime, the group has all the answers! 🎵";
+      } else {
+        setAiTyping(true);
+        const query = trimmedMessage.replace(AI_MENTION_PATTERN, "").trim();
+        aiResponse = await callAIAssistant(query);
+      }
+
+      if (aiResponse) {
+        // Insert AI response - this will appear via realtime (author_id is null, so not skipped)
+        await supabase.from("group_messages").insert({
+          group_id: group.id,
+          author_id: null,
+          body: `🤖 League Bot: ${aiResponse}`,
+        });
+      }
+      setAiTyping(false);
+    }
+
+    // Send notifications (fire and forget)
+    supabase
+      .from("group_members")
+      .select("profiles(email,chat_notify_enabled,email_notify_enabled)")
+      .eq("group_id", group.id)
+      .then(({ data: memberData }) => {
+        const emails = (memberData ?? [])
+          .map((row) => row.profiles as unknown as NotifyProfile)
+          .filter((member) => member?.chat_notify_enabled !== false && member?.email_notify_enabled !== false)
+          .map((member) => member?.email)
+          .filter(Boolean) as string[];
+
+        supabase.functions.invoke("notify", {
+          body: {
+            title: "Group chat message",
+            message: `${profile.display_name ?? "Someone"}: ${trimmedMessage}`,
+            recipients: emails,
+          },
+        });
+      });
+
     setSending(false);
   };
 
@@ -734,6 +791,14 @@ export default function ChatPage() {
     <div className="chat-page">
       {/* Peek tab - cassette spine on right edge */}
       <PeekTab onClick={openPanel} variant="cassette" />
+
+      {/* Connection status banner */}
+      {!isConnected && connectionState !== "connecting" && (
+        <div className="chat-connection-banner">
+          <span className="connection-dot" />
+          <span>Reconnecting...</span>
+        </div>
+      )}
 
       <div
         className="chat-thread"

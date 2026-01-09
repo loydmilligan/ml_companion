@@ -4316,6 +4316,42 @@
   overflow: hidden;
 }
 
+/* Connection status banner for realtime */
+.chat-connection-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 165, 0, 0.9);
+  color: #000;
+  font-size: 0.85rem;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+}
+
+.chat-connection-banner .connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff6b35;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+[data-mode="dark"] .chat-connection-banner {
+  background: rgba(255, 165, 0, 0.85);
+}
+
 /* Light mode chat colors (default) */
 :root {
   /* Global layout variables */
