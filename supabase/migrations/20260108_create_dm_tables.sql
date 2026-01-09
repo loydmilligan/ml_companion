@@ -78,14 +78,25 @@ CREATE POLICY "Users can create conversations in their group"
     WHERE group_id = conversations.group_id AND member_id = auth.uid()
   ));
 
+-- Helper function to check participation (avoids infinite recursion in RLS)
+CREATE OR REPLACE FUNCTION is_conversation_participant(conv_id UUID, user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM conversation_participants
+    WHERE conversation_id = conv_id AND participant_id = user_id
+  );
+$$;
+
 -- Conversation participants policies
+-- NOTE: Uses helper function to avoid infinite recursion in RLS
 CREATE POLICY "Users can view participants of their conversations"
   ON conversation_participants FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM conversation_participants cp
-    WHERE cp.conversation_id = conversation_participants.conversation_id
-    AND cp.participant_id = auth.uid()
-  ));
+  USING (is_conversation_participant(conversation_id, auth.uid()));
 
 CREATE POLICY "Users can add participants to conversations they created"
   ON conversation_participants FOR INSERT
