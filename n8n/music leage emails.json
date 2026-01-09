@@ -1,0 +1,1336 @@
+{
+  "name": "music leage emails",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "",
+          "sender": "notifications@musicleague.com"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -688,
+        240
+      ],
+      "id": "65f5c189-644c-4e39-a511-dca70e882e7d",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LfEKExTCSFH2grUh",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "ml_email_events",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "thread_id",
+              "fieldValue": "={{ $json.threadId }}"
+            },
+            {
+              "fieldId": "event_type",
+              "fieldValue": "={{ $json.event_type }}"
+            },
+            {
+              "fieldId": "league_name",
+              "fieldValue": "={{ $json.league_name }}"
+            },
+            {
+              "fieldId": "round_name",
+              "fieldValue": "={{ $json.round_name }}"
+            },
+            {
+              "fieldId": "actor_name",
+              "fieldValue": "={{ $json.actor_name }}"
+            },
+            {
+              "fieldId": "playlist_url",
+              "fieldValue": "={{ $json.playlist_url }}"
+            },
+            {
+              "fieldId": "from_email",
+              "fieldValue": "={{ $json.from }}"
+            },
+            {
+              "fieldId": "to_email",
+              "fieldValue": "={{ $json.to }}"
+            },
+            {
+              "fieldId": "raw_text",
+              "fieldValue": "={{ $json.text }}"
+            },
+            {
+              "fieldId": "received_at",
+              "fieldValue": "={{ $json.received_at }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -512
+      ],
+      "id": "a41e8935-3e4b-445a-891f-c8f8bc781cf5",
+      "name": "Create a row",
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "gHPjGYWchPy7uw4J",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.subject }}",
+                    "rightValue": "Round Starting",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "06dbbc51-033b-440e-9bf3-dcba5d79c644"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "round_starting"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6418cb75-6217-4cba-ad03-d14cf6d56d44",
+                    "leftValue": "={{ $json.subject }}",
+                    "rightValue": "New Playlist",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "new_playlist"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "29ca5448-6287-4f01-a1bd-17424db4225f",
+                    "leftValue": "={{ $json.subject }}",
+                    "rightValue": "Votes Are In",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "votes_in"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "978454b5-6daf-4ad5-b7d2-93d4f1341bde",
+                    "leftValue": "={{ $json.subject }}",
+                    "rightValue": "User Submitted",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "user_submitted"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "864d7302-2228-47d7-9e3c-dc5d0167ba68",
+                    "leftValue": "={{ $json.subject }}",
+                    "rightValue": "User Voted",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "user_voted"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -144,
+        0
+      ],
+      "id": "cf067b93-ece4-497b-9736-dcff5d7791cc",
+      "name": "Switch"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        32
+      ],
+      "id": "23987690-300d-4d20-a42e-4187dfd8b6a3",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 1,
+        "simple": false,
+        "filters": {
+          "q": "subject:hip jammers round starting",
+          "sender": "notifications@musicleague.com"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -400,
+        -32
+      ],
+      "id": "f6f8aa3b-6523-4cc3-9099-ea7aa5e580cf",
+      "name": "Get many messages",
+      "webhookId": "b09876ca-d42b-4378-bd51-6b72ac07db24",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LfEKExTCSFH2grUh",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        608,
+        -528
+      ],
+      "id": "e0d6f5d9-3e4c-4b34-916f-fe9b5249f458",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -656,
+        -128
+      ],
+      "id": "56e1cc86-7d20-4d39-9e5b-817724311f90",
+      "name": "Schedule Trigger",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1e83b07-efde-49be-baec-272d3dc889fe",
+              "name": "league_name",
+              "value": "={{ $json.headers.subject.replace(/^Subject:\\s*/i, \"\").split(\" - \")[0].trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "f23093f9-9172-469b-a893-5dc2933c2600",
+              "name": "event_type",
+              "value": "={{\n    /Round Starting/i.test($json.headers.subject) || /open and ready for song submissions/i.test($json.html)\n      ? \"round_start\"\n      : /New Playlist/i.test($json.headers.subject) || /Playlist is Ready/i.test($json.html)\n      ? \"playlist_ready\"\n      : /Votes Are In/i.test($json.headers.subject) || /Results are in/i.test($json.html)\n      ? \"votes_in\"\n      : /User Submitted/i.test($json.headers.subject) || /has submitted a song/i.test($json.html)\n      ? \"user_submitted\"\n      : /User Voted/i.test($json.headers.subject) || /has cast their votes/i.test($json.html)\n      ? \"user_voted\"\n      : /Joined Your League/i.test($json.headers.subject) || /has joined your league/i.test($json.html)\n      ? \"user_joined\"\n      : \"unknown\"\n  }}",
+              "type": "string"
+            },
+            {
+              "id": "e5a9c75d-fe8b-42f4-9a15-b80e22da3404",
+              "name": "round_name",
+              "value": "={{\n    (function () {\n      const subject = ($json.headers?.subject || \"\").toLowerCase();\n      const html = $json.html || \"\";\n      const text = $json.text || \"\";\n\n      const isPlaylist = subject.includes(\"new playlist\") || /playlist is ready/i.test(html);\n      const isRoundStart = subject.includes(\"round starting\") || /open and ready for song submissions/i.test(html);\n\n      if (isPlaylist) {\n        const m = html.match(/The playlist for the <b>([^<]+)<\\/b> round of the <b>[^<]+<\\/b> league/i);\n        return m ? m[1].trim() : null;\n      }\n\n      if (isRoundStart) {\n        const cleaned = html\n          .replace(/<style[\\s\\S]*?<\\/style>/gi, \" \")\n          .replace(/<script[\\s\\S]*?<\\/script>/gi, \" \")\n          .replace(/<[^>]+>/g, \" \")\n          .replace(/\\s+/g, \" \")\n          .trim();\n        const m = cleaned.match(/The (.+?) round of the .+? league is open/i);\n        return m ? m[1].trim() : null;\n      }\n\n      const m = text.match(/round\\s+(.+?)!$/i);\n      return m ? m[1].trim() : null;\n    })()\n  }}",
+              "type": "string"
+            },
+            {
+              "id": "6de76cac-ef07-4e2f-ab70-d7aaa27696d9",
+              "name": "actor_name",
+              "value": "={{ ($json.text.match(/^User\\s+(.+?)\\s+just\\s+(?:submitted|voted)/i) || [])[1] || null }}",
+              "type": "string"
+            },
+            {
+              "id": "147058e9-758b-4fcd-b87b-78e954d72f47",
+              "name": "playlist_url",
+              "value": "={{\n    (function () {\n      const m = $json.html.match(/https?:\\/\\/[^\"']*open\\.spotify\\.com%2Fplaylist%2F[0-9A-Za-z]+/i);\n      if (!m) return null;\n      return decodeURIComponent(m[0].replace(/^https?:\\/\\/[^/]+\\/L0\\//i, \"\"));\n    })()\n  }}",
+              "type": "string"
+            },
+            {
+              "id": "05380eaf-7024-46cc-82e0-c7746d134261",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "ba0ee56d-91cb-4161-9cd4-b2335cf7d913",
+              "name": "threadId",
+              "value": "={{ $json.threadId }}",
+              "type": "string"
+            },
+            {
+              "id": "f4ee3e0b-64f4-4b30-95f2-5b6a3fdce9ee",
+              "name": "from",
+              "value": "={{ ($json.from.text.match(/<([^>]+)>/) || [])[1] || $json.from.text }}",
+              "type": "string"
+            },
+            {
+              "id": "5572ae1a-39ad-4b11-829c-57ae7f2d70f9",
+              "name": "to",
+              "value": "={{ ($json.to.text.match(/<([^>]+)>/) || [])[1] || $json.to.text }}",
+              "type": "string"
+            },
+            {
+              "id": "80edfddd-0d06-4128-9665-b7135c947f0b",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "a82679b8-b950-4918-935c-592ae1d02860",
+              "name": "received_at",
+              "value": "={{ $json.date }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -240
+      ],
+      "id": "c792fda2-217b-4773-af55-5653eab9db9a",
+      "name": "Convert fields to tml fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1e83b07-efde-49be-baec-272d3dc889fe",
+              "name": "league_name",
+              "value": "={{ $json.headers.subject.replace(/^Subject:\\s*/i, \"\").split(\" - \")[0].trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "f23093f9-9172-469b-a893-5dc2933c2600",
+              "name": "event_type",
+              "value": "={{\n    /Round Starting/i.test($json.headers.subject) || /open and ready for song submissions/i.test($json.html)\n      ? \"round_start\"\n      : /New Playlist/i.test($json.headers.subject) || /Playlist is Ready/i.test($json.html)\n      ? \"playlist_ready\"\n      : /Votes Are In/i.test($json.headers.subject) || /Results are in/i.test($json.html)\n      ? \"votes_in\"\n      : /User Submitted/i.test($json.headers.subject) || /has submitted a song/i.test($json.html)\n      ? \"user_submitted\"\n      : /User Voted/i.test($json.headers.subject) || /has cast their votes/i.test($json.html)\n      ? \"user_voted\"\n      : /Joined Your League/i.test($json.headers.subject) || /has joined your league/i.test($json.html)\n      ? \"user_joined\"\n      : \"unknown\"\n  }}",
+              "type": "string"
+            },
+            {
+              "id": "e5a9c75d-fe8b-42f4-9a15-b80e22da3404",
+              "name": "round_name",
+              "value": "={{\n    (function () {\n      const subject = ($json.headers?.subject || \"\").toLowerCase();\n      const html = $json.html || \"\";\n      const text = $json.text || \"\";\n\n      const isPlaylist = subject.includes(\"new playlist\") || /playlist is ready/i.test(html);\n      const isRoundStart = subject.includes(\"round starting\") || /open and ready for song submissions/i.test(html);\n\n      if (isPlaylist) {\n        const m = html.match(/The playlist for the <b>([^<]+)<\\/b> round of the <b>[^<]+<\\/b> league/i);\n        return m ? m[1].trim() : null;\n      }\n\n      if (isRoundStart) {\n        const cleaned = html\n          .replace(/<style[\\s\\S]*?<\\/style>/gi, \" \")\n          .replace(/<script[\\s\\S]*?<\\/script>/gi, \" \")\n          .replace(/<[^>]+>/g, \" \")\n          .replace(/\\s+/g, \" \")\n          .trim();\n        const m = cleaned.match(/The (.+?) round of the .+? league is open/i);\n        return m ? m[1].trim() : null;\n      }\n\n      const m = text.match(/round\\s+(.+?)!$/i);\n      return m ? m[1].trim() : null;\n    })()\n  }}",
+              "type": "string"
+            },
+            {
+              "id": "6de76cac-ef07-4e2f-ab70-d7aaa27696d9",
+              "name": "actor_name",
+              "value": "={{ ($json.text.match(/^User\\s+(.+?)\\s+just\\s+(?:submitted|voted)/i) || [])[1] || null }}",
+              "type": "string"
+            },
+            {
+              "id": "147058e9-758b-4fcd-b87b-78e954d72f47",
+              "name": "playlist_url",
+              "value": "={{\n    (function () {\n      const m = $json.html.match(/https?:\\/\\/[^\"']*open\\.spotify\\.com%2Fplaylist%2F[0-9A-Za-z]+/i);\n      if (!m) return null;\n      return decodeURIComponent(m[0].replace(/^https?:\\/\\/[^/]+\\/L0\\//i, \"\"));\n    })()\n  }}",
+              "type": "string"
+            },
+            {
+              "id": "05380eaf-7024-46cc-82e0-c7746d134261",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "ba0ee56d-91cb-4161-9cd4-b2335cf7d913",
+              "name": "threadId",
+              "value": "={{ $json.threadId }}",
+              "type": "string"
+            },
+            {
+              "id": "f4ee3e0b-64f4-4b30-95f2-5b6a3fdce9ee",
+              "name": "from",
+              "value": "={{ ($json.from.text.match(/<([^>]+)>/) || [])[1] || $json.from.text }}",
+              "type": "string"
+            },
+            {
+              "id": "5572ae1a-39ad-4b11-829c-57ae7f2d70f9",
+              "name": "to",
+              "value": "={{ ($json.to.text.match(/<([^>]+)>/) || [])[1] || $json.to.text }}",
+              "type": "string"
+            },
+            {
+              "id": "80edfddd-0d06-4128-9665-b7135c947f0b",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "a82679b8-b950-4918-935c-592ae1d02860",
+              "name": "received_at",
+              "value": "={{ $json.date }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -16
+      ],
+      "id": "286ee16f-2fac-4ef2-9632-e49a0d5620fd",
+      "name": "Convert fields to tml fields2"
+    },
+    {
+      "parameters": {
+        "tableId": "ml_email_events",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "thread_id",
+              "fieldValue": "={{ $json.threadId }}"
+            },
+            {
+              "fieldId": "event_type",
+              "fieldValue": "={{ $json.event_type }}"
+            },
+            {
+              "fieldId": "league_name",
+              "fieldValue": "={{ $json.league_name }}"
+            },
+            {
+              "fieldId": "round_name",
+              "fieldValue": "={{ $json.round_name }}"
+            },
+            {
+              "fieldId": "actor_name",
+              "fieldValue": "={{ $json.actor_name }}"
+            },
+            {
+              "fieldId": "playlist_url",
+              "fieldValue": "={{ $json.playlist_url }}"
+            },
+            {
+              "fieldId": "from_email",
+              "fieldValue": "={{ $json.from }}"
+            },
+            {
+              "fieldId": "to_email",
+              "fieldValue": "={{ $json.to }}"
+            },
+            {
+              "fieldId": "raw_text",
+              "fieldValue": "={{ $json.text }}"
+            },
+            {
+              "fieldId": "received_at",
+              "fieldValue": "={{ $json.received_at }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -256
+      ],
+      "id": "ff45d209-4af4-4d0a-a5c0-e27343112551",
+      "name": "Create a row1",
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "gHPjGYWchPy7uw4J",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        624,
+        -256
+      ],
+      "id": "d5431a87-e02b-444f-83a5-84155758c0ed",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "tableId": "ml_email_events",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "thread_id",
+              "fieldValue": "={{ $json.threadId }}"
+            },
+            {
+              "fieldId": "event_type",
+              "fieldValue": "={{ $json.event_type }}"
+            },
+            {
+              "fieldId": "league_name",
+              "fieldValue": "={{ $json.league_name }}"
+            },
+            {
+              "fieldId": "round_name",
+              "fieldValue": "={{ $json.round_name }}"
+            },
+            {
+              "fieldId": "actor_name",
+              "fieldValue": "={{ $json.actor_name }}"
+            },
+            {
+              "fieldId": "playlist_url",
+              "fieldValue": "={{ $json.playlist_url }}"
+            },
+            {
+              "fieldId": "from_email",
+              "fieldValue": "={{ $json.from }}"
+            },
+            {
+              "fieldId": "to_email",
+              "fieldValue": "={{ $json.to }}"
+            },
+            {
+              "fieldId": "raw_text",
+              "fieldValue": "={{ $json.text }}"
+            },
+            {
+              "fieldId": "received_at",
+              "fieldValue": "={{ $json.received_at }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -16
+      ],
+      "id": "5e5f9a90-0063-4844-8e17-f41df8e19a81",
+      "name": "Create a row2",
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "gHPjGYWchPy7uw4J",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        624,
+        -16
+      ],
+      "id": "59e0b3e7-602a-4304-93f3-2bc8729536cf",
+      "name": "Loop Over Items2"
+    },
+    {
+      "parameters": {
+        "tableId": "ml_email_events",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "thread_id",
+              "fieldValue": "={{ $json.threadId }}"
+            },
+            {
+              "fieldId": "event_type",
+              "fieldValue": "={{ $json.event_type }}"
+            },
+            {
+              "fieldId": "league_name",
+              "fieldValue": "={{ $json.league_name }}"
+            },
+            {
+              "fieldId": "round_name",
+              "fieldValue": "={{ $json.round_name }}"
+            },
+            {
+              "fieldId": "actor_name",
+              "fieldValue": "={{ $json.actor_name }}"
+            },
+            {
+              "fieldId": "playlist_url",
+              "fieldValue": "={{ $json.playlist_url }}"
+            },
+            {
+              "fieldId": "from_email",
+              "fieldValue": "={{ $json.from }}"
+            },
+            {
+              "fieldId": "to_email",
+              "fieldValue": "={{ $json.to }}"
+            },
+            {
+              "fieldId": "raw_text",
+              "fieldValue": "={{ $json.text }}"
+            },
+            {
+              "fieldId": "received_at",
+              "fieldValue": "={{ $json.received_at }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        896,
+        208
+      ],
+      "id": "08be9698-ad6d-4768-a83d-ec80c48654f6",
+      "name": "Create a row3",
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "gHPjGYWchPy7uw4J",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        624,
+        208
+      ],
+      "id": "3db8f6eb-b727-4d43-b55c-5f783ce4b1c9",
+      "name": "Loop Over Items3"
+    },
+    {
+      "parameters": {
+        "tableId": "ml_email_events",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "thread_id",
+              "fieldValue": "={{ $json.threadId }}"
+            },
+            {
+              "fieldId": "event_type",
+              "fieldValue": "={{ $json.event_type }}"
+            },
+            {
+              "fieldId": "league_name",
+              "fieldValue": "={{ $json.league_name }}"
+            },
+            {
+              "fieldId": "round_name",
+              "fieldValue": "={{ $json.round_name }}"
+            },
+            {
+              "fieldId": "actor_name",
+              "fieldValue": "={{ $json.actor_name }}"
+            },
+            {
+              "fieldId": "playlist_url",
+              "fieldValue": "={{ $json.playlist_url }}"
+            },
+            {
+              "fieldId": "from_email",
+              "fieldValue": "={{ $json.from }}"
+            },
+            {
+              "fieldId": "to_email",
+              "fieldValue": "={{ $json.to }}"
+            },
+            {
+              "fieldId": "raw_text",
+              "fieldValue": "={{ $json.text }}"
+            },
+            {
+              "fieldId": "received_at",
+              "fieldValue": "={{ $json.received_at }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        896,
+        448
+      ],
+      "id": "eff69d2e-1495-4cc3-8429-5d6b28eb7cb4",
+      "name": "Create a row4",
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "gHPjGYWchPy7uw4J",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        624,
+        448
+      ],
+      "id": "861d3d67-21cb-4d49-8c92-d9da8df0e37f",
+      "name": "Loop Over Items4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1e83b07-efde-49be-baec-272d3dc889fe",
+              "name": "league_name",
+              "value": "={{ $json.headers.subject.replace(/^Subject:\\s*/i, \"\").split(\" - \")[0].trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "f23093f9-9172-469b-a893-5dc2933c2600",
+              "name": "event_type",
+              "value": "={{\n    /Round Starting/i.test($json.headers.subject) || /open and ready for song submissions/i.test($json.html)\n      ? \"round_start\"\n      : /New Playlist/i.test($json.headers.subject) || /Playlist is Ready/i.test($json.html)\n      ? \"playlist_ready\"\n      : /Votes Are In/i.test($json.headers.subject) || /Results are in/i.test($json.html)\n      ? \"votes_in\"\n      : /User Submitted/i.test($json.headers.subject) || /has submitted a song/i.test($json.html)\n      ? \"user_submitted\"\n      : /User Voted/i.test($json.headers.subject) || /has cast their votes/i.test($json.html)\n      ? \"user_voted\"\n      : /Joined Your League/i.test($json.headers.subject) || /has joined your league/i.test($json.html)\n      ? \"user_joined\"\n      : \"unknown\"\n  }}",
+              "type": "string"
+            },
+            {
+              "id": "e5a9c75d-fe8b-42f4-9a15-b80e22da3404",
+              "name": "round_name",
+              "value": "={{\n    (function () {\n      const subject = ($json.headers?.subject || \"\").toLowerCase();\n      const html = $json.html || \"\";\n      const text = $json.text || \"\";\n\n      const isPlaylist = subject.includes(\"new playlist\") || /playlist is ready/i.test(html);\n      const isRoundStart = subject.includes(\"round starting\") || /open and ready for song submissions/i.test(html);\n\n      if (isPlaylist) {\n        const m = html.match(/The playlist for the <b>([^<]+)<\\/b> round of the <b>[^<]+<\\/b> league/i);\n        return m ? m[1].trim() : null;\n      }\n\n      if (isRoundStart) {\n        const cleaned = html\n          .replace(/<style[\\s\\S]*?<\\/style>/gi, \" \")\n          .replace(/<script[\\s\\S]*?<\\/script>/gi, \" \")\n          .replace(/<[^>]+>/g, \" \")\n          .replace(/\\s+/g, \" \")\n          .trim();\n        const m = cleaned.match(/The (.+?) round of the .+? league is open/i);\n        return m ? m[1].trim() : null;\n      }\n\n      const m = text.match(/round\\s+(.+?)!$/i);\n      return m ? m[1].trim() : null;\n    })()\n  }}",
+              "type": "string"
+            },
+            {
+              "id": "6de76cac-ef07-4e2f-ab70-d7aaa27696d9",
+              "name": "actor_name",
+              "value": "={{ ($json.text.match(/^User\\s+(.+?)\\s+just\\s+(?:submitted|voted)/i) || [])[1] || null }}",
+              "type": "string"
+            },
+            {
+              "id": "147058e9-758b-4fcd-b87b-78e954d72f47",
+              "name": "playlist_url",
+              "value": "={{\n    (function () {\n      const m = $json.html.match(/https?:\\/\\/[^\"']*open\\.spotify\\.com%2Fplaylist%2F[0-9A-Za-z]+/i);\n      if (!m) return null;\n      return decodeURIComponent(m[0].replace(/^https?:\\/\\/[^/]+\\/L0\\//i, \"\"));\n    })()\n  }}",
+              "type": "string"
+            },
+            {
+              "id": "05380eaf-7024-46cc-82e0-c7746d134261",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "ba0ee56d-91cb-4161-9cd4-b2335cf7d913",
+              "name": "threadId",
+              "value": "={{ $json.threadId }}",
+              "type": "string"
+            },
+            {
+              "id": "f4ee3e0b-64f4-4b30-95f2-5b6a3fdce9ee",
+              "name": "from",
+              "value": "={{ ($json.from.text.match(/<([^>]+)>/) || [])[1] || $json.from.text }}",
+              "type": "string"
+            },
+            {
+              "id": "5572ae1a-39ad-4b11-829c-57ae7f2d70f9",
+              "name": "to",
+              "value": "={{ ($json.to.text.match(/<([^>]+)>/) || [])[1] || $json.to.text }}",
+              "type": "string"
+            },
+            {
+              "id": "80edfddd-0d06-4128-9665-b7135c947f0b",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "a82679b8-b950-4918-935c-592ae1d02860",
+              "name": "received_at",
+              "value": "={{ $json.date }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        208
+      ],
+      "id": "e43fe88d-8288-4f79-add8-21750ad7acdd",
+      "name": "Convert fields to tml fields3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1e83b07-efde-49be-baec-272d3dc889fe",
+              "name": "league_name",
+              "value": "={{ $json.headers.subject.replace(/^Subject:\\s*/i, \"\").split(\" - \")[0].trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "f23093f9-9172-469b-a893-5dc2933c2600",
+              "name": "event_type",
+              "value": "={{\n    /Round Starting/i.test($json.headers.subject) || /open and ready for song submissions/i.test($json.html)\n      ? \"round_start\"\n      : /New Playlist/i.test($json.headers.subject) || /Playlist is Ready/i.test($json.html)\n      ? \"playlist_ready\"\n      : /Votes Are In/i.test($json.headers.subject) || /Results are in/i.test($json.html)\n      ? \"votes_in\"\n      : /User Submitted/i.test($json.headers.subject) || /has submitted a song/i.test($json.html)\n      ? \"user_submitted\"\n      : /User Voted/i.test($json.headers.subject) || /has cast their votes/i.test($json.html)\n      ? \"user_voted\"\n      : /Joined Your League/i.test($json.headers.subject) || /has joined your league/i.test($json.html)\n      ? \"user_joined\"\n      : \"unknown\"\n  }}",
+              "type": "string"
+            },
+            {
+              "id": "e5a9c75d-fe8b-42f4-9a15-b80e22da3404",
+              "name": "round_name",
+              "value": "={{\n    (function () {\n      const subject = ($json.headers?.subject || \"\").toLowerCase();\n      const html = $json.html || \"\";\n      const text = $json.text || \"\";\n\n      const isPlaylist = subject.includes(\"new playlist\") || /playlist is ready/i.test(html);\n      const isRoundStart = subject.includes(\"round starting\") || /open and ready for song submissions/i.test(html);\n\n      if (isPlaylist) {\n        const m = html.match(/The playlist for the <b>([^<]+)<\\/b> round of the <b>[^<]+<\\/b> league/i);\n        return m ? m[1].trim() : null;\n      }\n\n      if (isRoundStart) {\n        const cleaned = html\n          .replace(/<style[\\s\\S]*?<\\/style>/gi, \" \")\n          .replace(/<script[\\s\\S]*?<\\/script>/gi, \" \")\n          .replace(/<[^>]+>/g, \" \")\n          .replace(/\\s+/g, \" \")\n          .trim();\n        const m = cleaned.match(/The (.+?) round of the .+? league is open/i);\n        return m ? m[1].trim() : null;\n      }\n\n      const m = text.match(/round\\s+(.+?)!$/i);\n      return m ? m[1].trim() : null;\n    })()\n  }}",
+              "type": "string"
+            },
+            {
+              "id": "6de76cac-ef07-4e2f-ab70-d7aaa27696d9",
+              "name": "actor_name",
+              "value": "={{ ($json.text.match(/^User\\s+(.+?)\\s+just\\s+(?:submitted|voted)/i) || [])[1] || null }}",
+              "type": "string"
+            },
+            {
+              "id": "147058e9-758b-4fcd-b87b-78e954d72f47",
+              "name": "playlist_url",
+              "value": "={{\n    (function () {\n      const m = $json.html.match(/https?:\\/\\/[^\"']*open\\.spotify\\.com%2Fplaylist%2F[0-9A-Za-z]+/i);\n      if (!m) return null;\n      return decodeURIComponent(m[0].replace(/^https?:\\/\\/[^/]+\\/L0\\//i, \"\"));\n    })()\n  }}",
+              "type": "string"
+            },
+            {
+              "id": "05380eaf-7024-46cc-82e0-c7746d134261",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "ba0ee56d-91cb-4161-9cd4-b2335cf7d913",
+              "name": "threadId",
+              "value": "={{ $json.threadId }}",
+              "type": "string"
+            },
+            {
+              "id": "f4ee3e0b-64f4-4b30-95f2-5b6a3fdce9ee",
+              "name": "from",
+              "value": "={{ ($json.from.text.match(/<([^>]+)>/) || [])[1] || $json.from.text }}",
+              "type": "string"
+            },
+            {
+              "id": "5572ae1a-39ad-4b11-829c-57ae7f2d70f9",
+              "name": "to",
+              "value": "={{ ($json.to.text.match(/<([^>]+)>/) || [])[1] || $json.to.text }}",
+              "type": "string"
+            },
+            {
+              "id": "80edfddd-0d06-4128-9665-b7135c947f0b",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "a82679b8-b950-4918-935c-592ae1d02860",
+              "name": "received_at",
+              "value": "={{ $json.date }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        480
+      ],
+      "id": "f8fe5c50-e893-4ffb-8c54-de90b237e6f2",
+      "name": "Convert fields to tml fields4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1e83b07-efde-49be-baec-272d3dc889fe",
+              "name": "league_name",
+              "value": "={{ $json.headers.subject.replace(/^Subject:\\s*/i, \"\").split(\" - \")[0].trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "f23093f9-9172-469b-a893-5dc2933c2600",
+              "name": "event_type",
+              "value": "={{\n    /Round Starting/i.test($json.headers.subject) || /open and ready for song submissions/i.test($json.html)\n      ? \"round_start\"\n      : /New Playlist/i.test($json.headers.subject) || /Playlist is Ready/i.test($json.html)\n      ? \"playlist_ready\"\n      : /Votes Are In/i.test($json.headers.subject) || /Results are in/i.test($json.html)\n      ? \"votes_in\"\n      : /User Submitted/i.test($json.headers.subject) || /has submitted a song/i.test($json.html)\n      ? \"user_submitted\"\n      : /User Voted/i.test($json.headers.subject) || /has cast their votes/i.test($json.html)\n      ? \"user_voted\"\n      : /Joined Your League/i.test($json.headers.subject) || /has joined your league/i.test($json.html)\n      ? \"user_joined\"\n      : \"unknown\"\n  }}",
+              "type": "string"
+            },
+            {
+              "id": "e5a9c75d-fe8b-42f4-9a15-b80e22da3404",
+              "name": "round_name",
+              "value": "={{\n    (function () {\n      const subject = ($json.headers?.subject || \"\").toLowerCase();\n      const html = $json.html || \"\";\n      const text = $json.text || \"\";\n\n      const isPlaylist = subject.includes(\"new playlist\") || /playlist is ready/i.test(html);\n      const isRoundStart = subject.includes(\"round starting\") || /open and ready for song submissions/i.test(html);\n\n      if (isPlaylist) {\n        const m = html.match(/The playlist for the <b>([^<]+)<\\/b> round of the <b>[^<]+<\\/b> league/i);\n        return m ? m[1].trim() : null;\n      }\n\n      if (isRoundStart) {\n        const cleaned = html\n          .replace(/<style[\\s\\S]*?<\\/style>/gi, \" \")\n          .replace(/<script[\\s\\S]*?<\\/script>/gi, \" \")\n          .replace(/<[^>]+>/g, \" \")\n          .replace(/\\s+/g, \" \")\n          .trim();\n        const m = cleaned.match(/The (.+?) round of the .+? league is open/i);\n        return m ? m[1].trim() : null;\n      }\n\n      const m = text.match(/round\\s+(.+?)!$/i);\n      return m ? m[1].trim() : null;\n    })()\n  }}",
+              "type": "string"
+            },
+            {
+              "id": "6de76cac-ef07-4e2f-ab70-d7aaa27696d9",
+              "name": "actor_name",
+              "value": "={{ ($json.text.match(/^User\\s+(.+?)\\s+just\\s+(?:submitted|voted)/i) || [])[1] || null }}",
+              "type": "string"
+            },
+            {
+              "id": "147058e9-758b-4fcd-b87b-78e954d72f47",
+              "name": "playlist_url",
+              "value": "={{\n    (function () {\n      const m = $json.html.match(/https?:\\/\\/[^\"']*open\\.spotify\\.com%2Fplaylist%2F[0-9A-Za-z]+/i);\n      if (!m) return null;\n      return decodeURIComponent(m[0].replace(/^https?:\\/\\/[^/]+\\/L0\\//i, \"\"));\n    })()\n  }}",
+              "type": "string"
+            },
+            {
+              "id": "05380eaf-7024-46cc-82e0-c7746d134261",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "ba0ee56d-91cb-4161-9cd4-b2335cf7d913",
+              "name": "threadId",
+              "value": "={{ $json.threadId }}",
+              "type": "string"
+            },
+            {
+              "id": "f4ee3e0b-64f4-4b30-95f2-5b6a3fdce9ee",
+              "name": "from",
+              "value": "={{ ($json.from.text.match(/<([^>]+)>/) || [])[1] || $json.from.text }}",
+              "type": "string"
+            },
+            {
+              "id": "5572ae1a-39ad-4b11-829c-57ae7f2d70f9",
+              "name": "to",
+              "value": "={{ ($json.to.text.match(/<([^>]+)>/) || [])[1] || $json.to.text }}",
+              "type": "string"
+            },
+            {
+              "id": "80edfddd-0d06-4128-9665-b7135c947f0b",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "a82679b8-b950-4918-935c-592ae1d02860",
+              "name": "received_at",
+              "value": "={{ $json.date }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -496
+      ],
+      "id": "e82f3ccf-98fb-46c8-806c-e1ffcc8b06f5",
+      "name": "Convert fields for roudn starting"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Convert fields for roudn starting",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Convert fields to tml fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Convert fields to tml fields2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Convert fields to tml fields3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Convert fields to tml fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Create a row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items2": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Create a row2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row3": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items3": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Create a row3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row4": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items4": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Create a row4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert fields to tml fields1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert fields to tml fields2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert fields to tml fields4": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert fields to tml fields3": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert fields for roudn starting": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "7b20c7bc-a89f-418c-8a0d-08bcf5d001b6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d17a1e6a168977dc6004ac61f07bc0cdd3ccce814f6962a4975530c6d6118"
+  },
+  "id": "xn2ujMwYW5UunK4e",
+  "tags": []
+}
