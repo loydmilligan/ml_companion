@@ -4927,11 +4927,17 @@
   border-radius: 4px;
   font-size: 0.8rem;
   cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
+  min-width: 0; /* Allow flex item to shrink below content size */
 }
 
 .chat-reply-quote .reply-author {
   font-weight: 600;
   color: var(--blue);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chat-reply-quote .reply-text {
@@ -4939,6 +4945,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 /* Reply preview bar above compose */

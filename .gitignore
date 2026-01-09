@@ -69,3 +69,4 @@ web/src/data/
 # Firebase service account (never commit)
 *service-account*.json
 firebase-adminsdk-*.json
+chat_quote_overflow.png
