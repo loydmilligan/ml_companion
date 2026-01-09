@@ -100,9 +100,11 @@ export default function DMInboxPage() {
 
       // Build conversation list
       const convList: Conversation[] = participations.map(p => {
-        const conv = p.conversations as { id: string; group_id: string; created_at: string };
+        const convData = p.conversations as unknown;
+        const conv = convData as { id: string; group_id: string; created_at: string };
         const otherPart = allParticipants?.find(ap => ap.conversation_id === p.conversation_id);
-        const otherProfile = otherPart?.profiles as GroupMember | undefined;
+        const profileData = otherPart?.profiles as unknown;
+        const otherProfile = profileData as GroupMember | undefined;
         const lastMsg = lastMessages?.find(m => m.conversation_id === p.conversation_id);
         const unread = unreadCounts?.find((u: { conversation_id: string; unread_count: number }) => u.conversation_id === p.conversation_id);
 
@@ -160,7 +162,7 @@ export default function DMInboxPage() {
       if (error) throw error;
 
       const members: GroupMember[] = (data ?? [])
-        .map(m => m.profiles as GroupMember)
+        .map(m => m.profiles as unknown as GroupMember)
         .filter(Boolean);
 
       setGroupMembers(members);
@@ -252,7 +254,7 @@ export default function DMInboxPage() {
     <div className="dm-inbox">
       <div className="dm-inbox-header">
         <h1>Messages</h1>
-        <Button size="sm" onClick={() => setShowNewDM(true)}>
+        <Button onClick={() => setShowNewDM(true)}>
           New Message
         </Button>
       </div>

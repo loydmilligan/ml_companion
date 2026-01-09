@@ -184,7 +184,7 @@ export default function DMThreadPage() {
         .neq("participant_id", profile.id);
 
       if (participants?.[0]) {
-        const other = participants[0].profiles as { display_name: string | null; avatar_url: string | null };
+        const other = participants[0].profiles as unknown as { display_name: string | null; avatar_url: string | null };
         setOtherParticipant(other);
       }
 
@@ -221,7 +221,8 @@ export default function DMThreadPage() {
           .in("id", replyIds);
 
         replies?.forEach(r => {
-          replyMap.set(r.id, r as { id: string; body: string; author_id: string; profiles?: { display_name: string | null } | null });
+          const profileData = r.profiles as unknown as { display_name: string | null } | null;
+          replyMap.set(r.id, { id: r.id, body: r.body, author_id: r.author_id, profiles: profileData });
         });
       }
 
@@ -232,7 +233,7 @@ export default function DMThreadPage() {
         body: m.body,
         reply_to_id: m.reply_to_id,
         created_at: m.created_at,
-        profiles: m.profiles as { display_name: string | null; avatar_url: string | null } | null,
+        profiles: m.profiles as unknown as { display_name: string | null; avatar_url: string | null } | null,
         reply_to: m.reply_to_id ? replyMap.get(m.reply_to_id) : null,
       }));
 
