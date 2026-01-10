@@ -653,37 +653,15 @@ export default function ChatPage() {
     setReactionPickerFor(null);
 
     try {
-      // Check if conversation already exists
-      const { data: existingConvId } = await supabase.rpc("find_dm_conversation", {
-        user1_id: profile.id,
-        user2_id: userId,
+      // Use RPC function that handles everything (find or create + add participants)
+      const { data: conversationId, error } = await supabase.rpc("create_dm_conversation", {
         p_group_id: group.id,
+        p_other_user_id: userId,
       });
 
-      if (existingConvId) {
-        navigate(`/app/dm/${existingConvId}`);
-        return;
-      }
+      if (error) throw error;
 
-      // Create new conversation
-      const { data: newConv, error: convError } = await supabase
-        .from("conversations")
-        .insert({
-          group_id: group.id,
-          created_by: profile.id,
-        })
-        .select()
-        .single();
-
-      if (convError) throw convError;
-
-      // Add both participants
-      await supabase.from("conversation_participants").insert([
-        { conversation_id: newConv.id, participant_id: profile.id },
-        { conversation_id: newConv.id, participant_id: userId },
-      ]);
-
-      navigate(`/app/dm/${newConv.id}`);
+      navigate(`/app/dm/${conversationId}`);
     } catch (err) {
       console.error("Error starting DM:", err);
     }
