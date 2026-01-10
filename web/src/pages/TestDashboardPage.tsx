@@ -306,6 +306,95 @@ export default function TestDashboardPage() {
     await loadState();
   };
 
+  const handleResetAllTestData = async () => {
+    if (!confirm("Are you sure you want to delete ALL test data? This will remove all rounds, submissions, votes, and test analytics for the test league.")) {
+      return;
+    }
+    setLoading(true);
+    addLog("reset-all-test-data", true, "Starting full reset...", "preseason");
+
+    try {
+      // Delete test analytics first (no FK constraints)
+      const { error: statsError } = await supabase
+        .from("test_daily_stats")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all
+      if (statsError) throw new Error(`test_daily_stats: ${statsError.message}`);
+
+      // Delete test_actions (depends on test_runs)
+      const { error: actionsError } = await supabase
+        .from("test_actions")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000");
+      if (actionsError) throw new Error(`test_actions: ${actionsError.message}`);
+
+      // Delete test_runs
+      const { error: runsError } = await supabase
+        .from("test_runs")
+        .delete()
+        .eq("league_id", TEST_LEAGUE_S2_ID);
+      if (runsError) throw new Error(`test_runs: ${runsError.message}`);
+
+      // Get all rounds for the test league
+      const { data: rounds, error: roundsQueryError } = await supabase
+        .from("rounds")
+        .select("id")
+        .eq("league_id", TEST_LEAGUE_S2_ID);
+      if (roundsQueryError) throw new Error(`rounds query: ${roundsQueryError.message}`);
+
+      const roundIds = rounds?.map(r => r.id) || [];
+
+      if (roundIds.length > 0) {
+        // Delete dependent data for these rounds
+        for (const table of [
+          "votes",
+          "submitter_guesses",
+          "timeline_guesses",
+          "round_awards",
+          "round_user_activity",
+          "round_ai_cache",
+          "round_challenges",
+          "round_challenge_v2",
+          "round_challenge_guesses",
+          "round_chats",
+        ]) {
+          const { error } = await supabase
+            .from(table)
+            .delete()
+            .in("round_id", roundIds);
+          if (error) {
+            console.warn(`Warning deleting ${table}:`, error.message);
+          }
+        }
+
+        // Delete submissions (after votes which depend on submission_id)
+        const { error: subsError } = await supabase
+          .from("submissions")
+          .delete()
+          .in("round_id", roundIds);
+        if (subsError) throw new Error(`submissions: ${subsError.message}`);
+
+        // Delete rounds themselves
+        const { error: roundsError } = await supabase
+          .from("rounds")
+          .delete()
+          .eq("league_id", TEST_LEAGUE_S2_ID);
+        if (roundsError) throw new Error(`rounds: ${roundsError.message}`);
+      }
+
+      addLog("reset-all-test-data", true, `Deleted ${roundIds.length} rounds and all associated data`, "preseason");
+      setPreseasonComplete(false);
+      setSelectedRoundId(null);
+      setLogs([]);
+      await loadState();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      addLog("reset-all-test-data", false, message, "preseason");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleGenerateCSVs = async () => {
     const result = await callFactory("generate-csvs", { roundCount: 5 });
     if (result?.files) {
@@ -427,6 +516,19 @@ export default function TestDashboardPage() {
             style={{ padding: "0.25rem 0.75rem", fontSize: "0.85rem" }}
           >
             Refresh
+          </Button>
+          <Button
+            onClick={handleResetAllTestData}
+            disabled={loading}
+            style={{
+              padding: "0.25rem 0.75rem",
+              fontSize: "0.85rem",
+              backgroundColor: "#dc2626",
+              borderColor: "#dc2626",
+              color: "white",
+            }}
+          >
+            Reset All Test Data
           </Button>
         </div>
       </div>
