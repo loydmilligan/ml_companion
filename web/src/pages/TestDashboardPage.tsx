@@ -537,7 +537,7 @@ export default function TestDashboardPage() {
                       variant="primary"
                       style={{ marginLeft: "0.5rem" }}
                     >
-                      Playlist Ready (-> Voting)
+                      Playlist Ready → Voting
                     </Button>
                   </div>
                 )}
@@ -567,7 +567,7 @@ export default function TestDashboardPage() {
                       variant="primary"
                       style={{ marginLeft: "0.5rem" }}
                     >
-                      Votes In (-> Revealed)
+                      Votes In → Revealed
                     </Button>
                   </div>
                 )}
