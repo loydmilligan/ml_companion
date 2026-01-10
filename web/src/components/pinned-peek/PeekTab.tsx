@@ -6,6 +6,10 @@ type PeekTabProps = {
   leagueName?: string;
   roundName?: string;
   deadline?: string | null;
+  /** Custom round-specific light mode image URL (overrides default) */
+  customImageLight?: string | null;
+  /** Custom round-specific dark mode image URL (overrides default) */
+  customImageDark?: string | null;
 };
 
 /**
@@ -36,6 +40,8 @@ export default function PeekTab({
   leagueName,
   roundName,
   deadline,
+  customImageLight,
+  customImageDark,
 }: PeekTabProps) {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
@@ -61,7 +67,19 @@ export default function PeekTab({
   // Use blank images when dynamic text is provided
   const useDynamicText = Boolean(leagueName || roundName);
 
+  // Check if we have custom round-specific images
+  const hasCustomImages = Boolean(customImageLight || customImageDark);
+
   const imageSrc = useMemo(() => {
+    // Priority 1: Use custom round-specific images if provided
+    if (hasCustomImages) {
+      const customImage = isDarkMode ? customImageDark : customImageLight;
+      if (customImage) return customImage;
+      // Fall back to whichever is available
+      return customImageDark || customImageLight || "";
+    }
+
+    // Priority 2: Default cassette/divider images
     if (variant === "cassette") {
       if (useDynamicText) {
         // Use blank images for dynamic CSS text overlay
@@ -78,9 +96,12 @@ export default function PeekTab({
     return isDarkMode
       ? "/images/peek-tab/peek-tab-divider-dark.png"
       : "/images/peek-tab/peek-tab-divider-light.png";
-  }, [variant, isDarkMode, useDynamicText]);
+  }, [variant, isDarkMode, useDynamicText, hasCustomImages, customImageLight, customImageDark]);
 
   const imageSrcSet = useMemo(() => {
+    // Custom images don't have 2x versions
+    if (hasCustomImages) return undefined;
+
     if (variant === "cassette") {
       if (useDynamicText) {
         const prefix = "peek-tab-cassette-blank";
@@ -94,7 +115,7 @@ export default function PeekTab({
         : `/images/peek-tab/peek-tab-cassette-ai-light.png 1x, /images/peek-tab/peek-tab-cassette-ai-light@2x.png 2x`;
     }
     return undefined; // Dividers don't have 2x yet
-  }, [variant, isDarkMode, useDynamicText]);
+  }, [variant, isDarkMode, useDynamicText, hasCustomImages]);
 
   const dateText = formatDeadlineDate(deadline);
 

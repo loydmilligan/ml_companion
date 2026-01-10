@@ -21,6 +21,7 @@ const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const InvitePage = lazy(() => import("./pages/InvitePage"));
 const DMInboxPage = lazy(() => import("./pages/DMInboxPage"));
 const DMThreadPage = lazy(() => import("./pages/DMThreadPage"));
+const TestDashboardPage = lazy(() => import("./pages/TestDashboardPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Loading fallback for lazy components
@@ -73,6 +74,7 @@ function AppShell() {
                     <Route path="settings" element={<SettingsPage />} />
                     <Route path="dm" element={<DMInboxPage />} />
                     <Route path="dm/:conversationId" element={<DMThreadPage />} />
+                    <Route path="test-dashboard" element={<TestDashboardPage />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
