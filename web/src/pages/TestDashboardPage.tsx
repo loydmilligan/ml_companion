@@ -9,7 +9,6 @@ import { useState, useEffect, useCallback } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import { supabase } from "../lib/supabase";
-import { useAuth } from "../contexts/AuthContext";
 
 // ============================================================================
 // Types
@@ -82,7 +81,6 @@ const ROUND_THEMES = [
 // ============================================================================
 
 export default function TestDashboardPage() {
-  const { user } = useAuth();
   const [state, setState] = useState<TestState | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -320,7 +318,7 @@ export default function TestDashboardPage() {
               />{" "}
               Auto-refresh
             </label>
-            <Button size="small" onClick={loadState} disabled={loading}>
+            <Button onClick={loadState} disabled={loading} style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}>
               Refresh
             </Button>
           </div>
@@ -516,9 +514,9 @@ export default function TestDashboardPage() {
                       {TEST_USERS.map((user) => (
                         <Button
                           key={user.id}
-                          size="small"
                           onClick={() => handleSimulateSubmission(user.name)}
                           disabled={loading || currentRound.activity?.submissions.includes(user.name)}
+                          style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
                         >
                           {user.name}
                         </Button>
@@ -550,9 +548,9 @@ export default function TestDashboardPage() {
                       {TEST_USERS.map((user) => (
                         <Button
                           key={user.id}
-                          size="small"
                           onClick={() => handleSimulateVote(user.name)}
                           disabled={loading || currentRound.activity?.votes.includes(user.name)}
+                          style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
                         >
                           {user.name}
                         </Button>
@@ -591,7 +589,7 @@ export default function TestDashboardPage() {
 
                 {/* Reset Button */}
                 <div style={{ marginTop: "1rem", borderTop: "1px solid var(--color-border)", paddingTop: "0.5rem" }}>
-                  <Button onClick={handleResetRound} disabled={loading} variant="danger">
+                  <Button onClick={handleResetRound} disabled={loading} variant="secondary" style={{ backgroundColor: "#dc2626", color: "white" }}>
                     Reset Round to Open
                   </Button>
                 </div>
