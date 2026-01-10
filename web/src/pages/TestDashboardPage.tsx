@@ -1,140 +1,106 @@
 /**
  * TEST-001: Test Dashboard Page
  *
- * Interactive test environment dashboard for simulating Music League round lifecycle.
- * Provides controls for creating rounds, simulating email events, and observing state changes.
+ * Redesigned test environment dashboard with:
+ * - Three-column layout (Phase blocks | Bulk actions | Logs)
+ * - Tab navigation (Control Panel | Season Summary | Analytics | App Preview)
+ * - Round tabs at bottom for multi-round testing
+ * - Visual phase progression with jump buttons
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import { supabase } from "../lib/supabase";
+import {
+  PhaseBlock,
+  getPhaseStatus,
+  UserGrid,
+  PhaseLog,
+  BulkActionsPanel,
+  JumpButton,
+  TEST_USERS,
+  TEST_LEAGUE_S2_ID,
+  ROUND_THEMES,
+  type PhaseType,
+  type PhaseStatus,
+  type RoundState,
+  type TestState,
+  type LogEntry,
+  type AnalyticsSummary,
+} from "../components/test";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-interface RoundState {
-  id: string;
-  theme: string;
-  status: "open" | "voting" | "revealed" | "archived";
-  submissionCount: number;
-  voteCount: number;
-  revealRemainingMs?: number | null;
-  revealRemainingMinutes?: number | null;
-  hasCustomPulltab?: boolean;
-  activity?: {
-    submissions: string[];
-    votes: string[];
-  };
-}
-
-interface TestState {
-  league: {
-    id: string;
-    name: string;
-    seasonNumber: number;
-    hasStory: boolean;
-    storyRoundId: string | null;
-  };
-  rounds: RoundState[];
-  members: Array<{ id: string; name: string; role: string }>;
-  competitors: number;
-  testUsers: Array<{ id: string; name: string }>;
-}
-
-interface LogEntry {
-  id: string;
-  timestamp: string;
-  action: string;
-  success: boolean;
-  details?: string;
-}
+type MainTab = "control" | "summary" | "analytics" | "preview";
 
 interface SimulationOptions {
   revealDurationMinutes?: number;
   useMockAI?: boolean;
 }
 
-interface AnalyticsSummary {
-  totalRuns: number;
-  completedRuns: number;
-  failedRuns: number;
-  successRate: number;
-  totalActions: number;
-  actionSuccessRate: number;
-  actionsByType: Record<string, { total: number; success: number; avgDurationMs: number }>;
-  avgRunDurationMs: number;
-  avgActionDurationMs: number;
-  dailyTrend: Array<{
-    date: string;
-    runs: number;
-    successRate: number;
-    avgDuration: number;
-  }>;
-  topErrors: Array<{ error: string; count: number }>;
-  recentRuns: Array<{
-    id: string;
-    started_at: string;
-    completed_at?: string;
-    status: string;
-    theme?: string;
-    total_actions: number;
-    successful_actions: number;
-    failed_actions: number;
-    duration_ms?: number;
-  }>;
-}
-
-// Test IDs matching the edge function
-const TEST_LEAGUE_S2_ID = "00000000-0000-0000-0002-000000000002";
-const TEST_USERS = [
-  { id: "00000000-0000-0000-0000-000000000001", name: "Test Admin" },
-  { id: "00000000-0000-0000-0000-000000000002", name: "Alice" },
-  { id: "00000000-0000-0000-0000-000000000003", name: "Bob" },
-  { id: "00000000-0000-0000-0000-000000000004", name: "Carol" },
-  { id: "00000000-0000-0000-0000-000000000005", name: "Uncle Dave" },
-];
-
-const ROUND_THEMES = [
-  "Songs That Make You Happy",
-  "Cover Songs",
-  "One-Hit Wonders",
-  "Songs from Movies",
-  "Deep Cuts",
-  "Guilty Pleasures",
-  "Summer Anthems",
-];
-
 // ============================================================================
 // Component
 // ============================================================================
 
 export default function TestDashboardPage() {
+  // State
   const [state, setState] = useState<TestState | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedRound, setSelectedRound] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<MainTab>("control");
+  const [selectedRoundId, setSelectedRoundId] = useState<string | null>(null);
   const [newTheme, setNewTheme] = useState(ROUND_THEMES[0]);
-  const [revealMinutes, setRevealMinutes] = useState(5);
+  const [revealMinutes, setRevealMinutes] = useState(120);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [activeTab, setActiveTab] = useState<"control" | "analytics">("control");
+  const [preseasonComplete, setPreseasonComplete] = useState(false);
+
+  // Analytics state
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [analyticsDays, setAnalyticsDays] = useState(7);
 
-  // Add log entry
-  const addLog = useCallback((action: string, success: boolean, details?: string) => {
-    const entry: LogEntry = {
-      id: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
-      action,
-      success,
-      details,
-    };
-    setLogs((prev) => [entry, ...prev].slice(0, 100));
-  }, []);
+  // Derived state
+  const selectedRound = useMemo(
+    () => state?.rounds?.find((r) => r.id === selectedRoundId) ?? null,
+    [state?.rounds, selectedRoundId]
+  );
 
-  // Call test-factory edge function
+  const currentPhase = useMemo<PhaseType>(() => {
+    if (!selectedRound) return preseasonComplete ? "submission" : "preseason";
+    const statusMap: Record<string, PhaseType> = {
+      open: "submission",
+      voting: "voting",
+      revealed: "reveal",
+      archived: "archived",
+    };
+    return statusMap[selectedRound.status] || "submission";
+  }, [selectedRound, preseasonComplete]);
+
+  // ============================================================================
+  // Logging
+  // ============================================================================
+
+  const addLog = useCallback(
+    (action: string, success: boolean, details?: string, phase?: PhaseType) => {
+      const entry: LogEntry = {
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        action,
+        success,
+        details,
+        phase,
+      };
+      setLogs((prev) => [entry, ...prev].slice(0, 200));
+    },
+    []
+  );
+
+  // ============================================================================
+  // API Calls
+  // ============================================================================
+
   const callFactory = useCallback(
     async (action: string, params: Record<string, unknown> = {}) => {
       setLoading(true);
@@ -165,15 +131,17 @@ export default function TestDashboardPage() {
     [addLog]
   );
 
-  // Load current state
   const loadState = useCallback(async () => {
     const data = await callFactory("get-state", { leagueId: TEST_LEAGUE_S2_ID });
     if (data) {
       setState(data);
+      // Check if preseason is complete (users exist)
+      if (data.testUsers?.length > 0) {
+        setPreseasonComplete(true);
+      }
     }
   }, [callFactory]);
 
-  // Load analytics
   const loadAnalytics = useCallback(async () => {
     const data = await callFactory("get-analytics", { days: analyticsDays });
     if (data) {
@@ -181,21 +149,10 @@ export default function TestDashboardPage() {
     }
   }, [callFactory, analyticsDays]);
 
-  // Export analytics
-  const handleExportAnalytics = async () => {
-    const result = await callFactory("export-analytics", { days: 30 });
-    if (result) {
-      const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `test-analytics-export-${new Date().toISOString().split("T")[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-  };
+  // ============================================================================
+  // Effects
+  // ============================================================================
 
-  // Initial load and auto-refresh
   useEffect(() => {
     loadState();
   }, [loadState]);
@@ -206,22 +163,32 @@ export default function TestDashboardPage() {
     return () => clearInterval(interval);
   }, [autoRefresh, loadState]);
 
-  // Load analytics when tab changes
   useEffect(() => {
     if (activeTab === "analytics") {
       loadAnalytics();
     }
   }, [activeTab, loadAnalytics]);
 
-  // Action handlers
+  // Auto-select first round
+  useEffect(() => {
+    if (!selectedRoundId && state?.rounds?.length) {
+      setSelectedRoundId(state.rounds[0].id);
+    }
+  }, [state?.rounds, selectedRoundId]);
+
+  // ============================================================================
+  // Action Handlers
+  // ============================================================================
+
   const handleSeedTestData = async () => {
     const { data, error } = await supabase.functions.invoke("seed-test-data", {
       body: { reset: true },
     });
     if (error) {
-      addLog("seed-test-data", false, error.message);
+      addLog("seed-test-data", false, error.message, "preseason");
     } else {
-      addLog("seed-test-data", data.success, JSON.stringify(data, null, 2));
+      addLog("seed-test-data", data.success, JSON.stringify(data, null, 2), "preseason");
+      setPreseasonComplete(true);
       await loadState();
     }
   };
@@ -231,30 +198,28 @@ export default function TestDashboardPage() {
       leagueId: TEST_LEAGUE_S2_ID,
       theme: newTheme,
     });
-    if (result) {
+    if (result?.roundId) {
+      setSelectedRoundId(result.roundId);
       await loadState();
-      if (result.roundId) {
-        setSelectedRound(result.roundId);
-      }
     }
   };
 
   const handleSimulateSubmission = async (userName: string) => {
-    if (!selectedRound) return;
+    if (!selectedRoundId) return;
     await callFactory("simulate-email", {
       eventType: "user_submitted",
-      roundId: selectedRound,
+      roundId: selectedRoundId,
       actorName: userName,
     });
     await loadState();
   };
 
   const handleSimulateAllSubmissions = async () => {
-    if (!selectedRound) return;
+    if (!selectedRoundId) return;
     for (const user of TEST_USERS) {
       await callFactory("simulate-email", {
         eventType: "user_submitted",
-        roundId: selectedRound,
+        roundId: selectedRoundId,
         actorName: user.name,
       });
     }
@@ -262,30 +227,30 @@ export default function TestDashboardPage() {
   };
 
   const handlePlaylistReady = async () => {
-    if (!selectedRound) return;
+    if (!selectedRoundId) return;
     await callFactory("simulate-email", {
       eventType: "playlist_ready",
-      roundId: selectedRound,
+      roundId: selectedRoundId,
     });
     await loadState();
   };
 
   const handleSimulateVote = async (userName: string) => {
-    if (!selectedRound) return;
+    if (!selectedRoundId) return;
     await callFactory("simulate-email", {
       eventType: "user_voted",
-      roundId: selectedRound,
+      roundId: selectedRoundId,
       actorName: userName,
     });
     await loadState();
   };
 
   const handleSimulateAllVotes = async () => {
-    if (!selectedRound) return;
+    if (!selectedRoundId) return;
     for (const user of TEST_USERS) {
       await callFactory("simulate-email", {
         eventType: "user_voted",
-        roundId: selectedRound,
+        roundId: selectedRoundId,
         actorName: user.name,
       });
     }
@@ -293,27 +258,27 @@ export default function TestDashboardPage() {
   };
 
   const handleVotesIn = async () => {
-    if (!selectedRound) return;
+    if (!selectedRoundId) return;
     const options: SimulationOptions = {
       revealDurationMinutes: revealMinutes,
       useMockAI: true,
     };
     await callFactory("simulate-email", {
       eventType: "votes_in",
-      roundId: selectedRound,
+      roundId: selectedRoundId,
       options,
     });
     await loadState();
   };
 
   const handleAdvanceRound = async () => {
-    if (!selectedRound) return;
+    if (!selectedRoundId) return;
     const options: SimulationOptions = {
       revealDurationMinutes: revealMinutes,
       useMockAI: true,
     };
     await callFactory("advance-round", {
-      roundId: selectedRound,
+      roundId: selectedRoundId,
       options,
     });
     await loadState();
@@ -324,27 +289,26 @@ export default function TestDashboardPage() {
       revealDurationMinutes: revealMinutes,
       useMockAI: true,
     };
-    await callFactory("complete-round", {
+    const result = await callFactory("complete-round", {
       leagueId: TEST_LEAGUE_S2_ID,
       theme: newTheme,
       userNames: TEST_USERS.map((u) => u.name),
       options,
     });
-    await loadState();
+    if (result) {
+      await loadState();
+    }
   };
 
   const handleResetRound = async () => {
-    if (!selectedRound) return;
-    await callFactory("reset-round", {
-      roundId: selectedRound,
-    });
+    if (!selectedRoundId) return;
+    await callFactory("reset-round", { roundId: selectedRoundId });
     await loadState();
   };
 
   const handleGenerateCSVs = async () => {
     const result = await callFactory("generate-csvs", { roundCount: 5 });
     if (result?.files) {
-      // Download CSVs
       for (const [name, content] of Object.entries(result.files)) {
         const blob = new Blob([content as string], { type: "text/csv" });
         const url = URL.createObjectURL(blob);
@@ -357,564 +321,1025 @@ export default function TestDashboardPage() {
     }
   };
 
-  // Get selected round data
-  const currentRound = state?.rounds?.find((r) => r.id === selectedRound);
+  const handleExportAnalytics = async () => {
+    const result = await callFactory("export-analytics", { days: 30 });
+    if (result) {
+      const blob = new Blob([JSON.stringify(result, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `test-analytics-export-${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  // Jump handlers
+  const handleJumpToSubmission = async () => {
+    if (!preseasonComplete) {
+      await handleSeedTestData();
+    }
+    await handleCreateRound();
+  };
+
+  const handleJumpToPlaylist = async () => {
+    await handleSimulateAllSubmissions();
+    await handlePlaylistReady();
+  };
+
+  const handleJumpToVoting = async () => {
+    await handleJumpToPlaylist();
+  };
+
+  const handleJumpToReveal = async () => {
+    await handleSimulateAllVotes();
+    await handleVotesIn();
+  };
+
+  const handleJumpToArchive = async () => {
+    await handleAdvanceRound();
+  };
+
+  // ============================================================================
+  // Helpers
+  // ============================================================================
+
+  const getPhaseStatusForRound = (phase: PhaseType): PhaseStatus => {
+    return getPhaseStatus(phase, selectedRound?.status ?? null, preseasonComplete);
+  };
+
+  const getSubmissions = (): Record<string, { song?: string; artist?: string }> => {
+    const submissions: Record<string, { song?: string; artist?: string }> = {};
+    if (selectedRound?.activity?.submissions) {
+      for (const name of selectedRound.activity.submissions) {
+        submissions[name] = { song: "Test Song" }; // Placeholder
+      }
+    }
+    return submissions;
+  };
+
+  const getVotes = (): Record<string, Array<{ recipient: string; points: number }>> => {
+    const votes: Record<string, Array<{ recipient: string; points: number }>> = {};
+    if (selectedRound?.activity?.votes) {
+      for (const name of selectedRound.activity.votes) {
+        votes[name] = [{ recipient: "Other", points: 5 }]; // Placeholder
+      }
+    }
+    return votes;
+  };
+
+  // ============================================================================
+  // Render
+  // ============================================================================
 
   return (
-    <div className="test-dashboard" style={{ padding: "1rem", maxWidth: "1200px", margin: "0 auto" }}>
-      <h1 style={{ marginBottom: "1rem" }}>Test Dashboard (TEST-001)</h1>
-
-      {/* Status Bar */}
-      <Card style={{ marginBottom: "1rem", padding: "0.75rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <strong>League:</strong> {state?.league?.name || "Loading..."} (Season{" "}
-            {state?.league?.seasonNumber})
-          </div>
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-            <label style={{ fontSize: "0.9rem" }}>
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-              />{" "}
-              Auto-refresh
-            </label>
-            <Button onClick={loadState} disabled={loading} style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}>
-              Refresh
-            </Button>
-          </div>
+    <div style={{ padding: "1rem", maxWidth: "1400px", margin: "0 auto" }}>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "1rem",
+        }}
+      >
+        <h1 style={{ margin: 0, fontSize: "1.5rem" }}>TML Testing Dashboard</h1>
+        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+          <span style={{ fontSize: "0.9rem" }}>
+            League: <strong>{state?.league?.name || "Loading..."}</strong>
+          </span>
+          <span style={{ fontSize: "0.9rem" }}>
+            Season: <strong>{state?.league?.seasonNumber || "-"}</strong>
+          </span>
+          <label style={{ fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+            />
+            Auto-refresh
+          </label>
+          <Button
+            onClick={loadState}
+            disabled={loading}
+            style={{ padding: "0.25rem 0.75rem", fontSize: "0.85rem" }}
+          >
+            Refresh
+          </Button>
         </div>
-      </Card>
+      </div>
 
-      {/* Tab Navigation */}
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-        <Button
-          variant={activeTab === "control" ? "primary" : "secondary"}
-          onClick={() => setActiveTab("control")}
-        >
+      {/* Main Tab Navigation */}
+      <div
+        style={{
+          display: "flex",
+          gap: "0.5rem",
+          marginBottom: "1rem",
+          borderBottom: "2px solid var(--color-border)",
+          paddingBottom: "0.5rem",
+        }}
+      >
+        <TabButton active={activeTab === "control"} onClick={() => setActiveTab("control")}>
           Control Panel
-        </Button>
-        <Button
-          variant={activeTab === "analytics" ? "primary" : "secondary"}
-          onClick={() => setActiveTab("analytics")}
-        >
+        </TabButton>
+        <TabButton active={activeTab === "summary"} onClick={() => setActiveTab("summary")}>
+          Season Summary
+        </TabButton>
+        <TabButton active={activeTab === "analytics"} onClick={() => setActiveTab("analytics")}>
           Analytics
-        </Button>
+        </TabButton>
+        <TabButton active={activeTab === "preview"} onClick={() => setActiveTab("preview")} disabled>
+          App Preview (Soon)
+        </TabButton>
       </div>
 
-      {/* Control Panel Tab */}
+      {/* Tab Content */}
       {activeTab === "control" && (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-        {/* Left Column: Display Panel */}
-        <div>
-          {/* Rounds List */}
-          <Card style={{ marginBottom: "1rem" }}>
-            <h3 style={{ marginBottom: "0.5rem" }}>Rounds</h3>
-            {state?.rounds?.length === 0 && (
-              <p style={{ color: "var(--color-text-secondary)" }}>No rounds yet. Create one!</p>
-            )}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {state?.rounds?.map((round) => (
-                <div
-                  key={round.id}
-                  onClick={() => setSelectedRound(round.id)}
-                  style={{
-                    padding: "0.75rem",
-                    border: `2px solid ${selectedRound === round.id ? "var(--color-primary)" : "var(--color-border)"}`,
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    backgroundColor:
-                      selectedRound === round.id
-                        ? "var(--color-surface-hover)"
-                        : "var(--color-surface)",
-                  }}
-                >
-                  <div style={{ fontWeight: "bold" }}>{round.theme}</div>
-                  <div style={{ display: "flex", gap: "1rem", marginTop: "0.25rem", fontSize: "0.9rem" }}>
-                    <span>
-                      Status: <StatusBadge status={round.status} />
-                    </span>
-                    <span>Submissions: {round.submissionCount}/5</span>
-                    <span>Votes: {round.voteCount}/5</span>
-                  </div>
-                  {round.status === "revealed" && round.revealRemainingMinutes != null && (
-                    <div style={{ marginTop: "0.25rem", color: "var(--color-warning)" }}>
-                      Reveal expires in: {round.revealRemainingMinutes} min
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Selected Round Details */}
-          {currentRound && (
-            <Card style={{ marginBottom: "1rem" }}>
-              <h3 style={{ marginBottom: "0.5rem" }}>Round: {currentRound.theme}</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                <div>
-                  <strong>Submissions:</strong>
-                  <ul style={{ margin: "0.25rem 0", paddingLeft: "1.5rem" }}>
-                    {TEST_USERS.map((user) => (
-                      <li
-                        key={user.id}
-                        style={{
-                          color: currentRound.activity?.submissions.includes(user.name)
-                            ? "var(--color-success)"
-                            : "var(--color-text-secondary)",
-                        }}
-                      >
-                        {user.name}{" "}
-                        {currentRound.activity?.submissions.includes(user.name) ? "X" : "-"}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <strong>Votes:</strong>
-                  <ul style={{ margin: "0.25rem 0", paddingLeft: "1.5rem" }}>
-                    {TEST_USERS.map((user) => (
-                      <li
-                        key={user.id}
-                        style={{
-                          color: currentRound.activity?.votes.includes(user.name)
-                            ? "var(--color-success)"
-                            : "var(--color-text-secondary)",
-                        }}
-                      >
-                        {user.name} {currentRound.activity?.votes.includes(user.name) ? "X" : "-"}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {/* Log Viewer */}
-          <Card>
-            <h3 style={{ marginBottom: "0.5rem" }}>Action Log</h3>
-            <div
-              style={{
-                maxHeight: "300px",
-                overflowY: "auto",
-                fontSize: "0.85rem",
-                fontFamily: "monospace",
-              }}
-            >
-              {logs.length === 0 && (
-                <p style={{ color: "var(--color-text-secondary)" }}>No actions yet.</p>
-              )}
-              {logs.map((log) => (
-                <div
-                  key={log.id}
-                  style={{
-                    padding: "0.25rem 0",
-                    borderBottom: "1px solid var(--color-border)",
-                    color: log.success ? "var(--color-success)" : "var(--color-error)",
-                  }}
-                >
-                  <div>
-                    [{new Date(log.timestamp).toLocaleTimeString()}] {log.action}:{" "}
-                    {log.success ? "OK" : "FAIL"}
-                  </div>
-                  {log.details && (
-                    <pre
-                      style={{
-                        margin: 0,
-                        fontSize: "0.75rem",
-                        whiteSpace: "pre-wrap",
-                        maxHeight: "100px",
-                        overflow: "auto",
-                      }}
-                    >
-                      {log.details}
-                    </pre>
-                  )}
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-
-        {/* Right Column: Control Panel */}
-        <div>
-          {/* Setup Section */}
-          <Card style={{ marginBottom: "1rem" }}>
-            <h3 style={{ marginBottom: "0.5rem" }}>Setup</h3>
-            <Button onClick={handleSeedTestData} disabled={loading} style={{ marginBottom: "0.5rem" }}>
-              Seed Test Data (Reset & Create Users)
-            </Button>
-            <div style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)" }}>
-              Creates 5 test users, family group, leagues, and competitors.
-            </div>
-          </Card>
-
-          {/* Create Round Section */}
-          <Card style={{ marginBottom: "1rem" }}>
-            <h3 style={{ marginBottom: "0.5rem" }}>Create Round</h3>
-            <div style={{ marginBottom: "0.5rem" }}>
-              <label style={{ display: "block", marginBottom: "0.25rem" }}>Theme:</label>
-              <select
-                value={newTheme}
-                onChange={(e) => setNewTheme(e.target.value)}
-                style={{ width: "100%", padding: "0.5rem" }}
-              >
-                {ROUND_THEMES.map((theme) => (
-                  <option key={theme} value={theme}>
-                    {theme}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <Button onClick={handleCreateRound} disabled={loading}>
-                Create Round
-              </Button>
-              <Button onClick={handleCompleteRound} disabled={loading} variant="secondary">
-                Run Complete Round
-              </Button>
-            </div>
-          </Card>
-
-          {/* Simulate Events Section */}
-          <Card style={{ marginBottom: "1rem" }}>
-            <h3 style={{ marginBottom: "0.5rem" }}>Simulate Events</h3>
-            {!selectedRound && (
-              <p style={{ color: "var(--color-text-secondary)" }}>Select a round first.</p>
-            )}
-            {selectedRound && currentRound && (
-              <>
-                {/* Submission Controls */}
-                {currentRound.status === "open" && (
-                  <div style={{ marginBottom: "1rem" }}>
-                    <strong>Submissions:</strong>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem", marginTop: "0.25rem" }}>
-                      {TEST_USERS.map((user) => (
-                        <Button
-                          key={user.id}
-                          onClick={() => handleSimulateSubmission(user.name)}
-                          disabled={loading || currentRound.activity?.submissions.includes(user.name)}
-                          style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
-                        >
-                          {user.name}
-                        </Button>
-                      ))}
-                    </div>
-                    <Button
-                      onClick={handleSimulateAllSubmissions}
-                      disabled={loading}
-                      style={{ marginTop: "0.5rem" }}
-                    >
-                      All Submit
-                    </Button>
-                    <Button
-                      onClick={handlePlaylistReady}
-                      disabled={loading}
-                      variant="primary"
-                      style={{ marginLeft: "0.5rem" }}
-                    >
-                      Playlist Ready → Voting
-                    </Button>
-                  </div>
-                )}
-
-                {/* Voting Controls */}
-                {currentRound.status === "voting" && (
-                  <div style={{ marginBottom: "1rem" }}>
-                    <strong>Votes:</strong>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem", marginTop: "0.25rem" }}>
-                      {TEST_USERS.map((user) => (
-                        <Button
-                          key={user.id}
-                          onClick={() => handleSimulateVote(user.name)}
-                          disabled={loading || currentRound.activity?.votes.includes(user.name)}
-                          style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
-                        >
-                          {user.name}
-                        </Button>
-                      ))}
-                    </div>
-                    <Button onClick={handleSimulateAllVotes} disabled={loading} style={{ marginTop: "0.5rem" }}>
-                      All Vote
-                    </Button>
-                    <Button
-                      onClick={handleVotesIn}
-                      disabled={loading}
-                      variant="primary"
-                      style={{ marginLeft: "0.5rem" }}
-                    >
-                      Votes In → Revealed
-                    </Button>
-                  </div>
-                )}
-
-                {/* Reveal Controls */}
-                {currentRound.status === "revealed" && (
-                  <div style={{ marginBottom: "1rem" }}>
-                    <p>Round is in reveal period.</p>
-                    <Button onClick={handleAdvanceRound} disabled={loading} variant="primary">
-                      Archive Round
-                    </Button>
-                  </div>
-                )}
-
-                {/* Archived */}
-                {currentRound.status === "archived" && (
-                  <div style={{ marginBottom: "1rem" }}>
-                    <p>Round is archived.</p>
-                  </div>
-                )}
-
-                {/* Reset Button */}
-                <div style={{ marginTop: "1rem", borderTop: "1px solid var(--color-border)", paddingTop: "0.5rem" }}>
-                  <Button onClick={handleResetRound} disabled={loading} variant="secondary" style={{ backgroundColor: "#dc2626", color: "white" }}>
-                    Reset Round to Open
-                  </Button>
-                </div>
-              </>
-            )}
-          </Card>
-
-          {/* Options Section */}
-          <Card style={{ marginBottom: "1rem" }}>
-            <h3 style={{ marginBottom: "0.5rem" }}>Options</h3>
-            <div style={{ marginBottom: "0.5rem" }}>
-              <label style={{ display: "block", marginBottom: "0.25rem" }}>
-                Reveal Duration (minutes):
-              </label>
-              <input
-                type="number"
-                value={revealMinutes}
-                onChange={(e) => setRevealMinutes(Number(e.target.value))}
-                min={1}
-                max={120}
-                style={{ width: "100px", padding: "0.5rem" }}
-              />
-              <span style={{ marginLeft: "0.5rem", fontSize: "0.9rem", color: "var(--color-text-secondary)" }}>
-                (Default: 120 min / 2 hours)
-              </span>
-            </div>
-          </Card>
-
-          {/* CSV Generation */}
-          <Card>
-            <h3 style={{ marginBottom: "0.5rem" }}>CSV Generation</h3>
-            <Button onClick={handleGenerateCSVs} disabled={loading}>
-              Generate & Download CSVs (5 rounds)
-            </Button>
-            <div style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)", marginTop: "0.5rem" }}>
-              Downloads: rounds.csv, submissions.csv, votes.csv, competitors.csv
-            </div>
-          </Card>
-        </div>
-      </div>
+        <ControlPanelTab
+          state={state}
+          selectedRound={selectedRound}
+          selectedRoundId={selectedRoundId}
+          currentPhase={currentPhase}
+          preseasonComplete={preseasonComplete}
+          loading={loading}
+          logs={logs}
+          newTheme={newTheme}
+          revealMinutes={revealMinutes}
+          setNewTheme={setNewTheme}
+          setRevealMinutes={setRevealMinutes}
+          setSelectedRoundId={setSelectedRoundId}
+          getPhaseStatusForRound={getPhaseStatusForRound}
+          getSubmissions={getSubmissions}
+          getVotes={getVotes}
+          onSeedTestData={handleSeedTestData}
+          onCreateRound={handleCreateRound}
+          onSimulateSubmission={handleSimulateSubmission}
+          onSimulateAllSubmissions={handleSimulateAllSubmissions}
+          onPlaylistReady={handlePlaylistReady}
+          onSimulateVote={handleSimulateVote}
+          onSimulateAllVotes={handleSimulateAllVotes}
+          onVotesIn={handleVotesIn}
+          onAdvanceRound={handleAdvanceRound}
+          onCompleteRound={handleCompleteRound}
+          onResetRound={handleResetRound}
+          onGenerateCSVs={handleGenerateCSVs}
+          onJumpToSubmission={handleJumpToSubmission}
+          onJumpToPlaylist={handleJumpToPlaylist}
+          onJumpToVoting={handleJumpToVoting}
+          onJumpToReveal={handleJumpToReveal}
+          onJumpToArchive={handleJumpToArchive}
+        />
       )}
 
-      {/* Analytics Tab */}
+      {activeTab === "summary" && (
+        <SeasonSummaryTab state={state} />
+      )}
+
       {activeTab === "analytics" && (
-        <div>
-          {/* Analytics Controls */}
-          <Card style={{ marginBottom: "1rem", padding: "0.75rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-                <label>
-                  Time Range:{" "}
-                  <select
-                    value={analyticsDays}
-                    onChange={(e) => setAnalyticsDays(Number(e.target.value))}
-                    style={{ padding: "0.25rem" }}
-                  >
-                    <option value={7}>Last 7 days</option>
-                    <option value={14}>Last 14 days</option>
-                    <option value={30}>Last 30 days</option>
-                  </select>
-                </label>
-                <Button onClick={loadAnalytics} disabled={loading} style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}>
-                  Refresh
-                </Button>
-              </div>
-              <Button onClick={handleExportAnalytics} disabled={loading}>
-                Export (30 days)
-              </Button>
-            </div>
-          </Card>
+        <AnalyticsTab
+          analytics={analytics}
+          analyticsDays={analyticsDays}
+          setAnalyticsDays={setAnalyticsDays}
+          loading={loading}
+          onRefresh={loadAnalytics}
+          onExport={handleExportAnalytics}
+        />
+      )}
 
-          {!analytics ? (
-            <Card style={{ padding: "2rem", textAlign: "center" }}>
-              <p style={{ color: "var(--color-text-secondary)" }}>Loading analytics...</p>
-            </Card>
-          ) : (
-            <>
-              {/* Summary Cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "1rem" }}>
-                <MetricCard
-                  label="Total Runs"
-                  value={analytics.totalRuns}
-                  subtext={`${analytics.completedRuns} completed, ${analytics.failedRuns} failed`}
-                />
-                <MetricCard
-                  label="Success Rate"
-                  value={`${analytics.successRate.toFixed(1)}%`}
-                  subtext="Test runs completed successfully"
-                  color={analytics.successRate >= 80 ? "#22c55e" : analytics.successRate >= 50 ? "#f59e0b" : "#ef4444"}
-                />
-                <MetricCard
-                  label="Total Actions"
-                  value={analytics.totalActions}
-                  subtext={`${analytics.actionSuccessRate.toFixed(1)}% success rate`}
-                />
-                <MetricCard
-                  label="Avg Duration"
-                  value={formatDuration(analytics.avgRunDurationMs)}
-                  subtext={`Action avg: ${formatDuration(analytics.avgActionDurationMs)}`}
-                />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                {/* Daily Trend Chart */}
-                <Card>
-                  <h3 style={{ marginBottom: "0.5rem" }}>Daily Trend</h3>
-                  {analytics.dailyTrend.length === 0 ? (
-                    <p style={{ color: "var(--color-text-secondary)" }}>No data for this period</p>
-                  ) : (
-                    <div style={{ height: "200px", display: "flex", alignItems: "flex-end", gap: "4px" }}>
-                      {analytics.dailyTrend.map((day) => {
-                        const maxRuns = Math.max(...analytics.dailyTrend.map((d) => d.runs), 1);
-                        const height = (day.runs / maxRuns) * 100;
-                        return (
-                          <div
-                            key={day.date}
-                            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}
-                          >
-                            <div
-                              style={{
-                                width: "100%",
-                                height: `${height}%`,
-                                minHeight: "4px",
-                                backgroundColor: day.successRate >= 80 ? "#22c55e" : day.successRate >= 50 ? "#f59e0b" : "#ef4444",
-                                borderRadius: "2px 2px 0 0",
-                              }}
-                              title={`${day.date}: ${day.runs} runs, ${day.successRate.toFixed(0)}% success`}
-                            />
-                            <span style={{ fontSize: "0.7rem", marginTop: "0.25rem", color: "var(--color-text-secondary)" }}>
-                              {new Date(day.date).getDate()}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </Card>
-
-                {/* Action Breakdown */}
-                <Card>
-                  <h3 style={{ marginBottom: "0.5rem" }}>Actions by Type</h3>
-                  {Object.keys(analytics.actionsByType).length === 0 ? (
-                    <p style={{ color: "var(--color-text-secondary)" }}>No actions recorded</p>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                      {Object.entries(analytics.actionsByType).map(([type, data]) => {
-                        const successRate = data.total > 0 ? (data.success / data.total) * 100 : 0;
-                        return (
-                          <div key={type}>
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem" }}>
-                              <span>{type}</span>
-                              <span>
-                                {data.total} ({successRate.toFixed(0)}%)
-                              </span>
-                            </div>
-                            <div
-                              style={{
-                                height: "8px",
-                                backgroundColor: "var(--color-border)",
-                                borderRadius: "4px",
-                                overflow: "hidden",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: `${successRate}%`,
-                                  height: "100%",
-                                  backgroundColor: successRate >= 80 ? "#22c55e" : successRate >= 50 ? "#f59e0b" : "#ef4444",
-                                }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </Card>
-
-                {/* Top Errors */}
-                <Card>
-                  <h3 style={{ marginBottom: "0.5rem" }}>Top Errors</h3>
-                  {analytics.topErrors.length === 0 ? (
-                    <p style={{ color: "var(--color-text-secondary)" }}>No errors recorded</p>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                      {analytics.topErrors.map((err, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            padding: "0.5rem",
-                            backgroundColor: "var(--color-surface-hover)",
-                            borderRadius: "4px",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          <div style={{ color: "#ef4444", fontWeight: "bold" }}>{err.count}x</div>
-                          <div style={{ fontFamily: "monospace", wordBreak: "break-all" }}>{err.error}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Card>
-
-                {/* Recent Runs */}
-                <Card>
-                  <h3 style={{ marginBottom: "0.5rem" }}>Recent Runs</h3>
-                  {analytics.recentRuns.length === 0 ? (
-                    <p style={{ color: "var(--color-text-secondary)" }}>No runs yet</p>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: "300px", overflowY: "auto" }}>
-                      {analytics.recentRuns.map((run) => (
-                        <div
-                          key={run.id}
-                          style={{
-                            padding: "0.5rem",
-                            border: "1px solid var(--color-border)",
-                            borderRadius: "4px",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontWeight: "bold" }}>{run.theme || "Untitled"}</span>
-                            <StatusBadge status={run.status} />
-                          </div>
-                          <div style={{ color: "var(--color-text-secondary)", marginTop: "0.25rem" }}>
-                            {new Date(run.started_at).toLocaleString()} | {run.successful_actions}/{run.total_actions} actions
-                            {run.duration_ms && ` | ${formatDuration(run.duration_ms)}`}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Card>
-              </div>
-            </>
-          )}
-        </div>
+      {activeTab === "preview" && (
+        <Card style={{ padding: "2rem", textAlign: "center" }}>
+          <h3>App Preview</h3>
+          <p style={{ color: "var(--color-text-secondary)" }}>
+            Coming soon: Live preview of the app UI based on current test state.
+          </p>
+        </Card>
       )}
     </div>
   );
 }
 
 // ============================================================================
+// Control Panel Tab
+// ============================================================================
+
+interface ControlPanelTabProps {
+  state: TestState | null;
+  selectedRound: RoundState | null;
+  selectedRoundId: string | null;
+  currentPhase: PhaseType;
+  preseasonComplete: boolean;
+  loading: boolean;
+  logs: LogEntry[];
+  newTheme: string;
+  revealMinutes: number;
+  setNewTheme: (theme: string) => void;
+  setRevealMinutes: (minutes: number) => void;
+  setSelectedRoundId: (id: string | null) => void;
+  getPhaseStatusForRound: (phase: PhaseType) => PhaseStatus;
+  getSubmissions: () => Record<string, { song?: string }>;
+  getVotes: () => Record<string, Array<{ recipient: string; points: number }>>;
+  onSeedTestData: () => void;
+  onCreateRound: () => void;
+  onSimulateSubmission: (userName: string) => void;
+  onSimulateAllSubmissions: () => void;
+  onPlaylistReady: () => void;
+  onSimulateVote: (userName: string) => void;
+  onSimulateAllVotes: () => void;
+  onVotesIn: () => void;
+  onAdvanceRound: () => void;
+  onCompleteRound: () => void;
+  onResetRound: () => void;
+  onGenerateCSVs: () => void;
+  onJumpToSubmission: () => void;
+  onJumpToPlaylist: () => void;
+  onJumpToVoting: () => void;
+  onJumpToReveal: () => void;
+  onJumpToArchive: () => void;
+}
+
+function ControlPanelTab({
+  state,
+  selectedRound,
+  selectedRoundId,
+  currentPhase,
+  preseasonComplete,
+  loading,
+  logs,
+  newTheme,
+  revealMinutes,
+  setNewTheme,
+  setRevealMinutes,
+  setSelectedRoundId,
+  getPhaseStatusForRound,
+  getSubmissions,
+  getVotes,
+  onSeedTestData,
+  onCreateRound,
+  onSimulateSubmission,
+  onSimulateAllSubmissions,
+  onPlaylistReady: _onPlaylistReady,
+  onSimulateVote,
+  onSimulateAllVotes,
+  onVotesIn: _onVotesIn,
+  onAdvanceRound: _onAdvanceRound,
+  onCompleteRound,
+  onResetRound,
+  onGenerateCSVs,
+  onJumpToSubmission,
+  onJumpToPlaylist,
+  onJumpToVoting,
+  onJumpToReveal,
+  onJumpToArchive,
+}: ControlPanelTabProps) {
+  return (
+    <>
+      {/* Three Column Layout */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 280px 300px",
+          gap: "1rem",
+          marginBottom: "1rem",
+        }}
+      >
+        {/* Left Column: Phase Blocks */}
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {/* Preseason */}
+          <PhaseBlock
+            phase="preseason"
+            title="1. PRESEASON"
+            status={getPhaseStatusForRound("preseason")}
+            summary={preseasonComplete ? "Complete" : "Setup required"}
+          >
+            {preseasonComplete ? (
+              <div style={{ fontSize: "0.9rem" }}>
+                <div>Users: {state?.testUsers?.length || 0} created</div>
+                <div>Family: Test Family</div>
+              </div>
+            ) : (
+              <div style={{ color: "var(--color-text-secondary)" }}>
+                Click "Generate Users" to set up test data
+              </div>
+            )}
+          </PhaseBlock>
+
+          <JumpButton
+            fromPhase="preseason"
+            toPhase="submission"
+            onClick={onJumpToSubmission}
+            disabled={loading}
+            loading={loading && currentPhase === "preseason"}
+          />
+
+          {/* Submission */}
+          <PhaseBlock
+            phase="submission"
+            title="2. OPEN FOR SUBMISSION"
+            status={getPhaseStatusForRound("submission")}
+            summary={
+              selectedRound
+                ? `${selectedRound.submissionCount}/${TEST_USERS.length} submitted`
+                : "No round"
+            }
+          >
+            {selectedRound && selectedRound.status === "open" ? (
+              <UserGrid
+                type="submission"
+                submissions={getSubmissions()}
+                onSubmit={onSimulateSubmission}
+                disabled={loading}
+                loading={loading}
+              />
+            ) : (
+              <div style={{ color: "var(--color-text-secondary)", fontSize: "0.9rem" }}>
+                {selectedRound ? "Submissions complete" : "Create a round to begin"}
+              </div>
+            )}
+          </PhaseBlock>
+
+          <JumpButton
+            fromPhase="submission"
+            toPhase="playlist"
+            onClick={onJumpToPlaylist}
+            disabled={loading || !selectedRound || selectedRound.status !== "open"}
+            loading={loading && currentPhase === "submission"}
+          />
+
+          {/* Playlist */}
+          <PhaseBlock
+            phase="playlist"
+            title="3. PLAYLIST CREATED"
+            status={getPhaseStatusForRound("playlist")}
+            summary={selectedRound?.status !== "open" ? "Complete" : "Waiting"}
+          >
+            <div style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)" }}>
+              {selectedRound?.status !== "open"
+                ? "Spotify playlist converted, music links created"
+                : "Waiting for all submissions"}
+            </div>
+          </PhaseBlock>
+
+          <JumpButton
+            fromPhase="playlist"
+            toPhase="voting"
+            onClick={onJumpToVoting}
+            disabled={loading || !selectedRound || selectedRound.status === "open"}
+            loading={loading && currentPhase === "playlist"}
+          />
+
+          {/* Voting */}
+          <PhaseBlock
+            phase="voting"
+            title="4. VOTING PERIOD"
+            status={getPhaseStatusForRound("voting")}
+            summary={
+              selectedRound?.status === "voting"
+                ? `${selectedRound.voteCount}/${TEST_USERS.length} voted`
+                : ""
+            }
+          >
+            {selectedRound?.status === "voting" ? (
+              <UserGrid
+                type="voting"
+                votes={getVotes()}
+                onVote={onSimulateVote}
+                disabled={loading}
+                loading={loading}
+              />
+            ) : (
+              <div style={{ color: "var(--color-text-secondary)", fontSize: "0.9rem" }}>
+                {selectedRound?.status === "revealed" || selectedRound?.status === "archived"
+                  ? "Voting complete"
+                  : "Waiting for playlist phase"}
+              </div>
+            )}
+          </PhaseBlock>
+
+          <JumpButton
+            fromPhase="voting"
+            toPhase="reveal"
+            onClick={onJumpToReveal}
+            disabled={loading || !selectedRound || selectedRound.status !== "voting"}
+            loading={loading && currentPhase === "voting"}
+          />
+
+          {/* Reveal */}
+          <PhaseBlock
+            phase="reveal"
+            title="5. VOTES IN / REVEAL"
+            status={getPhaseStatusForRound("reveal")}
+            summary={
+              selectedRound?.status === "revealed" && selectedRound.revealRemainingMinutes
+                ? `${selectedRound.revealRemainingMinutes} min remaining`
+                : ""
+            }
+          >
+            <div style={{ fontSize: "0.9rem" }}>
+              {selectedRound?.status === "revealed" ? (
+                <>
+                  <div>AI Story: Generated</div>
+                  <div>Awards: Calculated</div>
+                  <div>Scores visible, submitters hidden</div>
+                </>
+              ) : (
+                <span style={{ color: "var(--color-text-secondary)" }}>
+                  Waiting for all votes
+                </span>
+              )}
+            </div>
+          </PhaseBlock>
+
+          <JumpButton
+            fromPhase="reveal"
+            toPhase="archived"
+            onClick={onJumpToArchive}
+            disabled={loading || !selectedRound || selectedRound.status !== "revealed"}
+            loading={loading && currentPhase === "reveal"}
+          />
+
+          {/* Archived */}
+          <PhaseBlock
+            phase="archived"
+            title="6. ARCHIVED"
+            status={getPhaseStatusForRound("archived")}
+            summary={selectedRound?.status === "archived" ? "Complete" : ""}
+          >
+            <div style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)" }}>
+              {selectedRound?.status === "archived"
+                ? "Full results visible, round complete"
+                : "Waiting for reveal period to end"}
+            </div>
+          </PhaseBlock>
+        </div>
+
+        {/* Center Column: Bulk Actions */}
+        <div>
+          {/* Round Creation */}
+          <Card style={{ marginBottom: "1rem", padding: "0.75rem" }}>
+            <div style={{ fontWeight: "bold", marginBottom: "0.5rem" }}>Create Round</div>
+            <select
+              value={newTheme}
+              onChange={(e) => setNewTheme(e.target.value)}
+              style={{ width: "100%", padding: "0.5rem", marginBottom: "0.5rem" }}
+            >
+              {ROUND_THEMES.map((theme) => (
+                <option key={theme} value={theme}>
+                  {theme}
+                </option>
+              ))}
+            </select>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <Button onClick={onCreateRound} disabled={loading || !preseasonComplete}>
+                Create
+              </Button>
+              <Button onClick={onCompleteRound} disabled={loading || !preseasonComplete} variant="secondary">
+                Auto-Run
+              </Button>
+            </div>
+          </Card>
+
+          {/* Phase-specific bulk actions */}
+          <BulkActionsPanel
+            phase="preseason"
+            status={getPhaseStatusForRound("preseason")}
+            loading={loading}
+            onGenerateUsers={onSeedTestData}
+            onGenerateFamily={onSeedTestData}
+            onGenerateS1Data={onGenerateCSVs}
+          />
+
+          <BulkActionsPanel
+            phase="submission"
+            status={getPhaseStatusForRound("submission")}
+            loading={loading}
+            onSubmitAll={onSimulateAllSubmissions}
+            submissionCount={selectedRound?.submissionCount || 0}
+            totalUsers={TEST_USERS.length}
+            disabled={!selectedRound || selectedRound.status !== "open"}
+          />
+
+          <BulkActionsPanel
+            phase="voting"
+            status={getPhaseStatusForRound("voting")}
+            loading={loading}
+            onVoteAll={onSimulateAllVotes}
+            voteCount={selectedRound?.voteCount || 0}
+            totalUsers={TEST_USERS.length}
+            disabled={!selectedRound || selectedRound.status !== "voting"}
+          />
+
+          <BulkActionsPanel
+            phase="reveal"
+            status={getPhaseStatusForRound("reveal")}
+            loading={loading}
+            revealDurationMinutes={revealMinutes}
+            onRevealDurationChange={setRevealMinutes}
+            disabled={!selectedRound || selectedRound.status !== "voting"}
+          />
+
+          {/* Reset Button */}
+          {selectedRound && (
+            <Card style={{ padding: "0.75rem", marginTop: "1rem" }}>
+              <Button
+                onClick={onResetRound}
+                disabled={loading}
+                variant="secondary"
+                style={{ width: "100%", backgroundColor: "#fee2e2", color: "#dc2626" }}
+              >
+                Reset Round to Open
+              </Button>
+            </Card>
+          )}
+        </div>
+
+        {/* Right Column: Logs */}
+        <div>
+          <PhaseLog phase="preseason" title="Preseason Log" entries={logs} />
+          <PhaseLog phase="submission" title="Submission Log" entries={logs} />
+          <PhaseLog phase="playlist" title="Playlist Log" entries={logs} />
+          <PhaseLog phase="voting" title="Voting Log" entries={logs} />
+          <PhaseLog phase="reveal" title="Reveal Log" entries={logs} />
+          <PhaseLog phase="archived" title="Archive Log" entries={logs} />
+        </div>
+      </div>
+
+      {/* Round Tabs */}
+      <RoundTabs
+        rounds={state?.rounds || []}
+        selectedRoundId={selectedRoundId}
+        onSelectRound={setSelectedRoundId}
+        onAddRound={onCreateRound}
+        onRunRound={onCompleteRound}
+        loading={loading}
+      />
+    </>
+  );
+}
+
+// ============================================================================
+// Season Summary Tab
+// ============================================================================
+
+function SeasonSummaryTab({ state }: { state: TestState | null }) {
+  if (!state) {
+    return (
+      <Card style={{ padding: "2rem", textAlign: "center" }}>
+        <p style={{ color: "var(--color-text-secondary)" }}>Loading...</p>
+      </Card>
+    );
+  }
+
+  const completedRounds = state.rounds.filter((r) => r.status === "archived").length;
+  const activeRounds = state.rounds.filter((r) => r.status !== "archived").length;
+
+  return (
+    <div>
+      {/* Summary Cards */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: "1rem",
+          marginBottom: "1rem",
+        }}
+      >
+        <MetricCard label="Total Rounds" value={state.rounds.length} subtext="This season" />
+        <MetricCard
+          label="Completed"
+          value={completedRounds}
+          subtext="Archived rounds"
+          color="#22c55e"
+        />
+        <MetricCard
+          label="Active"
+          value={activeRounds}
+          subtext="In progress"
+          color="#f59e0b"
+        />
+        <MetricCard
+          label="Competitors"
+          value={state.competitors}
+          subtext="Unique participants"
+        />
+      </div>
+
+      {/* Rounds Table */}
+      <Card>
+        <h3 style={{ marginBottom: "1rem" }}>All Rounds</h3>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: "2px solid var(--color-border)" }}>
+              <th style={thStyle}>#</th>
+              <th style={thStyle}>Theme</th>
+              <th style={thStyle}>Status</th>
+              <th style={thStyle}>Submissions</th>
+              <th style={thStyle}>Votes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {state.rounds.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ ...tdStyle, textAlign: "center", color: "var(--color-text-secondary)" }}>
+                  No rounds yet
+                </td>
+              </tr>
+            ) : (
+              state.rounds.map((round, idx) => (
+                <tr key={round.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                  <td style={tdStyle}>{idx + 1}</td>
+                  <td style={tdStyle}>{round.theme}</td>
+                  <td style={tdStyle}>
+                    <StatusBadge status={round.status} />
+                  </td>
+                  <td style={tdStyle}>{round.submissionCount}/{TEST_USERS.length}</td>
+                  <td style={tdStyle}>{round.voteCount}/{TEST_USERS.length}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </Card>
+    </div>
+  );
+}
+
+// ============================================================================
+// Analytics Tab
+// ============================================================================
+
+interface AnalyticsTabProps {
+  analytics: AnalyticsSummary | null;
+  analyticsDays: number;
+  setAnalyticsDays: (days: number) => void;
+  loading: boolean;
+  onRefresh: () => void;
+  onExport: () => void;
+}
+
+function AnalyticsTab({
+  analytics,
+  analyticsDays,
+  setAnalyticsDays,
+  loading,
+  onRefresh,
+  onExport,
+}: AnalyticsTabProps) {
+  return (
+    <div>
+      {/* Controls */}
+      <Card style={{ marginBottom: "1rem", padding: "0.75rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+            <label>
+              Time Range:{" "}
+              <select
+                value={analyticsDays}
+                onChange={(e) => setAnalyticsDays(Number(e.target.value))}
+                style={{ padding: "0.25rem" }}
+              >
+                <option value={7}>Last 7 days</option>
+                <option value={14}>Last 14 days</option>
+                <option value={30}>Last 30 days</option>
+              </select>
+            </label>
+            <Button
+              onClick={onRefresh}
+              disabled={loading}
+              style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
+            >
+              Refresh
+            </Button>
+          </div>
+          <Button onClick={onExport} disabled={loading}>
+            Export (30 days)
+          </Button>
+        </div>
+      </Card>
+
+      {!analytics ? (
+        <Card style={{ padding: "2rem", textAlign: "center" }}>
+          <p style={{ color: "var(--color-text-secondary)" }}>Loading analytics...</p>
+        </Card>
+      ) : (
+        <>
+          {/* Summary Cards */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: "1rem",
+              marginBottom: "1rem",
+            }}
+          >
+            <MetricCard
+              label="Total Runs"
+              value={analytics.totalRuns}
+              subtext={`${analytics.completedRuns} completed, ${analytics.failedRuns} failed`}
+            />
+            <MetricCard
+              label="Success Rate"
+              value={`${analytics.successRate.toFixed(1)}%`}
+              subtext="Test runs completed successfully"
+              color={
+                analytics.successRate >= 80
+                  ? "#22c55e"
+                  : analytics.successRate >= 50
+                  ? "#f59e0b"
+                  : "#ef4444"
+              }
+            />
+            <MetricCard
+              label="Total Actions"
+              value={analytics.totalActions}
+              subtext={`${analytics.actionSuccessRate.toFixed(1)}% success rate`}
+            />
+            <MetricCard
+              label="Avg Duration"
+              value={formatDuration(analytics.avgRunDurationMs)}
+              subtext={`Action avg: ${formatDuration(analytics.avgActionDurationMs)}`}
+            />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            {/* Daily Trend */}
+            <Card>
+              <h3 style={{ marginBottom: "0.5rem" }}>Daily Trend</h3>
+              {analytics.dailyTrend.length === 0 ? (
+                <p style={{ color: "var(--color-text-secondary)" }}>No data</p>
+              ) : (
+                <div style={{ height: "200px", display: "flex", alignItems: "flex-end", gap: "4px" }}>
+                  {analytics.dailyTrend.map((day) => {
+                    const maxRuns = Math.max(...analytics.dailyTrend.map((d) => d.runs), 1);
+                    const height = (day.runs / maxRuns) * 100;
+                    return (
+                      <div
+                        key={day.date}
+                        style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}
+                      >
+                        <div
+                          style={{
+                            width: "100%",
+                            height: `${height}%`,
+                            minHeight: "4px",
+                            backgroundColor:
+                              day.successRate >= 80
+                                ? "#22c55e"
+                                : day.successRate >= 50
+                                ? "#f59e0b"
+                                : "#ef4444",
+                            borderRadius: "2px 2px 0 0",
+                          }}
+                          title={`${day.date}: ${day.runs} runs, ${day.successRate.toFixed(0)}% success`}
+                        />
+                        <span
+                          style={{
+                            fontSize: "0.7rem",
+                            marginTop: "0.25rem",
+                            color: "var(--color-text-secondary)",
+                          }}
+                        >
+                          {new Date(day.date).getDate()}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+
+            {/* Actions by Type */}
+            <Card>
+              <h3 style={{ marginBottom: "0.5rem" }}>Actions by Type</h3>
+              {Object.keys(analytics.actionsByType).length === 0 ? (
+                <p style={{ color: "var(--color-text-secondary)" }}>No actions</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {Object.entries(analytics.actionsByType).map(([type, data]) => {
+                    const successRate = data.total > 0 ? (data.success / data.total) * 100 : 0;
+                    return (
+                      <div key={type}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem" }}>
+                          <span>{type}</span>
+                          <span>
+                            {data.total} ({successRate.toFixed(0)}%)
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            height: "8px",
+                            backgroundColor: "var(--color-border)",
+                            borderRadius: "4px",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: `${successRate}%`,
+                              height: "100%",
+                              backgroundColor:
+                                successRate >= 80 ? "#22c55e" : successRate >= 50 ? "#f59e0b" : "#ef4444",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+
+            {/* Top Errors */}
+            <Card>
+              <h3 style={{ marginBottom: "0.5rem" }}>Top Errors</h3>
+              {analytics.topErrors.length === 0 ? (
+                <p style={{ color: "var(--color-text-secondary)" }}>No errors</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {analytics.topErrors.map((err, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: "0.5rem",
+                        backgroundColor: "var(--color-surface-hover)",
+                        borderRadius: "4px",
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      <div style={{ color: "#ef4444", fontWeight: "bold" }}>{err.count}x</div>
+                      <div style={{ fontFamily: "monospace", wordBreak: "break-all" }}>{err.error}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Recent Runs */}
+            <Card>
+              <h3 style={{ marginBottom: "0.5rem" }}>Recent Runs</h3>
+              {analytics.recentRuns.length === 0 ? (
+                <p style={{ color: "var(--color-text-secondary)" }}>No runs</p>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.5rem",
+                    maxHeight: "300px",
+                    overflowY: "auto",
+                  }}
+                >
+                  {analytics.recentRuns.map((run) => (
+                    <div
+                      key={run.id}
+                      style={{
+                        padding: "0.5rem",
+                        border: "1px solid var(--color-border)",
+                        borderRadius: "4px",
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontWeight: "bold" }}>{run.theme || "Untitled"}</span>
+                        <StatusBadge status={run.status} />
+                      </div>
+                      <div style={{ color: "var(--color-text-secondary)", marginTop: "0.25rem" }}>
+                        {new Date(run.started_at).toLocaleString()} |{" "}
+                        {run.successful_actions}/{run.total_actions} actions
+                        {run.duration_ms && ` | ${formatDuration(run.duration_ms)}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Round Tabs Component
+// ============================================================================
+
+interface RoundTabsProps {
+  rounds: RoundState[];
+  selectedRoundId: string | null;
+  onSelectRound: (id: string) => void;
+  onAddRound: () => void;
+  onRunRound: () => void;
+  loading: boolean;
+}
+
+function RoundTabs({
+  rounds,
+  selectedRoundId,
+  onSelectRound,
+  onAddRound,
+  onRunRound,
+  loading,
+}: RoundTabsProps) {
+  return (
+    <Card style={{ padding: "0.75rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+        <span style={{ fontWeight: "bold", marginRight: "0.5rem" }}>Rounds:</span>
+        {rounds.map((round, idx) => (
+          <div
+            key={round.id}
+            onClick={() => onSelectRound(round.id)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              padding: "0.5rem 0.75rem",
+              border: `2px solid ${selectedRoundId === round.id ? "var(--color-primary)" : "var(--color-border)"}`,
+              borderRadius: "8px",
+              cursor: "pointer",
+              backgroundColor:
+                selectedRoundId === round.id ? "var(--color-surface-hover)" : "var(--color-surface)",
+            }}
+          >
+            <span>Round {idx + 1}</span>
+            <StatusBadge status={round.status} />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRunRound();
+              }}
+              disabled={loading || round.status === "archived"}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: round.status === "archived" ? "not-allowed" : "pointer",
+                fontSize: "1rem",
+                opacity: round.status === "archived" ? 0.3 : 1,
+              }}
+              title="Auto-run round"
+            >
+              ▶
+            </button>
+          </div>
+        ))}
+        <button
+          onClick={onAddRound}
+          disabled={loading}
+          style={{
+            padding: "0.5rem 1rem",
+            border: "2px dashed var(--color-border)",
+            borderRadius: "8px",
+            backgroundColor: "transparent",
+            cursor: "pointer",
+            fontSize: "0.9rem",
+          }}
+        >
+          + Add Round
+        </button>
+      </div>
+      <div style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)", marginTop: "0.5rem" }}>
+        ▶ = Generate/Automate entire round (fills phases top to bottom)
+      </div>
+    </Card>
+  );
+}
+
+// ============================================================================
 // Helper Components
 // ============================================================================
+
+function TabButton({
+  active,
+  disabled,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        padding: "0.5rem 1rem",
+        border: "none",
+        borderBottom: active ? "3px solid var(--color-primary)" : "3px solid transparent",
+        backgroundColor: "transparent",
+        cursor: disabled ? "not-allowed" : "pointer",
+        fontWeight: active ? "bold" : "normal",
+        color: disabled ? "var(--color-text-secondary)" : active ? "var(--color-primary)" : "var(--color-text)",
+        opacity: disabled ? 0.5 : 1,
+        transition: "all 0.15s ease",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -936,7 +1361,7 @@ function StatusBadge({ status }: { status: string }) {
         borderRadius: "4px",
         backgroundColor: colors[status] || "#6b7280",
         color: "white",
-        fontSize: "0.8rem",
+        fontSize: "0.75rem",
         fontWeight: "bold",
       }}
     >
@@ -957,14 +1382,7 @@ function MetricCard({
   color?: string;
 }) {
   return (
-    <div
-      style={{
-        padding: "1rem",
-        backgroundColor: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
-        borderRadius: "8px",
-      }}
-    >
+    <Card style={{ padding: "1rem" }}>
       <div style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)", marginBottom: "0.25rem" }}>
         {label}
       </div>
@@ -974,7 +1392,7 @@ function MetricCard({
       <div style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginTop: "0.25rem" }}>
         {subtext}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -986,3 +1404,19 @@ function formatDuration(ms: number): string {
   const seconds = Math.floor((ms % 60000) / 1000);
   return `${minutes}m ${seconds}s`;
 }
+
+// ============================================================================
+// Styles
+// ============================================================================
+
+const thStyle: React.CSSProperties = {
+  textAlign: "left",
+  padding: "0.5rem",
+  fontWeight: "bold",
+  fontSize: "0.85rem",
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: "0.5rem",
+  verticalAlign: "middle",
+};
