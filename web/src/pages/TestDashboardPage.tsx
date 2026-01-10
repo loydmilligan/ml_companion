@@ -425,6 +425,114 @@ export default function TestDashboardPage() {
     }
   };
 
+  const handleExportLiveDataBackup = async () => {
+    setLoading(true);
+    addLog("export-live-backup", true, "Starting live data backup...", "preseason");
+
+    try {
+      // Get all non-test leagues
+      const { data: leagues, error: leaguesError } = await supabase
+        .from("leagues")
+        .select("*")
+        .not("id", "like", "00000000-0000-0000-0002-%");
+      if (leaguesError) throw leaguesError;
+
+      const leagueIds = leagues?.map(l => l.id) || [];
+
+      // Get all rounds for these leagues
+      const { data: rounds, error: roundsError } = await supabase
+        .from("rounds")
+        .select("*")
+        .in("league_id", leagueIds);
+      if (roundsError) throw roundsError;
+
+      const roundIds = rounds?.map(r => r.id) || [];
+
+      // Get all submissions for these rounds
+      const { data: submissions, error: subsError } = await supabase
+        .from("submissions")
+        .select("*")
+        .in("round_id", roundIds);
+      if (subsError) throw subsError;
+
+      const submissionIds = submissions?.map(s => s.id) || [];
+
+      // Get all votes for these submissions
+      const { data: votes, error: votesError } = await supabase
+        .from("votes")
+        .select("*")
+        .in("submission_id", submissionIds);
+      if (votesError) throw votesError;
+
+      // Get round awards
+      const { data: awards, error: awardsError } = await supabase
+        .from("round_awards")
+        .select("*")
+        .in("round_id", roundIds);
+      if (awardsError) throw awardsError;
+
+      // Get family groups (non-test)
+      const { data: groups, error: groupsError } = await supabase
+        .from("family_groups")
+        .select("*")
+        .eq("is_test_group", false);
+      if (groupsError) throw groupsError;
+
+      // Get season competitors for these groups
+      const groupIds = groups?.map(g => g.id) || [];
+      const { data: competitors, error: compsError } = await supabase
+        .from("season_competitors")
+        .select("*")
+        .in("group_id", groupIds);
+      if (compsError) throw compsError;
+
+      const backup = {
+        exportedAt: new Date().toISOString(),
+        version: "1.0",
+        stats: {
+          leagues: leagues?.length || 0,
+          rounds: rounds?.length || 0,
+          submissions: submissions?.length || 0,
+          votes: votes?.length || 0,
+          awards: awards?.length || 0,
+          groups: groups?.length || 0,
+          competitors: competitors?.length || 0,
+        },
+        data: {
+          leagues,
+          rounds,
+          submissions,
+          votes,
+          awards,
+          groups,
+          competitors,
+        },
+      };
+
+      const blob = new Blob([JSON.stringify(backup, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tml-live-data-backup-${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      addLog(
+        "export-live-backup",
+        true,
+        `Backup complete: ${backup.stats.leagues} leagues, ${backup.stats.rounds} rounds, ${backup.stats.submissions} submissions, ${backup.stats.votes} votes`,
+        "preseason"
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      addLog("export-live-backup", false, message, "preseason");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Jump handlers
   const handleJumpToSubmission = async () => {
     if (!preseasonComplete) {
@@ -518,6 +626,19 @@ export default function TestDashboardPage() {
             Refresh
           </Button>
           <Button
+            onClick={handleExportLiveDataBackup}
+            disabled={loading}
+            style={{
+              padding: "0.25rem 0.75rem",
+              fontSize: "0.85rem",
+              backgroundColor: "#16a34a",
+              borderColor: "#16a34a",
+              color: "white",
+            }}
+          >
+            Backup Live Data
+          </Button>
+          <Button
             onClick={handleResetAllTestData}
             disabled={loading}
             style={{
@@ -528,7 +649,7 @@ export default function TestDashboardPage() {
               color: "white",
             }}
           >
-            Reset All Test Data
+            Reset Test Data
           </Button>
         </div>
       </div>
