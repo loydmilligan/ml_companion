@@ -990,11 +990,11 @@ export default function ChatPage() {
                   ↩️
                 </button>
                 {/* DM button - only show for other users' messages */}
-                {item.author_id !== profile?.id && (
+                {item.author_id && item.author_id !== profile?.id && (
                   <button
                     type="button"
                     className="chat-bubble-reaction dm-btn"
-                    onClick={() => startDM(item.author_id)}
+                    onClick={() => startDM(item.author_id!)}
                     title={`Message ${item.profiles?.display_name ?? "user"}`}
                   >
                     💬
