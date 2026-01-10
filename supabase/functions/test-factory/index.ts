@@ -37,6 +37,15 @@ import {
   type GenerationOptions,
 } from "./csv-generators.ts";
 import { getMockAIResponse } from "./mock-ai-responses.ts";
+import {
+  startTestRun,
+  recordAction,
+  completeTestRun,
+  getAnalyticsSummary,
+  getTestRuns,
+  getTestRunActions,
+  exportAnalytics,
+} from "./analytics.ts";
 
 // Test IDs (must match seed-test-data function)
 const TEST_GROUP_ID = "00000000-0000-0000-0001-000000000001";
@@ -111,11 +120,27 @@ Deno.serve(async (req) => {
         response = await handleResetRound(supabase, params);
         break;
 
+      case "get-analytics":
+        response = await handleGetAnalytics(supabase, params);
+        break;
+
+      case "get-test-runs":
+        response = await handleGetTestRuns(supabase, params);
+        break;
+
+      case "get-test-run-actions":
+        response = await handleGetTestRunActions(supabase, params);
+        break;
+
+      case "export-analytics":
+        response = await handleExportAnalytics(supabase, params);
+        break;
+
       default:
         response = {
           success: false,
           action: action || "unknown",
-          error: `Unknown action: ${action}. Valid actions: create-round, simulate-email, advance-round, complete-round, generate-csvs, get-state, get-rounds, reset-round`,
+          error: `Unknown action: ${action}. Valid actions: create-round, simulate-email, advance-round, complete-round, generate-csvs, get-state, get-rounds, reset-round, get-analytics, get-test-runs, get-test-run-actions, export-analytics`,
         };
     }
 
@@ -333,6 +358,7 @@ async function handleAdvanceRound(
 
 /**
  * Run a complete round simulation with all users.
+ * Records analytics for each action.
  */
 async function handleCompleteRound(
   supabase: ReturnType<typeof createClient>,
@@ -347,15 +373,101 @@ async function handleCompleteRound(
   const userNames = params.userNames || TEST_USERS.map(u => u.name);
   const options = params.options || { useMockAI: true, revealDurationMinutes: 5 };
 
-  const results = await simulateCompleteRound(
-    supabase,
-    leagueId,
-    params.theme,
-    userNames,
-    options
+  // Start analytics tracking
+  let testRunId: string | undefined;
+  try {
+    testRunId = await startTestRun(supabase, {
+      leagueId,
+      theme: params.theme,
+      revealDurationMinutes: options.revealDurationMinutes,
+      userCount: userNames.length,
+    });
+  } catch (err) {
+    console.error("[Analytics] Failed to start test run:", err);
+  }
+
+  const results: SimulationResult[] = [];
+
+  // Execute with analytics recording
+  const executeWithAnalytics = async (
+    actionType: string,
+    actionParams: Record<string, unknown>,
+    executor: () => Promise<SimulationResult>
+  ): Promise<SimulationResult> => {
+    if (testRunId) {
+      return await recordAction(supabase, testRunId, actionType, actionParams, async () => {
+        const result = await executor();
+        return { success: result.success, data: result, error: result.error };
+      }).then(r => r.data as SimulationResult);
+    } else {
+      return await executor();
+    }
+  };
+
+  // Step 1: Create round
+  const roundResult = await executeWithAnalytics(
+    "create_round",
+    { leagueId, theme: params.theme },
+    () => simulateRoundStart(supabase, leagueId, params.theme, options)
   );
+  results.push(roundResult);
+
+  if (!roundResult.success || !roundResult.roundId) {
+    if (testRunId) {
+      await completeTestRun(supabase, testRunId, undefined, true);
+    }
+    return {
+      success: false,
+      action: "complete-round",
+      data: { results },
+      error: "Failed to create round",
+    };
+  }
+
+  const roundId = roundResult.roundId;
+
+  // Step 2: All users submit
+  for (const userName of userNames) {
+    const submitResult = await executeWithAnalytics(
+      "user_submitted",
+      { roundId, userName },
+      () => simulateUserSubmitted(supabase, roundId, userName, options)
+    );
+    results.push(submitResult);
+  }
+
+  // Step 3: Playlist ready (transition to voting)
+  const playlistResult = await executeWithAnalytics(
+    "playlist_ready",
+    { roundId },
+    () => simulatePlaylistReady(supabase, roundId, options)
+  );
+  results.push(playlistResult);
+
+  // Step 4: All users vote
+  for (const userName of userNames) {
+    const voteResult = await executeWithAnalytics(
+      "user_voted",
+      { roundId, userName },
+      () => simulateUserVoted(supabase, roundId, userName, options)
+    );
+    results.push(voteResult);
+  }
+
+  // Step 5: Votes in (transition to revealed)
+  const votesInResult = await executeWithAnalytics(
+    "votes_in",
+    { roundId, revealDurationMinutes: options.revealDurationMinutes },
+    () => simulateVotesIn(supabase, roundId, options)
+  );
+  results.push(votesInResult);
 
   const success = results.every(r => r.success);
+
+  // Complete analytics tracking
+  if (testRunId) {
+    await completeTestRun(supabase, testRunId, roundId, !success);
+  }
 
   return {
     success,
@@ -364,6 +476,7 @@ async function handleCompleteRound(
       leagueId,
       theme: params.theme,
       userCount: userNames.length,
+      testRunId,
       results,
     },
     error: success ? undefined : "Some simulation steps failed",
@@ -629,4 +742,122 @@ function getNextStatus(currentStatus: string): string | null {
   }
 
   return statusOrder[currentIndex + 1];
+}
+
+// ============================================================================
+// Analytics Handlers
+// ============================================================================
+
+/**
+ * Get analytics summary with trends.
+ */
+async function handleGetAnalytics(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    days?: number;
+  }
+): Promise<ActionResponse> {
+  try {
+    const summary = await getAnalyticsSummary(supabase, params.days || 7);
+
+    return {
+      success: true,
+      action: "get-analytics",
+      data: summary,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      action: "get-analytics",
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Get list of test runs.
+ */
+async function handleGetTestRuns(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    limit?: number;
+    status?: string;
+    leagueId?: string;
+  }
+): Promise<ActionResponse> {
+  try {
+    const runs = await getTestRuns(supabase, params);
+
+    return {
+      success: true,
+      action: "get-test-runs",
+      data: { runs },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      action: "get-test-runs",
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Get actions for a specific test run.
+ */
+async function handleGetTestRunActions(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    testRunId: string;
+  }
+): Promise<ActionResponse> {
+  if (!params.testRunId) {
+    return {
+      success: false,
+      action: "get-test-run-actions",
+      error: "testRunId is required",
+    };
+  }
+
+  try {
+    const actions = await getTestRunActions(supabase, params.testRunId);
+
+    return {
+      success: true,
+      action: "get-test-run-actions",
+      data: { actions },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      action: "get-test-run-actions",
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Export analytics data as JSON.
+ */
+async function handleExportAnalytics(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    days?: number;
+  }
+): Promise<ActionResponse> {
+  try {
+    const exportData = await exportAnalytics(supabase, params.days || 30);
+
+    return {
+      success: true,
+      action: "export-analytics",
+      data: exportData,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      action: "export-analytics",
+      error: error.message,
+    };
+  }
 }
