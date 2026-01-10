@@ -584,17 +584,37 @@ export default function DMInboxPage() {
 
         .dm-member-name {
           font-weight: 500;
-          color: var(--text);
+          color: var(--text, #1e293b);
         }
 
-        /* Dark mode fixes */
+        /* Light mode - ensure text is visible */
+        [data-mode="light"] .dm-modal {
+          background: var(--surface, #ffffff);
+        }
+
+        [data-mode="light"] .dm-modal-header h2 {
+          color: var(--text, #1e293b);
+        }
+
+        [data-mode="light"] .dm-member-name {
+          color: #1e293b;
+        }
+
+        [data-mode="light"] .dm-member-item:hover {
+          background: rgba(0, 0, 0, 0.06);
+        }
+
+        /* Dark mode */
         [data-mode="dark"] .dm-modal {
           background: var(--surface, #1e293b);
         }
 
-        [data-mode="dark"] .dm-modal-header h2,
-        [data-mode="dark"] .dm-member-name {
+        [data-mode="dark"] .dm-modal-header h2 {
           color: var(--text, #f1f5f9);
+        }
+
+        [data-mode="dark"] .dm-member-name {
+          color: #f1f5f9;
         }
 
         [data-mode="dark"] .dm-member-item:hover {
