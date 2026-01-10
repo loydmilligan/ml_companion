@@ -13,11 +13,8 @@ import Card from "../components/Card";
 import Button from "../components/Button";
 import { supabase } from "../lib/supabase";
 import {
-  PhaseBlock,
   getPhaseStatus,
   UserGrid,
-  PhaseLog,
-  BulkActionsPanel,
   JumpButton,
   TEST_USERS,
   TEST_LEAGUE_S2_ID,
@@ -427,7 +424,6 @@ export default function TestDashboardPage() {
 
   const handleExportLiveDataBackup = async () => {
     setLoading(true);
-    addLog("export-live-backup", true, "Starting live data backup...", "preseason");
 
     try {
       // Get all non-test leagues
@@ -571,7 +567,7 @@ export default function TestDashboardPage() {
     const submissions: Record<string, { song?: string; artist?: string }> = {};
     if (selectedRound?.activity?.submissions) {
       for (const name of selectedRound.activity.submissions) {
-        submissions[name] = { song: "Test Song" }; // Placeholder
+        submissions[name] = { song: "✓ Submitted" };
       }
     }
     return submissions;
@@ -782,6 +778,58 @@ interface ControlPanelTabProps {
   onJumpToArchive: () => void;
 }
 
+// Phase explanations for the left column
+const PHASE_EXPLANATIONS: Record<PhaseType, { title: string; steps: string[] }> = {
+  preseason: {
+    title: "Setup & Data Generation",
+    steps: [
+      "1. Generate test users (5 players)",
+      "2. Create family group relationships",
+      "3. Optionally import S1 historical data",
+    ],
+  },
+  submission: {
+    title: "Song Submission Period",
+    steps: [
+      "1. Create a new round with theme",
+      "2. Each user submits one song",
+      "3. Spotify metadata auto-fetched",
+    ],
+  },
+  playlist: {
+    title: "Playlist Generation",
+    steps: [
+      "1. All submissions collected",
+      "2. Spotify playlist created",
+      "3. Music service links generated",
+    ],
+  },
+  voting: {
+    title: "Voting Period",
+    steps: [
+      "1. Users listen to playlist",
+      "2. Each user votes on all songs",
+      "3. Points: (n-1)/2 rounded up per song",
+    ],
+  },
+  reveal: {
+    title: "Results & Reveal",
+    steps: [
+      "1. AI generates round story",
+      "2. Awards calculated",
+      "3. Timed reveal (submitters hidden)",
+    ],
+  },
+  archived: {
+    title: "Round Complete",
+    steps: [
+      "1. Full results visible",
+      "2. All submitters revealed",
+      "3. Round added to history",
+    ],
+  },
+};
+
 function ControlPanelTab({
   state,
   selectedRound,
@@ -816,58 +864,89 @@ function ControlPanelTab({
   onJumpToReveal,
   onJumpToArchive,
 }: ControlPanelTabProps) {
+  // Column styles
+  const colExplain = { width: "180px", flexShrink: 0 };
+  const colStatus = { flex: 1, minWidth: "200px" };
+  const colActions = { width: "220px", flexShrink: 0 };
+  const colLogs = { width: "260px", flexShrink: 0 };
+
   return (
     <>
-      {/* Three Column Layout */}
+      {/* Header Row */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 280px 300px",
-          gap: "1rem",
-          marginBottom: "1rem",
+          display: "flex",
+          gap: "0.75rem",
+          marginBottom: "0.5rem",
+          padding: "0.5rem",
+          backgroundColor: "var(--color-surface-hover)",
+          borderRadius: "8px",
+          fontWeight: "bold",
+          fontSize: "0.8rem",
+          color: "var(--color-text-secondary)",
+          textTransform: "uppercase",
         }}
       >
-        {/* Left Column: Phase Blocks */}
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          {/* Preseason */}
-          <PhaseBlock
-            phase="preseason"
-            title="1. PRESEASON"
-            status={getPhaseStatusForRound("preseason")}
-            summary={preseasonComplete ? "Complete" : "Setup required"}
-          >
-            {preseasonComplete ? (
-              <div style={{ fontSize: "0.9rem" }}>
-                <div>Users: {state?.testUsers?.length || 0} created</div>
-                <div>Family: Test Family</div>
-              </div>
-            ) : (
-              <div style={{ color: "var(--color-text-secondary)" }}>
-                Click "Generate Users" to set up test data
-              </div>
-            )}
-          </PhaseBlock>
+        <div style={colExplain}>Instructions</div>
+        <div style={colStatus}>Status</div>
+        <div style={colActions}>Actions</div>
+        <div style={colLogs}>Log</div>
+      </div>
 
-          <JumpButton
-            fromPhase="preseason"
-            toPhase="submission"
-            onClick={onJumpToSubmission}
-            disabled={loading}
-            loading={loading && currentPhase === "preseason"}
-          />
+      {/* PRESEASON ROW */}
+      <PhaseRow
+        phase="preseason"
+        title="1. PRESEASON"
+        explanation={PHASE_EXPLANATIONS.preseason}
+        status={getPhaseStatusForRound("preseason")}
+        logs={logs}
+        colStyles={{ colExplain, colStatus, colActions, colLogs }}
+        statusContent={
+          preseasonComplete ? (
+            <div style={{ fontSize: "0.85rem" }}>
+              <div>✓ Users: {state?.testUsers?.length || 0} created</div>
+              <div>✓ Family: Test Family</div>
+            </div>
+          ) : (
+            <div style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>
+              Click "Generate" to set up test data
+            </div>
+          )
+        }
+        actionsContent={
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <ActionBtn onClick={onSeedTestData} disabled={loading || preseasonComplete}>
+              {preseasonComplete ? "✓ Generated" : "Generate Users"}
+            </ActionBtn>
+            <ActionBtn onClick={onGenerateCSVs} disabled={loading} small>
+              Export S1 CSVs
+            </ActionBtn>
+          </div>
+        }
+      />
 
-          {/* Submission */}
-          <PhaseBlock
-            phase="submission"
-            title="2. OPEN FOR SUBMISSION"
-            status={getPhaseStatusForRound("submission")}
-            summary={
-              selectedRound
-                ? `${selectedRound.submissionCount}/${TEST_USERS.length} submitted`
-                : "No round"
-            }
-          >
-            {selectedRound && selectedRound.status === "open" ? (
+      <JumpButton
+        fromPhase="preseason"
+        toPhase="submission"
+        onClick={onJumpToSubmission}
+        disabled={loading}
+        loading={loading && currentPhase === "preseason"}
+      />
+
+      {/* SUBMISSION ROW */}
+      <PhaseRow
+        phase="submission"
+        title="2. SUBMISSION"
+        explanation={PHASE_EXPLANATIONS.submission}
+        status={getPhaseStatusForRound("submission")}
+        logs={logs}
+        colStyles={{ colExplain, colStatus, colActions, colLogs }}
+        statusContent={
+          selectedRound && selectedRound.status === "open" ? (
+            <div style={{ fontSize: "0.85rem" }}>
+              <div style={{ marginBottom: "0.5rem", fontWeight: "bold" }}>
+                {selectedRound.submissionCount}/{TEST_USERS.length} submitted
+              </div>
               <UserGrid
                 type="submission"
                 submissions={getSubmissions()}
@@ -875,55 +954,92 @@ function ControlPanelTab({
                 disabled={loading}
                 loading={loading}
               />
-            ) : (
-              <div style={{ color: "var(--color-text-secondary)", fontSize: "0.9rem" }}>
-                {selectedRound ? "Submissions complete" : "Create a round to begin"}
-              </div>
-            )}
-          </PhaseBlock>
-
-          <JumpButton
-            fromPhase="submission"
-            toPhase="playlist"
-            onClick={onJumpToPlaylist}
-            disabled={loading || !selectedRound || selectedRound.status !== "open"}
-            loading={loading && currentPhase === "submission"}
-          />
-
-          {/* Playlist */}
-          <PhaseBlock
-            phase="playlist"
-            title="3. PLAYLIST CREATED"
-            status={getPhaseStatusForRound("playlist")}
-            summary={selectedRound?.status !== "open" ? "Complete" : "Waiting"}
-          >
-            <div style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)" }}>
-              {selectedRound?.status !== "open"
-                ? "Spotify playlist converted, music links created"
-                : "Waiting for all submissions"}
             </div>
-          </PhaseBlock>
+          ) : (
+            <div style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>
+              {selectedRound ? "✓ Submissions complete" : "Create a round first"}
+            </div>
+          )
+        }
+        actionsContent={
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <div style={{ marginBottom: "0.25rem" }}>
+              <select
+                value={newTheme}
+                onChange={(e) => setNewTheme(e.target.value)}
+                style={{ width: "100%", padding: "0.35rem", fontSize: "0.8rem" }}
+              >
+                {ROUND_THEMES.map((theme) => (
+                  <option key={theme} value={theme}>{theme}</option>
+                ))}
+              </select>
+            </div>
+            <ActionBtn onClick={onCreateRound} disabled={loading || !preseasonComplete}>
+              Create Round
+            </ActionBtn>
+            <ActionBtn
+              onClick={onSimulateAllSubmissions}
+              disabled={loading || !selectedRound || selectedRound.status !== "open"}
+              small
+            >
+              Submit All
+            </ActionBtn>
+          </div>
+        }
+      />
 
-          <JumpButton
-            fromPhase="playlist"
-            toPhase="voting"
-            onClick={onJumpToVoting}
-            disabled={loading || !selectedRound || selectedRound.status === "open"}
-            loading={loading && currentPhase === "playlist"}
-          />
+      <JumpButton
+        fromPhase="submission"
+        toPhase="playlist"
+        onClick={onJumpToPlaylist}
+        disabled={loading || !selectedRound || selectedRound.status !== "open"}
+        loading={loading && currentPhase === "submission"}
+      />
 
-          {/* Voting */}
-          <PhaseBlock
-            phase="voting"
-            title="4. VOTING PERIOD"
-            status={getPhaseStatusForRound("voting")}
-            summary={
-              selectedRound?.status === "voting"
-                ? `${selectedRound.voteCount}/${TEST_USERS.length} voted`
-                : ""
-            }
-          >
-            {selectedRound?.status === "voting" ? (
+      {/* PLAYLIST ROW */}
+      <PhaseRow
+        phase="playlist"
+        title="3. PLAYLIST"
+        explanation={PHASE_EXPLANATIONS.playlist}
+        status={getPhaseStatusForRound("playlist")}
+        logs={logs}
+        colStyles={{ colExplain, colStatus, colActions, colLogs }}
+        statusContent={
+          <div style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+            {selectedRound?.status !== "open"
+              ? "✓ Spotify playlist created"
+              : "Waiting for all submissions..."}
+          </div>
+        }
+        actionsContent={
+          <div style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>
+            Auto-generated when all submit
+          </div>
+        }
+      />
+
+      <JumpButton
+        fromPhase="playlist"
+        toPhase="voting"
+        onClick={onJumpToVoting}
+        disabled={loading || !selectedRound || selectedRound.status === "open"}
+        loading={loading && currentPhase === "playlist"}
+      />
+
+      {/* VOTING ROW */}
+      <PhaseRow
+        phase="voting"
+        title="4. VOTING"
+        explanation={PHASE_EXPLANATIONS.voting}
+        status={getPhaseStatusForRound("voting")}
+        logs={logs}
+        colStyles={{ colExplain, colStatus, colActions, colLogs }}
+        statusContent={
+          selectedRound?.status === "voting" ? (
+            <div style={{ fontSize: "0.85rem" }}>
+              <div style={{ marginBottom: "0.5rem", fontWeight: "bold" }}>
+                {selectedRound.voteCount}/{TEST_USERS.length} voted
+              </div>
               <UserGrid
                 type="voting"
                 votes={getVotes()}
@@ -931,173 +1047,288 @@ function ControlPanelTab({
                 disabled={loading}
                 loading={loading}
               />
-            ) : (
-              <div style={{ color: "var(--color-text-secondary)", fontSize: "0.9rem" }}>
-                {selectedRound?.status === "revealed" || selectedRound?.status === "archived"
-                  ? "Voting complete"
-                  : "Waiting for playlist phase"}
-              </div>
-            )}
-          </PhaseBlock>
-
-          <JumpButton
-            fromPhase="voting"
-            toPhase="reveal"
-            onClick={onJumpToReveal}
-            disabled={loading || !selectedRound || selectedRound.status !== "voting"}
-            loading={loading && currentPhase === "voting"}
-          />
-
-          {/* Reveal */}
-          <PhaseBlock
-            phase="reveal"
-            title="5. VOTES IN / REVEAL"
-            status={getPhaseStatusForRound("reveal")}
-            summary={
-              selectedRound?.status === "revealed" && selectedRound.revealRemainingMinutes
-                ? `${selectedRound.revealRemainingMinutes} min remaining`
-                : ""
-            }
-          >
-            <div style={{ fontSize: "0.9rem" }}>
-              {selectedRound?.status === "revealed" ? (
-                <>
-                  <div>AI Story: Generated</div>
-                  <div>Awards: Calculated</div>
-                  <div>Scores visible, submitters hidden</div>
-                </>
-              ) : (
-                <span style={{ color: "var(--color-text-secondary)" }}>
-                  Waiting for all votes
-                </span>
-              )}
             </div>
-          </PhaseBlock>
-
-          <JumpButton
-            fromPhase="reveal"
-            toPhase="archived"
-            onClick={onJumpToArchive}
-            disabled={loading || !selectedRound || selectedRound.status !== "revealed"}
-            loading={loading && currentPhase === "reveal"}
-          />
-
-          {/* Archived */}
-          <PhaseBlock
-            phase="archived"
-            title="6. ARCHIVED"
-            status={getPhaseStatusForRound("archived")}
-            summary={selectedRound?.status === "archived" ? "Complete" : ""}
-          >
-            <div style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)" }}>
-              {selectedRound?.status === "archived"
-                ? "Full results visible, round complete"
-                : "Waiting for reveal period to end"}
+          ) : (
+            <div style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>
+              {selectedRound?.status === "revealed" || selectedRound?.status === "archived"
+                ? "✓ Voting complete"
+                : "Waiting for playlist phase..."}
             </div>
-          </PhaseBlock>
-        </div>
-
-        {/* Center Column: Bulk Actions */}
-        <div>
-          {/* Round Creation */}
-          <Card style={{ marginBottom: "1rem", padding: "0.75rem" }}>
-            <div style={{ fontWeight: "bold", marginBottom: "0.5rem" }}>Create Round</div>
-            <select
-              value={newTheme}
-              onChange={(e) => setNewTheme(e.target.value)}
-              style={{ width: "100%", padding: "0.5rem", marginBottom: "0.5rem" }}
+          )
+        }
+        actionsContent={
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <ActionBtn
+              onClick={onSimulateAllVotes}
+              disabled={loading || !selectedRound || selectedRound.status !== "voting"}
             >
-              {ROUND_THEMES.map((theme) => (
-                <option key={theme} value={theme}>
-                  {theme}
-                </option>
-              ))}
-            </select>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <Button onClick={onCreateRound} disabled={loading || !preseasonComplete}>
-                Create
-              </Button>
-              <Button onClick={onCompleteRound} disabled={loading || !preseasonComplete} variant="secondary">
-                Auto-Run
-              </Button>
+              Vote All
+            </ActionBtn>
+          </div>
+        }
+      />
+
+      <JumpButton
+        fromPhase="voting"
+        toPhase="reveal"
+        onClick={onJumpToReveal}
+        disabled={loading || !selectedRound || selectedRound.status !== "voting"}
+        loading={loading && currentPhase === "voting"}
+      />
+
+      {/* REVEAL ROW */}
+      <PhaseRow
+        phase="reveal"
+        title="5. REVEAL"
+        explanation={PHASE_EXPLANATIONS.reveal}
+        status={getPhaseStatusForRound("reveal")}
+        logs={logs}
+        colStyles={{ colExplain, colStatus, colActions, colLogs }}
+        statusContent={
+          <div style={{ fontSize: "0.85rem" }}>
+            {selectedRound?.status === "revealed" ? (
+              <>
+                <div>✓ AI Story generated</div>
+                <div>✓ Awards calculated</div>
+                {selectedRound.revealRemainingMinutes && (
+                  <div style={{ color: "#f59e0b", fontWeight: "bold" }}>
+                    {selectedRound.revealRemainingMinutes} min remaining
+                  </div>
+                )}
+              </>
+            ) : (
+              <span style={{ color: "var(--color-text-secondary)" }}>
+                Waiting for all votes...
+              </span>
+            )}
+          </div>
+        }
+        actionsContent={
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <div style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>
+              Reveal duration:
             </div>
-          </Card>
+            <input
+              type="number"
+              value={revealMinutes}
+              onChange={(e) => setRevealMinutes(Number(e.target.value))}
+              min={1}
+              max={1440}
+              style={{ width: "80px", padding: "0.25rem", fontSize: "0.8rem" }}
+            />
+            <span style={{ fontSize: "0.75rem" }}>minutes</span>
+          </div>
+        }
+      />
 
-          {/* Phase-specific bulk actions */}
-          <BulkActionsPanel
-            phase="preseason"
-            status={getPhaseStatusForRound("preseason")}
-            loading={loading}
-            onGenerateUsers={onSeedTestData}
-            onGenerateFamily={onSeedTestData}
-            onGenerateS1Data={onGenerateCSVs}
-          />
+      <JumpButton
+        fromPhase="reveal"
+        toPhase="archived"
+        onClick={onJumpToArchive}
+        disabled={loading || !selectedRound || selectedRound.status !== "revealed"}
+        loading={loading && currentPhase === "reveal"}
+      />
 
-          <BulkActionsPanel
-            phase="submission"
-            status={getPhaseStatusForRound("submission")}
-            loading={loading}
-            onSubmitAll={onSimulateAllSubmissions}
-            submissionCount={selectedRound?.submissionCount || 0}
-            totalUsers={TEST_USERS.length}
-            disabled={!selectedRound || selectedRound.status !== "open"}
-          />
+      {/* ARCHIVED ROW */}
+      <PhaseRow
+        phase="archived"
+        title="6. ARCHIVED"
+        explanation={PHASE_EXPLANATIONS.archived}
+        status={getPhaseStatusForRound("archived")}
+        logs={logs}
+        colStyles={{ colExplain, colStatus, colActions, colLogs }}
+        statusContent={
+          <div style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+            {selectedRound?.status === "archived"
+              ? "✓ Round complete - full results visible"
+              : "Waiting for reveal to end..."}
+          </div>
+        }
+        actionsContent={
+          selectedRound && (
+            <ActionBtn onClick={onResetRound} disabled={loading} danger>
+              Reset Round
+            </ActionBtn>
+          )
+        }
+      />
 
-          <BulkActionsPanel
-            phase="voting"
-            status={getPhaseStatusForRound("voting")}
-            loading={loading}
-            onVoteAll={onSimulateAllVotes}
-            voteCount={selectedRound?.voteCount || 0}
-            totalUsers={TEST_USERS.length}
-            disabled={!selectedRound || selectedRound.status !== "voting"}
-          />
+      {/* Round Tabs */}
+      <div style={{ marginTop: "1.5rem" }}>
+        <RoundTabs
+          rounds={state?.rounds || []}
+          selectedRoundId={selectedRoundId}
+          onSelectRound={setSelectedRoundId}
+          onAddRound={onCreateRound}
+          onRunRound={onCompleteRound}
+          loading={loading}
+        />
+      </div>
+    </>
+  );
+}
 
-          <BulkActionsPanel
-            phase="reveal"
-            status={getPhaseStatusForRound("reveal")}
-            loading={loading}
-            revealDurationMinutes={revealMinutes}
-            onRevealDurationChange={setRevealMinutes}
-            disabled={!selectedRound || selectedRound.status !== "voting"}
-          />
+// ============================================================================
+// PhaseRow Component
+// ============================================================================
 
-          {/* Reset Button */}
-          {selectedRound && (
-            <Card style={{ padding: "0.75rem", marginTop: "1rem" }}>
-              <Button
-                onClick={onResetRound}
-                disabled={loading}
-                variant="secondary"
-                style={{ width: "100%", backgroundColor: "#fee2e2", color: "#dc2626" }}
-              >
-                Reset Round to Open
-              </Button>
-            </Card>
-          )}
+interface PhaseRowProps {
+  phase: PhaseType;
+  title: string;
+  explanation: { title: string; steps: string[] };
+  status: PhaseStatus;
+  logs: LogEntry[];
+  colStyles: {
+    colExplain: React.CSSProperties;
+    colStatus: React.CSSProperties;
+    colActions: React.CSSProperties;
+    colLogs: React.CSSProperties;
+  };
+  statusContent: React.ReactNode;
+  actionsContent: React.ReactNode;
+}
+
+function PhaseRow({
+  phase,
+  title,
+  explanation,
+  status,
+  logs,
+  colStyles,
+  statusContent,
+  actionsContent,
+}: PhaseRowProps) {
+  const { colExplain, colStatus, colActions, colLogs } = colStyles;
+
+  const statusColors: Record<PhaseStatus, string> = {
+    future: "var(--color-border)",
+    current: "#3b82f6",
+    complete: "#22c55e",
+    past: "#86efac",
+  };
+
+  const phaseLogs = logs.filter(
+    (e) => e.phase === phase || (!e.phase && isPhaseAction(e.action, phase))
+  );
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "0.75rem",
+        padding: "0.75rem",
+        marginBottom: "0.25rem",
+        backgroundColor: status === "current" ? "#eff6ff" : "var(--color-surface)",
+        border: `2px solid ${statusColors[status]}`,
+        borderRadius: "8px",
+        borderStyle: status === "future" ? "dashed" : "solid",
+        opacity: status === "future" ? 0.6 : 1,
+      }}
+    >
+      {/* Explanation Column */}
+      <div style={{ ...colExplain, fontSize: "0.75rem" }}>
+        <div style={{ fontWeight: "bold", marginBottom: "0.35rem", color: statusColors[status] }}>
+          {title}
         </div>
-
-        {/* Right Column: Logs */}
-        <div>
-          <PhaseLog phase="preseason" title="Preseason Log" entries={logs} />
-          <PhaseLog phase="submission" title="Submission Log" entries={logs} />
-          <PhaseLog phase="playlist" title="Playlist Log" entries={logs} />
-          <PhaseLog phase="voting" title="Voting Log" entries={logs} />
-          <PhaseLog phase="reveal" title="Reveal Log" entries={logs} />
-          <PhaseLog phase="archived" title="Archive Log" entries={logs} />
+        <div style={{ color: "var(--color-text-secondary)" }}>
+          {explanation.steps.map((step, i) => (
+            <div key={i} style={{ marginBottom: "0.15rem" }}>{step}</div>
+          ))}
         </div>
       </div>
 
-      {/* Round Tabs */}
-      <RoundTabs
-        rounds={state?.rounds || []}
-        selectedRoundId={selectedRoundId}
-        onSelectRound={setSelectedRoundId}
-        onAddRound={onCreateRound}
-        onRunRound={onCompleteRound}
-        loading={loading}
-      />
-    </>
+      {/* Status Column */}
+      <div style={{ ...colStatus, borderLeft: "1px solid var(--color-border)", paddingLeft: "0.75rem" }}>
+        {statusContent}
+      </div>
+
+      {/* Actions Column */}
+      <div style={{ ...colActions, borderLeft: "1px solid var(--color-border)", paddingLeft: "0.75rem" }}>
+        {actionsContent}
+      </div>
+
+      {/* Logs Column */}
+      <div style={{ ...colLogs, borderLeft: "1px solid var(--color-border)", paddingLeft: "0.75rem" }}>
+        <div
+          style={{
+            maxHeight: "100px",
+            overflowY: "auto",
+            fontSize: "0.7rem",
+            fontFamily: "monospace",
+          }}
+        >
+          {phaseLogs.length === 0 ? (
+            <span style={{ color: "var(--color-text-secondary)" }}>No activity</span>
+          ) : (
+            phaseLogs.slice(0, 5).map((entry) => (
+              <div
+                key={entry.id}
+                style={{
+                  color: entry.success ? "#22c55e" : "#ef4444",
+                  marginBottom: "0.15rem",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {entry.success ? "✓" : "✗"} {entry.action}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Helper to check if action belongs to phase
+function isPhaseAction(action: string, phase: PhaseType): boolean {
+  const phaseActions: Record<PhaseType, string[]> = {
+    preseason: ["seed", "generate", "import", "export"],
+    submission: ["round", "submit", "submission"],
+    playlist: ["playlist", "links"],
+    voting: ["vote", "voted"],
+    reveal: ["reveal", "story", "award", "banner"],
+    archived: ["archive", "complete", "reset"],
+  };
+  const actionLower = action.toLowerCase();
+  return phaseActions[phase]?.some((a) => actionLower.includes(a)) ?? false;
+}
+
+// ============================================================================
+// Action Button Helper
+// ============================================================================
+
+function ActionBtn({
+  onClick,
+  disabled,
+  children,
+  small,
+  danger,
+}: {
+  onClick?: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+  small?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        padding: small ? "0.25rem 0.5rem" : "0.4rem 0.75rem",
+        fontSize: small ? "0.75rem" : "0.8rem",
+        border: "1px solid var(--color-border)",
+        borderRadius: "4px",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.5 : 1,
+        backgroundColor: danger ? "#fee2e2" : "var(--color-surface)",
+        color: danger ? "#dc2626" : "var(--color-text)",
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
