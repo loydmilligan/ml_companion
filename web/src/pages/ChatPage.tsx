@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type TouchEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
@@ -131,6 +132,7 @@ const allEmojis = [
 ];
 
 export default function ChatPage() {
+  const navigate = useNavigate();
   const { group, profile } = useAuth();
   const { round } = useRound(); // Get round for AI context
   const { quotedSong, clearQuotedSong, openPanel } = usePeekPanel();
@@ -644,6 +646,49 @@ export default function ChatPage() {
     setReactionPickerFor(null);
   };
 
+  // Start a DM conversation with a user
+  const startDM = async (userId: string) => {
+    if (!group?.id || !profile?.id || userId === profile.id) return;
+
+    setReactionPickerFor(null);
+
+    try {
+      // Check if conversation already exists
+      const { data: existingConvId } = await supabase.rpc("find_dm_conversation", {
+        user1_id: profile.id,
+        user2_id: userId,
+        p_group_id: group.id,
+      });
+
+      if (existingConvId) {
+        navigate(`/app/dm/${existingConvId}`);
+        return;
+      }
+
+      // Create new conversation
+      const { data: newConv, error: convError } = await supabase
+        .from("conversations")
+        .insert({
+          group_id: group.id,
+          created_by: profile.id,
+        })
+        .select()
+        .single();
+
+      if (convError) throw convError;
+
+      // Add both participants
+      await supabase.from("conversation_participants").insert([
+        { conversation_id: newConv.id, participant_id: profile.id },
+        { conversation_id: newConv.id, participant_id: userId },
+      ]);
+
+      navigate(`/app/dm/${newConv.id}`);
+    } catch (err) {
+      console.error("Error starting DM:", err);
+    }
+  };
+
   // Call AI assistant for @AI mentions
   const callAIAssistant = useCallback(async (userQuery: string) => {
     if (!round) return null;
@@ -944,6 +989,17 @@ export default function ChatPage() {
                 >
                   ↩️
                 </button>
+                {/* DM button - only show for other users' messages */}
+                {item.author_id !== profile?.id && (
+                  <button
+                    type="button"
+                    className="chat-bubble-reaction dm-btn"
+                    onClick={() => startDM(item.author_id)}
+                    title={`Message ${item.profiles?.display_name ?? "user"}`}
+                  >
+                    💬
+                  </button>
+                )}
               </div>
             )}
           </div>
