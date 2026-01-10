@@ -1,7 +1,7 @@
 # Issues & Roadmap
 
-Version: v1.9
-Date: 2026-01-07
+Version: v1.10
+Date: 2026-01-09
 
 **Legend:**
 - **Effort:** Low (< 1 day) | Medium (1-3 days) | High (1+ week)
@@ -15,6 +15,7 @@ Date: 2026-01-07
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.10 | 2026-01-09 | Added TEST-001 Automated Test Environment & Data Factory |
 | v1.9 | 2026-01-07 | Added RC-002 (LOYD-175) Round Challenge UI Polish |
 | v1.8 | 2026-01-05 | Sprint planning: Added YouTube Automation epic, Chat Quote Reply, History Spotify links. Canceled EF-002 (JWT covers it) |
 | v1.7 | 2026-01-05 | Added BE-001, AI-001, ADM-001 from Linear sync |
@@ -246,6 +247,54 @@ Display on History page showing:
 5. Season Award Calculations (AWD-004)
 6. Current Season Card (AWD-005)
 7. Awards in Reach (AWD-006)
+
+---
+
+## Testing & Infrastructure
+
+| ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
+|----|--------|---------|--------|--------|---------|------|-------|
+| TEST-001 | [LOYD-185](https://linear.app/loydmilligan/issue/LOYD-185) | Automated Test Environment & Data Factory | Planned | High | High | Low | Full test harness for round lifecycle, multi-user simulation, observation dashboard |
+
+### TEST-001: Automated Test Environment
+
+**Problem:** No proper test environment to validate full application lifecycle. Recent votes-in-transition issues revealed critical flows are untested. Claude Code cannot independently test multi-user features.
+
+**Requirements:**
+
+1. **Test Group Setup**
+   - 5+ synthetic users (1 admin, 4+ members)
+   - At least 2 seasons configured
+   - All group settings enabled
+
+2. **Data Factory Functions**
+   - `simulate_ml_round_start` - Trigger round from "email"
+   - `simulate_ml_submission` - Add song submission
+   - `simulate_ml_vote` - Cast votes
+   - `simulate_ml_results` - Trigger results
+   - `simulate_chat_message` - Post to group chat
+   - `simulate_dm_message` - Send DM
+   - `simulate_reaction` - Add reaction
+   - `advance_round_phase` - Move round phases
+
+3. **Test Scenarios Inventory**
+   - Round lifecycle (create → submit → vote → results)
+   - Chat & realtime delivery
+   - Reactions (multiple users, same emoji)
+   - DM creation and messaging
+   - Admin functions
+   - Edge cases (user joins mid-round, concurrent submissions)
+
+4. **Observation Dashboard**
+   - Real-time round status
+   - User activity log
+   - Submission/voting progress
+   - System events and errors
+
+5. **Test Runner**
+   - CLI or UI to trigger scenarios
+   - Speed controls (real-time vs accelerated)
+   - Reset function to clear and restart
 
 ---
 
