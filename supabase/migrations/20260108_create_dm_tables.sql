@@ -73,10 +73,10 @@ CREATE POLICY "Users can view conversations they participate in"
 
 CREATE POLICY "Users can create conversations in their group"
   ON conversations FOR INSERT
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM group_members
-    WHERE group_id = conversations.group_id AND member_id = auth.uid()
-  ));
+  WITH CHECK (
+    created_by = auth.uid()
+    AND public.is_group_member(group_id)
+  );
 
 -- Helper function to check participation (avoids infinite recursion in RLS)
 CREATE OR REPLACE FUNCTION is_conversation_participant(conv_id UUID, user_id UUID)
