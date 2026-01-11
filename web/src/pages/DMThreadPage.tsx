@@ -618,6 +618,7 @@ export default function DMThreadPage() {
           height: calc(100vh - 140px);
           max-width: 600px;
           margin: 0 auto;
+          padding-top: 16px;
         }
 
         .dm-thread-header {
@@ -672,11 +673,21 @@ export default function DMThreadPage() {
         .dm-header-name {
           font-weight: 600;
           display: block;
+          color: var(--text, #1e293b);
         }
 
         .dm-header-status {
           font-size: 0.75rem;
           color: var(--warning, #f59e0b);
+        }
+
+        /* Dark mode header */
+        [data-mode="dark"] .dm-header-name {
+          color: #f1f5f9;
+        }
+
+        [data-mode="dark"] .dm-back-btn {
+          color: #f1f5f9;
         }
 
         .dm-messages {
@@ -730,10 +741,11 @@ export default function DMThreadPage() {
         }
 
         .dm-bubble-content {
-          background: var(--surface);
+          background: var(--surface, #f1f5f9);
           padding: 10px 14px;
           border-radius: 16px;
           position: relative;
+          color: var(--text, #1e293b);
         }
 
         .dm-bubble.own .dm-bubble-content {
@@ -744,6 +756,18 @@ export default function DMThreadPage() {
         .dm-bubble-content p {
           margin: 0;
           word-break: break-word;
+          color: inherit;
+        }
+
+        /* Dark mode - ensure incoming messages are legible */
+        [data-mode="dark"] .dm-bubble-content {
+          background: var(--surface, #334155);
+          color: #f1f5f9;
+        }
+
+        [data-mode="dark"] .dm-bubble.own .dm-bubble-content {
+          background: var(--primary);
+          color: white;
         }
 
         .dm-link {

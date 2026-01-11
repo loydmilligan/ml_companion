@@ -1,7 +1,12 @@
 # Issues & Roadmap
 
-Version: v1.10
-Date: 2026-01-09
+Version: v1.12
+Date: 2026-01-10
+
+**Sync Status:**
+- Last Local Change: 2026-01-10
+- Last Linear Sync: 2026-01-09
+- Pending Sync: Yes (TEST-002, DM-001 through DM-004 not yet in Linear)
 
 **Legend:**
 - **Effort:** Low (< 1 day) | Medium (1-3 days) | High (1+ week)
@@ -15,6 +20,8 @@ Date: 2026-01-09
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.12 | 2026-01-10 | Added DM-001 through DM-004 (DM inbox bugs and icon styling) |
+| v1.11 | 2026-01-10 | Added TEST-002 Test Dashboard Song Tracking; updated TEST-001 to In Progress |
 | v1.10 | 2026-01-09 | Added TEST-001 Automated Test Environment & Data Factory |
 | v1.9 | 2026-01-07 | Added RC-002 (LOYD-175) Round Challenge UI Polish |
 | v1.8 | 2026-01-05 | Sprint planning: Added YouTube Automation epic, Chat Quote Reply, History Spotify links. Canceled EF-002 (JWT covers it) |
@@ -101,6 +108,45 @@ Date: 2026-01-09
 | ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
 |----|--------|---------|--------|--------|---------|------|-------|
 | HIST-001 | [LOYD-155](https://linear.app/loydmilligan/issue/LOYD-155) | Spotify Links on Song Cards | **In Progress** | Low | Medium | Low | Convert source_uri to clickable Spotify links |
+
+### Direct Messages (Bugs)
+
+| ID | Linear | Issue | Status | Effort | Benefit | Risk | Notes |
+|----|--------|-------|--------|--------|---------|------|-------|
+| DM-001 | — | DM Inbox Blank Screen on Load | **In Progress** | Low | High | Low | Added padding-top to push content below header |
+| DM-002 | — | DM Message Text Illegible | **In Progress** | Low | High | Low | Added explicit color styles for light/dark modes |
+| DM-003 | — | DM Icon Styling & Position | **In Progress** | Medium | Medium | Low | Raised circle, shimmer border, paper airplane icon, reordered in TopBar |
+| DM-004 | — | DM Unread Badge Animation | **In Progress** | Low | Medium | Low | Lipstick red (#f21b3f) badge with shimmer animation when unread |
+
+### DM-003: DM Icon Styling Requirements
+
+**Current Issues:**
+- DM icon is a plain chat bubble with no distinction from regular chat
+- No raised circle background like settings icon
+- Position incorrect in header
+
+**Requirements:**
+
+1. **Icon Design:**
+   - Chat bubble with paper airplane or other symbol denoting "direct message" (not regular chat)
+   - Should feel distinct from group chat icon
+
+2. **Background Circle:**
+   - Raised/elevated circle like settings cog button
+   - Background color: slightly darker blue than icon, but lighter than main app background
+   - Border/edge should mimic settings button shine/shimmer effect
+
+3. **Position in Header (left to right):**
+   - DM icon
+   - Settings icon (cog)
+   - Avatar icon
+   - Gauge icon
+
+4. **Unread State (DM-004):**
+   - Border becomes shinier/flashier when unread messages exist
+   - May include different colors in the shimmer effect
+   - Badge count uses lipstick red color
+   - Should really catch attention
 
 ---
 
@@ -254,7 +300,8 @@ Display on History page showing:
 
 | ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
 |----|--------|---------|--------|--------|---------|------|-------|
-| TEST-001 | [LOYD-185](https://linear.app/loydmilligan/issue/LOYD-185) | Automated Test Environment & Data Factory | Planned | High | High | Low | Full test harness for round lifecycle, multi-user simulation, observation dashboard |
+| TEST-001 | [LOYD-185](https://linear.app/loydmilligan/issue/LOYD-185) | Automated Test Environment & Data Factory | **In Progress** | High | High | Low | Full test harness for round lifecycle, multi-user simulation, observation dashboard |
+| TEST-002 | — | Test Dashboard Song Tracking | Planned | Low | Medium | Low | Display actual song names in submission grid; requires edge function enhancement to return song data |
 
 ### TEST-001: Automated Test Environment
 

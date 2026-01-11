@@ -167,6 +167,25 @@ export default function TopBar() {
           </div>
         </div>
         <nav className="top-bar-actions">
+          {/* DM Icon - navigates to DM inbox */}
+          <DMIcon
+            onClick={() => navigate("/app/dm")}
+            badgeCount={dmUnreadCount}
+          />
+
+          {/* Gear - opens settings drawer */}
+          <SettingsGear onClick={openSettingsDrawer} />
+
+          {/* Avatar - opens profile drawer */}
+          <button
+            type="button"
+            className="top-bar-avatar-btn"
+            onClick={openProfileDrawer}
+            title={displayName}
+          >
+            <Avatar src={profile?.avatar_url} name={displayName} size="md" framed />
+          </button>
+
           {/* Gauge - only show if there's an active round */}
           {round && (
             <DualNeedleGauge
@@ -180,25 +199,6 @@ export default function TopBar() {
               roundStatus={round.status}
             />
           )}
-
-          {/* DM Icon - navigates to DM inbox */}
-          <DMIcon
-            onClick={() => navigate("/app/dm")}
-            badgeCount={dmUnreadCount}
-          />
-
-          {/* Avatar - opens profile drawer */}
-          <button
-            type="button"
-            className="top-bar-avatar-btn"
-            onClick={openProfileDrawer}
-            title={displayName}
-          >
-            <Avatar src={profile?.avatar_url} name={displayName} size="md" framed />
-          </button>
-
-          {/* Gear - opens settings drawer */}
-          <SettingsGear onClick={openSettingsDrawer} />
         </nav>
       </header>
 

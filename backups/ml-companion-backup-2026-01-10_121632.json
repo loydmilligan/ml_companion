@@ -1,0 +1,17 @@
+{
+  "backup_date": "2026-01-10T12:16:32-08:00",
+  "backup_type": "live_data_only",
+  "leagues": [],
+  "rounds": [],
+  "submissions": [],
+  "votes": [],
+  "profiles": [],
+  "family_groups": [],
+  "group_members": [],
+  "season_competitors": [],
+  "group_settings": [],
+  "round_awards": [],
+  "group_messages": [],
+  "dm_threads": {"code":"PGRST205","details":null,"hint":"Perhaps you meant the table 'public.dm_reactions'","message":"Could not find the table 'public.dm_threads' in the schema cache"},
+  "dm_messages": {"code":"PGRST205","details":null,"hint":"Perhaps you meant the table 'public.direct_messages'","message":"Could not find the table 'public.dm_messages' in the schema cache"}
+}

@@ -330,6 +330,7 @@ export default function DMInboxPage() {
         .dm-inbox {
           max-width: 600px;
           margin: 0 auto;
+          padding-top: 16px;
         }
 
         .dm-inbox-header {
@@ -342,6 +343,7 @@ export default function DMInboxPage() {
         .dm-inbox-header h1 {
           font-size: 1.5rem;
           margin: 0;
+          color: var(--text);
         }
 
         .dm-empty {
@@ -415,7 +417,7 @@ export default function DMInboxPage() {
 
         .dm-conv-name {
           font-weight: 600;
-          color: var(--text);
+          color: var(--text, #1e293b);
         }
 
         .dm-conversation-item.unread .dm-conv-name {
@@ -424,22 +426,51 @@ export default function DMInboxPage() {
 
         .dm-conv-time {
           font-size: 0.75rem;
-          color: var(--text-muted);
+          color: var(--text-muted, #64748b);
           flex-shrink: 0;
         }
 
         .dm-conv-preview {
           margin: 4px 0 0;
           font-size: 0.875rem;
-          color: var(--text-muted);
+          color: var(--text-muted, #64748b);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
 
         .dm-conversation-item.unread .dm-conv-preview {
-          color: var(--text);
+          color: var(--text, #1e293b);
           font-weight: 500;
+        }
+
+        /* Dark mode text colors */
+        [data-mode="dark"] .dm-inbox-header h1 {
+          color: #f1f5f9;
+        }
+
+        [data-mode="dark"] .dm-conv-name {
+          color: #f1f5f9;
+        }
+
+        [data-mode="dark"] .dm-conv-time {
+          color: #94a3b8;
+        }
+
+        [data-mode="dark"] .dm-conv-preview {
+          color: #94a3b8;
+        }
+
+        [data-mode="dark"] .dm-conversation-item.unread .dm-conv-preview {
+          color: #f1f5f9;
+        }
+
+        [data-mode="dark"] .dm-empty p {
+          color: #f1f5f9;
+        }
+
+        [data-mode="dark"] .dm-empty .muted {
+          color: #94a3b8;
         }
 
         .dm-conv-badge {

@@ -1066,17 +1066,24 @@
   filter: brightness(1.1);
 }
 
-/* DM Icon - matches gauge and gear depth */
+/* DM Icon - matches gauge and gear depth with raised circle */
 .dm-icon {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  background: transparent;
   border: none;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, filter 0.3s ease, background 0.3s ease;
+  border-radius: 50%;
+  /* Match settings gear depth effect */
+  filter: drop-shadow(0 3px 6px rgba(10, 26, 47, 0.3));
+  /* Raised circle with shimmer border like settings gear */
+  background:
+    linear-gradient(#3a5a7a, #2a4a6a) padding-box,
+    linear-gradient(135deg, #7aaddf 0%, #4a7cb5 25%, #9ac5eb 50%, #4a7cb5 75%, #3a6ca5 100%) border-box;
+  border: 2px solid transparent;
 }
 
 .dm-icon-sm {
@@ -1112,21 +1119,43 @@
   display: block;
 }
 
+/* Lipstick red badge */
 .dm-icon-badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  background: var(--danger, #ef4444);
+  top: -2px;
+  right: -2px;
+  background: #f21b3f;
   color: white;
   font-size: 0.65rem;
   font-weight: 700;
-  min-width: 16px;
-  height: 16px;
-  line-height: 16px;
-  padding: 0 4px;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  padding: 0 5px;
   border-radius: 999px;
   text-align: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 4px rgba(242, 27, 63, 0.4);
+  border: 2px solid var(--surface, #fff);
+}
+
+/* Shimmer animation for unread messages */
+.dm-icon.has-unread {
+  animation: dm-shimmer 2s ease-in-out infinite;
+}
+
+@keyframes dm-shimmer {
+  0%, 100% {
+    background:
+      linear-gradient(#3a5a7a, #2a4a6a) padding-box,
+      linear-gradient(135deg, #7aaddf 0%, #4a7cb5 25%, #9ac5eb 50%, #4a7cb5 75%, #3a6ca5 100%) border-box;
+    filter: drop-shadow(0 3px 6px rgba(10, 26, 47, 0.3));
+  }
+  50% {
+    background:
+      linear-gradient(#3a5a7a, #2a4a6a) padding-box,
+      linear-gradient(135deg, #f21b3f 0%, #ff6b8a 25%, #f21b3f 50%, #ff6b8a 75%, #f21b3f 100%) border-box;
+    filter: drop-shadow(0 4px 12px rgba(242, 27, 63, 0.5));
+  }
 }
 
 /* Dark mode adjustments for DM icon */
