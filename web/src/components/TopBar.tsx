@@ -167,15 +167,6 @@ export default function TopBar() {
           </div>
         </div>
         <nav className="top-bar-actions">
-          {/* Gear - opens settings drawer (far left) */}
-          <SettingsGear onClick={openSettingsDrawer} />
-
-          {/* DM Icon - navigates to DM inbox */}
-          <DMIcon
-            onClick={() => navigate("/app/dm")}
-            badgeCount={dmUnreadCount}
-          />
-
           {/* Avatar - opens profile drawer */}
           <button
             type="button"
@@ -199,6 +190,15 @@ export default function TopBar() {
               roundStatus={round.status}
             />
           )}
+
+          {/* DM Icon - navigates to DM inbox (second from right) */}
+          <DMIcon
+            onClick={() => navigate("/app/dm")}
+            badgeCount={dmUnreadCount}
+          />
+
+          {/* Gear - opens settings drawer (far right) */}
+          <SettingsGear onClick={openSettingsDrawer} />
         </nav>
       </header>
 
