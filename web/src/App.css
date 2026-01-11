@@ -1092,8 +1092,8 @@
 }
 
 .dm-icon-md {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
 }
 
 .dm-icon:hover {
@@ -3055,16 +3055,23 @@
 .dm-drawer-new-btn {
   background: var(--primary);
   color: white;
-  border: none;
-  width: 28px;
-  height: 28px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-size: 1.4rem;
+  font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.dm-drawer-new-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.5);
 }
 
 .dm-drawer-subtitle {

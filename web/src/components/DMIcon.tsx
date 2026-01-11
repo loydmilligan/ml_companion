@@ -34,52 +34,52 @@ export default function DMIcon({ onClick, className, size = "md", badgeCount = 0
             </filter>
           </defs>
 
-          {/* Speech bubble - smaller and positioned left */}
-          <g transform="translate(42, 48) scale(0.7)" filter="url(#dmInnerShadow)">
+          {/* Large centered speech bubble */}
+          <g transform="translate(50, 48)" filter="url(#dmInnerShadow)">
             <path
-              d="M-28 -18
-                 C-28 -25 -23 -28 -16 -28
-                 L16 -28
-                 C23 -28 28 -25 28 -18
-                 L28 8
-                 C28 15 23 18 16 18
-                 L0 18
-                 L-8 26
-                 L-8 18
-                 L-16 18
-                 C-23 18 -28 15 -28 8
+              d="M-32 -22
+                 C-32 -30 -26 -34 -18 -34
+                 L18 -34
+                 C26 -34 32 -30 32 -22
+                 L32 12
+                 C32 20 26 24 18 24
+                 L2 24
+                 L-8 34
+                 L-8 24
+                 L-18 24
+                 C-26 24 -32 20 -32 12
                  Z"
               fill="url(#dmIconGradient)"
             />
           </g>
 
-          {/* Paper airplane overlay - positioned top right of bubble */}
-          <g transform="translate(62, 38) rotate(-15) scale(0.5)">
+          {/* Large paper airplane centered inside bubble */}
+          <g transform="translate(50, 46) rotate(-20)">
+            {/* Main wing - top */}
             <path
-              d="M-20 8 L24 -8 L-10 -2 Z"
+              d="M-18 6 L22 -10 L-8 -2 Z"
               fill="#f8fafc"
-              opacity="0.95"
             />
+            {/* Body - right side */}
             <path
-              d="M-10 -2 L24 -8 L-6 12 L-10 -2 Z"
+              d="M-8 -2 L22 -10 L-4 14 L-8 -2 Z"
               fill="#e2e8f0"
-              opacity="0.9"
             />
+            {/* Tail fold */}
             <path
-              d="M-6 12 L-10 -2 L0 4 Z"
+              d="M-4 14 L-8 -2 L2 5 Z"
               fill="#cbd5e1"
-              opacity="0.85"
             />
           </g>
 
           {/* Highlight on bubble */}
           <ellipse
-            cx="42"
-            cy="32"
-            rx="12"
-            ry="3"
+            cx="50"
+            cy="28"
+            rx="16"
+            ry="4"
             fill="white"
-            opacity="0.25"
+            opacity="0.3"
           />
         </svg>
       </div>
