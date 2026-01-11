@@ -28,6 +28,39 @@ When discussing or implementing UI/frontend changes, always:
 2. Mention any concerns to the user before implementing
 3. Consider: bundle size, re-renders, DOM complexity, network requests, animations/transforms, and polling frequency
 
+## UI Contrast & Visibility Verification
+
+**CRITICAL**: Before completing ANY UI/CSS changes, verify contrast and visibility in both light and dark modes.
+
+### Pre-Implementation Checklist
+1. Check `docs/design/style-guide.md` for approved color variables
+2. Ensure any CSS variable used exists in `web/src/index.css`
+3. Provide explicit `[data-mode="light"]` and `[data-mode="dark"]` overrides for:
+   - Buttons and interactive elements
+   - Text on colored backgrounds
+   - Badges and pills
+   - Form inputs
+
+### Post-Implementation Verification
+1. Run contrast checker: `cd web && npm run check:contrast`
+2. Run CSS linter: `cd web && npm run lint:css`
+3. Visual verification in BOTH modes before claiming success
+
+### Forbidden CSS Patterns
+These variables DO NOT EXIST - never use them:
+- `var(--primary)` - use `#4f46e5` or `var(--coral)` instead
+- `var(--secondary)` - does not exist
+- `var(--background)` - use `var(--surface)` or `var(--page-bg)`
+- `var(--text)` - use `var(--text-primary)`
+- `var(--color-*)` - none of these exist
+- `var(--border)` - use `rgba(10, 26, 47, 0.12)` for light, `rgba(255, 255, 255, 0.12)` for dark
+
+### Quick Reference
+See `docs/design/style-guide.md` for:
+- Complete approved color palette with hex values
+- Pre-calculated WCAG contrast ratios
+- Copy-paste CSS snippets for common patterns
+
 ## Deployment Workflow
 
 **CRITICAL**: After making ANY code changes, you MUST deploy using the steps below. Do NOT run dev servers locally - we deploy to a Raspberry Pi.

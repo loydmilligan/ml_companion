@@ -37,6 +37,40 @@
   --trophy-silver: #c0c0c0;
   --trophy-bronze: #cd7f32;
 
+  /* Semantic aliases for common patterns */
+  --primary: #4f46e5;
+  --accent: #11c1ec;
+  --success: #18e0a8;
+  --error: #ff6f61;
+  --warning: #ffd166;
+  --text: #0a1a2f;
+  --muted: #5a6b7f;
+  --border: rgba(10, 26, 47, 0.12);
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f7fb;
+  --green: #18e0a8;
+
+  /* Test dashboard color system */
+  --color-primary: #4f46e5;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f3f7fb;
+  --color-border: rgba(10, 26, 47, 0.12);
+  --color-text: #0a1a2f;
+  --color-text-secondary: #5a6b7f;
+  --color-success: #18e0a8;
+  --color-error: #ff6f61;
+
+  /* Additional semantic aliases */
+  --border-color: rgba(10, 26, 47, 0.12);
+  --surface-primary: #ffffff;
+  --surface-secondary: #f3f7fb;
+  --surface-light: #f7fbff;
+  --surface-muted: #eef4ff;
+  --accent-primary: #4f46e5;
+  --text-secondary: #5a6b7f;
+  --success-bg: rgba(24, 224, 168, 0.1);
+  --bg-warning: rgba(255, 209, 102, 0.15);
+
   /* Logo palette (default: ocean-coral, light mode) */
   --logo-mark-bg: #f4f8ff;
   --logo-mark-border: rgba(11, 29, 51, 0.12);
@@ -96,6 +130,40 @@
   --page-bg: linear-gradient(160deg, #f7fbff 0%, #eef4ff 45%, #f8f4ff 100%);
   --shadow: 0 14px 30px rgba(10, 26, 47, 0.15);
   --shadow-soft: 0 8px 20px rgba(10, 26, 47, 0.08);
+
+  /* Semantic aliases - light mode */
+  --primary: #4f46e5;
+  --accent: #11c1ec;
+  --success: #18e0a8;
+  --error: #ff6f61;
+  --warning: #ffd166;
+  --text: #0a1a2f;
+  --muted: #5a6b7f;
+  --border: rgba(10, 26, 47, 0.12);
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f7fb;
+  --green: #18e0a8;
+
+  /* Test dashboard - light mode */
+  --color-primary: #4f46e5;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f3f7fb;
+  --color-border: rgba(10, 26, 47, 0.12);
+  --color-text: #0a1a2f;
+  --color-text-secondary: #5a6b7f;
+  --color-success: #18e0a8;
+  --color-error: #ff6f61;
+
+  /* Additional aliases - light mode */
+  --border-color: rgba(10, 26, 47, 0.12);
+  --surface-primary: #ffffff;
+  --surface-secondary: #f3f7fb;
+  --surface-light: #f7fbff;
+  --surface-muted: #eef4ff;
+  --accent-primary: #4f46e5;
+  --text-secondary: #5a6b7f;
+  --success-bg: rgba(24, 224, 168, 0.1);
+  --bg-warning: rgba(255, 209, 102, 0.15);
 }
 
 :root[data-mode="dark"] {
@@ -108,6 +176,40 @@
   --page-bg: linear-gradient(160deg, #0b1220 0%, #0a192f 60%, #0f1c2d 100%);
   --shadow: 0 16px 32px rgba(4, 8, 20, 0.45);
   --shadow-soft: 0 10px 24px rgba(4, 8, 20, 0.3);
+
+  /* Semantic aliases - dark mode */
+  --primary: #6366f1;
+  --accent: #22d3ee;
+  --success: #34d399;
+  --error: #f87171;
+  --warning: #fbbf24;
+  --text: #eef3ff;
+  --muted: #9fb0c8;
+  --border: rgba(255, 255, 255, 0.12);
+  --bg-primary: #121c2b;
+  --bg-secondary: #0a1426;
+  --green: #34d399;
+
+  /* Test dashboard - dark mode */
+  --color-primary: #6366f1;
+  --color-surface: #121c2b;
+  --color-surface-hover: #1e293b;
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-text: #eef3ff;
+  --color-text-secondary: #9fb0c8;
+  --color-success: #34d399;
+  --color-error: #f87171;
+
+  /* Additional aliases - dark mode */
+  --border-color: rgba(255, 255, 255, 0.12);
+  --surface-primary: #121c2b;
+  --surface-secondary: #0a1426;
+  --surface-light: #1e293b;
+  --surface-muted: #1a2332;
+  --accent-primary: #6366f1;
+  --text-secondary: #9fb0c8;
+  --success-bg: rgba(52, 211, 153, 0.15);
+  --bg-warning: rgba(251, 191, 36, 0.15);
 }
 
 :root[data-mode="dark"][data-logo-palette="ocean-coral"] {
