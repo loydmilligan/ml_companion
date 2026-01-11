@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRound } from "../contexts/RoundContext";
 import Avatar from "./Avatar";
 import DMIcon from "./DMIcon";
+import DMDrawer from "./DMDrawer";
 import SettingsGear from "./SettingsGear";
 import ProfileDrawer from "./ProfileDrawer";
 import SettingsDrawer from "./SettingsDrawer";
 import { DualNeedleGauge, PinnedBar, PeekPanel, usePeekPanel } from "./pinned-peek";
 
 export default function TopBar() {
-  const navigate = useNavigate();
   const { profile, group, refresh } = useAuth();
   const {
     round,
@@ -34,6 +33,7 @@ export default function TopBar() {
   const [pinnedBarOpen, setPinnedBarOpen] = useState(false);
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
+  const [dmDrawerOpen, setDmDrawerOpen] = useState(false);
   const [logoPalette, setLogoPalette] = useState("ocean-coral");
   const [roundChallengeEnabled, setRoundChallengeEnabled] = useState(true);
   const [submitterGuessEnabled, setSubmitterGuessEnabled] = useState(true);
@@ -54,18 +54,28 @@ export default function TopBar() {
   const openPinnedBar = () => {
     setProfileDrawerOpen(false);
     setSettingsDrawerOpen(false);
+    setDmDrawerOpen(false);
     setPinnedBarOpen((prev) => !prev);
   };
 
   const openProfileDrawer = () => {
     setPinnedBarOpen(false);
     setSettingsDrawerOpen(false);
+    setDmDrawerOpen(false);
     setProfileDrawerOpen((prev) => !prev);
+  };
+
+  const openDMDrawer = () => {
+    setPinnedBarOpen(false);
+    setProfileDrawerOpen(false);
+    setSettingsDrawerOpen(false);
+    setDmDrawerOpen((prev) => !prev);
   };
 
   const openSettingsDrawer = () => {
     setPinnedBarOpen(false);
     setProfileDrawerOpen(false);
+    setDmDrawerOpen(false);
     setSettingsDrawerOpen((prev) => !prev);
   };
 
@@ -191,9 +201,9 @@ export default function TopBar() {
             />
           )}
 
-          {/* DM Icon - navigates to DM inbox (second from right) */}
+          {/* DM Icon - opens DM drawer (second from right) */}
           <DMIcon
-            onClick={() => navigate("/app/dm")}
+            onClick={openDMDrawer}
             badgeCount={dmUnreadCount}
           />
 
@@ -225,6 +235,12 @@ export default function TopBar() {
         isOpen={settingsDrawerOpen}
         onClose={() => setSettingsDrawerOpen(false)}
         isLead={isLead}
+      />
+
+      {/* DM Drawer */}
+      <DMDrawer
+        isOpen={dmDrawerOpen}
+        onClose={() => setDmDrawerOpen(false)}
       />
 
       {/* Peek Panel (slide-out from right) */}
