@@ -2313,12 +2313,17 @@
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: var(--bg-primary);
+  background: var(--bg-primary, #ffffff);
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 100;
   overflow: hidden;
+}
+
+/* Light mode dropdown - ensure solid background */
+[data-mode="light"] .custom-dropdown-menu {
+  background: #ffffff;
 }
 
 .custom-dropdown-option {
@@ -2352,7 +2357,17 @@
 
 /* Dark mode dropdown styles */
 [data-mode="dark"] .custom-dropdown-menu {
+  background: #1e293b;
+  border-color: #475569;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-mode="dark"] .custom-dropdown-option {
+  color: #f1f5f9;
+}
+
+[data-mode="dark"] .custom-dropdown-option:hover {
+  background: #334155;
 }
 
 .import-grid {
@@ -2753,7 +2768,7 @@
 /* Pinned Bar */
 .pinned-bar-dropdown {
   position: fixed;
-  top: var(--topbar-height, 90px);
+  top: 138px; /* Account for full header height (114px logo + 24px padding) */
   left: 0;
   right: 0;
   background: var(--surface);
@@ -2817,7 +2832,7 @@
 /* Profile Drawer */
 .profile-drawer {
   position: fixed;
-  top: var(--topbar-height, 90px);
+  top: 138px; /* Account for full header height (114px logo + 24px padding) */
   left: 0;
   right: 0;
   background: var(--surface);
@@ -2933,7 +2948,7 @@
 /* Settings Drawer */
 .settings-drawer {
   position: fixed;
-  top: var(--topbar-height, 90px);
+  top: 138px; /* Account for full header height (114px logo + 24px padding) */
   left: 0;
   right: 0;
   background: var(--surface);

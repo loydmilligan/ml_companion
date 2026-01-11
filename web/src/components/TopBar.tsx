@@ -167,14 +167,14 @@ export default function TopBar() {
           </div>
         </div>
         <nav className="top-bar-actions">
+          {/* Gear - opens settings drawer (far left) */}
+          <SettingsGear onClick={openSettingsDrawer} />
+
           {/* DM Icon - navigates to DM inbox */}
           <DMIcon
             onClick={() => navigate("/app/dm")}
             badgeCount={dmUnreadCount}
           />
-
-          {/* Gear - opens settings drawer */}
-          <SettingsGear onClick={openSettingsDrawer} />
 
           {/* Avatar - opens profile drawer */}
           <button

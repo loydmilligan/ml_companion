@@ -697,6 +697,13 @@ export default function DMThreadPage() {
           display: flex;
           flex-direction: column;
           gap: 8px;
+          justify-content: flex-end;
+          min-height: 0;
+        }
+
+        /* When there are many messages, start from top */
+        .dm-messages:has(.dm-bubble:nth-child(5)) {
+          justify-content: flex-start;
         }
 
         .dm-empty-msg {
@@ -759,6 +766,21 @@ export default function DMThreadPage() {
           color: inherit;
         }
 
+        /* Light mode - ensure text is legible */
+        [data-mode="light"] .dm-bubble-content {
+          background: var(--surface, #e2e8f0);
+          color: #1e293b;
+        }
+
+        [data-mode="light"] .dm-bubble.own .dm-bubble-content {
+          background: var(--primary, #4f46e5);
+          color: #ffffff;
+        }
+
+        [data-mode="light"] .dm-bubble.own .dm-bubble-content p {
+          color: #ffffff;
+        }
+
         /* Dark mode - ensure incoming messages are legible */
         [data-mode="dark"] .dm-bubble-content {
           background: var(--surface, #334155);
@@ -767,6 +789,10 @@ export default function DMThreadPage() {
 
         [data-mode="dark"] .dm-bubble.own .dm-bubble-content {
           background: var(--primary);
+          color: white;
+        }
+
+        [data-mode="dark"] .dm-bubble.own .dm-bubble-content p {
           color: white;
         }
 
@@ -988,12 +1014,28 @@ export default function DMThreadPage() {
           border: 1px solid var(--border);
           border-radius: 20px;
           font-size: 1rem;
-          background: var(--background);
+          background: var(--background, #ffffff);
+          color: var(--text, #1e293b);
         }
 
         .dm-input:focus {
           outline: none;
           border-color: var(--primary);
+        }
+
+        .dm-input::placeholder {
+          color: var(--text-muted, #64748b);
+        }
+
+        /* Dark mode input styling */
+        [data-mode="dark"] .dm-input {
+          background: var(--background, #1e293b);
+          color: #f1f5f9;
+          border-color: var(--border, #475569);
+        }
+
+        [data-mode="dark"] .dm-input::placeholder {
+          color: #94a3b8;
         }
 
         .dm-send-btn {
