@@ -642,7 +642,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 24px;
-  background-color: var(--surface);
+  /* Solid base color to prevent any transparency/flicker */
+  background-color: #1a1a2e;
   background-image: url('/images/textures/header-dark.png?v2');
   background-size: cover;
   background-position: center;
@@ -652,6 +653,12 @@
   top: 0;
   z-index: 30;
   min-height: var(--topbar-height);
+  /* Force GPU compositing to prevent flicker during animations */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  isolation: isolate;
+  /* Prevent content from bleeding through during transitions */
+  overflow: hidden;
 }
 
 .top-bar-brand {
@@ -4862,10 +4869,17 @@
 }
 
 [data-mode="light"] .top-bar {
+  /* Solid opaque background to prevent flicker */
   background-color: #f8f4ef;
   background-image: url('/images/textures/header-light.png?v2');
   background-size: cover;
   background-position: center;
+}
+
+/* Dark mode explicit - ensure solid opaque background */
+[data-mode="dark"] .top-bar {
+  background-color: #1a1a2e;
+  background-image: url('/images/textures/header-dark.png?v2');
 }
 
 [data-mode="light"] .bottom-nav {
