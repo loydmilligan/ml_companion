@@ -113,10 +113,10 @@ Date: 2026-01-10
 
 | ID | Linear | Issue | Status | Effort | Benefit | Risk | Notes |
 |----|--------|-------|--------|--------|---------|------|-------|
-| DM-001 | — | DM Inbox Blank Screen on Load | **In Progress** | Low | High | Low | Added padding-top to push content below header |
-| DM-002 | — | DM Message Text Illegible | **In Progress** | Low | High | Low | Added explicit color styles for light/dark modes |
-| DM-003 | — | DM Icon Styling & Position | **In Progress** | Medium | Medium | Low | Raised circle, shimmer border, paper airplane icon, reordered in TopBar |
-| DM-004 | — | DM Unread Badge Animation | **In Progress** | Low | Medium | Low | Lipstick red (#f21b3f) badge with shimmer animation when unread |
+| DM-001 | — | DM Inbox Blank Screen on Load | **Complete** | Low | High | Low | Added padding-top to push content below header. Deployed 2026-01-10 |
+| DM-002 | — | DM Message Text Illegible | **Complete** | Low | High | Low | Added explicit color styles for light/dark modes. Deployed 2026-01-10 |
+| DM-003 | — | DM Icon Styling & Position | **Complete** | Medium | Medium | Low | Raised circle, shimmer border, paper airplane icon, reordered in TopBar. Deployed 2026-01-10 |
+| DM-004 | — | DM Unread Badge Animation | **Complete** | Low | Medium | Low | Lipstick red (#f21b3f) badge with shimmer animation when unread. Deployed 2026-01-10 |
 
 ### DM-003: DM Icon Styling Requirements
 
