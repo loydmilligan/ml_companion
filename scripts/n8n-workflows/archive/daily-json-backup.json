@@ -1,0 +1,386 @@
+{
+  "name": "ML Companion - Daily JSON Backup",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24,
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily 3am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'table', 'leagues',\n  'exported_at', now(),\n  'data', (SELECT COALESCE(json_agg(t), '[]') FROM leagues t WHERE id != '00000000-0000-0000-0002-000000000002')\n) as result",
+        "options": {}
+      },
+      "id": "export-leagues",
+      "name": "Export leagues",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [220, -400],
+      "credentials": {
+        "postgres": {
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'table', 'rounds',\n  'exported_at', now(),\n  'data', (SELECT COALESCE(json_agg(t), '[]') FROM rounds t WHERE league_id != '00000000-0000-0000-0002-000000000002')\n) as result",
+        "options": {}
+      },
+      "id": "export-rounds",
+      "name": "Export rounds",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [220, -280],
+      "credentials": {
+        "postgres": {
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'table', 'submissions',\n  'exported_at', now(),\n  'data', (SELECT COALESCE(json_agg(t), '[]') FROM submissions t)\n) as result",
+        "options": {}
+      },
+      "id": "export-submissions",
+      "name": "Export submissions",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [220, -160],
+      "credentials": {
+        "postgres": {
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'table', 'votes',\n  'exported_at', now(),\n  'data', (SELECT COALESCE(json_agg(t), '[]') FROM votes t)\n) as result",
+        "options": {}
+      },
+      "id": "export-votes",
+      "name": "Export votes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [220, -40],
+      "credentials": {
+        "postgres": {
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'table', 'profiles',\n  'exported_at', now(),\n  'data', (SELECT COALESCE(json_agg(t), '[]') FROM profiles t)\n) as result",
+        "options": {}
+      },
+      "id": "export-profiles",
+      "name": "Export profiles",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [220, 80],
+      "credentials": {
+        "postgres": {
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'table', 'family_groups',\n  'exported_at', now(),\n  'data', (SELECT COALESCE(json_agg(t), '[]') FROM family_groups t WHERE id != '00000000-0000-0000-0001-000000000001')\n) as result",
+        "options": {}
+      },
+      "id": "export-family-groups",
+      "name": "Export family_groups",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [220, 200],
+      "credentials": {
+        "postgres": {
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'table', 'group_members',\n  'exported_at', now(),\n  'data', (SELECT COALESCE(json_agg(t), '[]') FROM group_members t WHERE group_id != '00000000-0000-0000-0001-000000000001')\n) as result",
+        "options": {}
+      },
+      "id": "export-group-members",
+      "name": "Export group_members",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [220, 320],
+      "credentials": {
+        "postgres": {
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'table', 'season_competitors',\n  'exported_at', now(),\n  'data', (SELECT COALESCE(json_agg(t), '[]') FROM season_competitors t WHERE group_id != '00000000-0000-0000-0001-000000000001')\n) as result",
+        "options": {}
+      },
+      "id": "export-season-competitors",
+      "name": "Export season_competitors",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [220, 440],
+      "credentials": {
+        "postgres": {
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'table', 'round_awards',\n  'exported_at', now(),\n  'data', (SELECT COALESCE(json_agg(t), '[]') FROM round_awards t)\n) as result",
+        "options": {}
+      },
+      "id": "export-round-awards",
+      "name": "Export round_awards",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [220, 560],
+      "credentials": {
+        "postgres": {
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'table', 'group_messages',\n  'exported_at', now(),\n  'data', (SELECT COALESCE(json_agg(t), '[]') FROM group_messages t WHERE group_id != '00000000-0000-0000-0001-000000000001')\n) as result",
+        "options": {}
+      },
+      "id": "export-group-messages",
+      "name": "Export group_messages",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [220, 680],
+      "credentials": {
+        "postgres": {
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'table', 'group_settings',\n  'exported_at', now(),\n  'data', (SELECT COALESCE(json_agg(t), '[]') FROM group_settings t WHERE group_id != '00000000-0000-0000-0001-000000000001')\n) as result",
+        "options": {}
+      },
+      "id": "export-group-settings",
+      "name": "Export group_settings",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [220, 800],
+      "credentials": {
+        "postgres": {
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'table', 'player_connections',\n  'exported_at', now(),\n  'data', (SELECT COALESCE(json_agg(t), '[]') FROM player_connections t WHERE group_id != '00000000-0000-0000-0001-000000000001')\n) as result",
+        "options": {}
+      },
+      "id": "export-player-connections",
+      "name": "Export player_connections",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [220, 920],
+      "credentials": {
+        "postgres": {
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'table', 'message_reactions',\n  'exported_at', now(),\n  'data', (SELECT COALESCE(json_agg(t), '[]') FROM message_reactions t)\n) as result",
+        "options": {}
+      },
+      "id": "export-message-reactions",
+      "name": "Export message_reactions",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [220, 1040],
+      "credentials": {
+        "postgres": {
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'table', 'invites',\n  'exported_at', now(),\n  'data', (SELECT COALESCE(json_agg(t), '[]') FROM invites t WHERE group_id != '00000000-0000-0000-0001-000000000001')\n) as result",
+        "options": {}
+      },
+      "id": "export-invites",
+      "name": "Export invites",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [220, 1160],
+      "credentials": {
+        "postgres": {
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "merge-all",
+      "name": "Merge All",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [500, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine all table exports into single backup object\nconst backup = {\n  backup_date: new Date().toISOString(),\n  backup_type: 'daily_json',\n  tables: {}\n};\n\nfor (const item of $input.all()) {\n  const result = item.json.result;\n  if (result && result.table) {\n    backup.tables[result.table] = {\n      exported_at: result.exported_at,\n      record_count: result.data ? result.data.length : 0,\n      data: result.data || []\n    };\n  }\n}\n\nreturn [{ json: backup }];"
+      },
+      "id": "build-backup",
+      "name": "Build Backup JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO json_backups (backup_date, backup_data) VALUES (NOW(), $1::jsonb) RETURNING id, backup_date",
+        "options": {
+          "queryReplacement": "={{ JSON.stringify($json) }}"
+        }
+      },
+      "id": "save-to-db",
+      "name": "Save to Backup DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [920, 400],
+      "credentials": {
+        "postgres": {
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-success",
+              "leftValue": "={{ $json.tables }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-success",
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1140, 400]
+    },
+    {
+      "parameters": {
+        "content": "## ML Companion Daily JSON Backup\n\n**Credentials:**\n- Export nodes: TML_Supabase_direct\n- Save node: TML_backup_DB\n\n**Tables Backed Up:**\n- leagues, rounds, submissions, votes\n- profiles, family_groups, group_members\n- season_competitors, round_awards\n- group_messages, group_settings\n- player_connections, message_reactions, invites\n\n**Excludes test data** (group/league with test UUIDs)",
+        "height": 460,
+        "width": 340
+      },
+      "id": "sticky-note",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-280, -200]
+    }
+  ],
+  "connections": {
+    "Daily 3am": {
+      "main": [
+        [
+          { "node": "Export leagues", "type": "main", "index": 0 },
+          { "node": "Export rounds", "type": "main", "index": 0 },
+          { "node": "Export submissions", "type": "main", "index": 0 },
+          { "node": "Export votes", "type": "main", "index": 0 },
+          { "node": "Export profiles", "type": "main", "index": 0 },
+          { "node": "Export family_groups", "type": "main", "index": 0 },
+          { "node": "Export group_members", "type": "main", "index": 0 },
+          { "node": "Export season_competitors", "type": "main", "index": 0 },
+          { "node": "Export round_awards", "type": "main", "index": 0 },
+          { "node": "Export group_messages", "type": "main", "index": 0 },
+          { "node": "Export group_settings", "type": "main", "index": 0 },
+          { "node": "Export player_connections", "type": "main", "index": 0 },
+          { "node": "Export message_reactions", "type": "main", "index": 0 },
+          { "node": "Export invites", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Export leagues": { "main": [[{ "node": "Merge All", "type": "main", "index": 0 }]] },
+    "Export rounds": { "main": [[{ "node": "Merge All", "type": "main", "index": 0 }]] },
+    "Export submissions": { "main": [[{ "node": "Merge All", "type": "main", "index": 0 }]] },
+    "Export votes": { "main": [[{ "node": "Merge All", "type": "main", "index": 0 }]] },
+    "Export profiles": { "main": [[{ "node": "Merge All", "type": "main", "index": 0 }]] },
+    "Export family_groups": { "main": [[{ "node": "Merge All", "type": "main", "index": 0 }]] },
+    "Export group_members": { "main": [[{ "node": "Merge All", "type": "main", "index": 0 }]] },
+    "Export season_competitors": { "main": [[{ "node": "Merge All", "type": "main", "index": 0 }]] },
+    "Export round_awards": { "main": [[{ "node": "Merge All", "type": "main", "index": 0 }]] },
+    "Export group_messages": { "main": [[{ "node": "Merge All", "type": "main", "index": 0 }]] },
+    "Export group_settings": { "main": [[{ "node": "Merge All", "type": "main", "index": 0 }]] },
+    "Export player_connections": { "main": [[{ "node": "Merge All", "type": "main", "index": 0 }]] },
+    "Export message_reactions": { "main": [[{ "node": "Merge All", "type": "main", "index": 0 }]] },
+    "Export invites": { "main": [[{ "node": "Merge All", "type": "main", "index": 0 }]] },
+    "Merge All": { "main": [[{ "node": "Build Backup JSON", "type": "main", "index": 0 }]] },
+    "Build Backup JSON": { "main": [[{ "node": "Save to Backup DB", "type": "main", "index": 0 }]] },
+    "Save to Backup DB": { "main": [[{ "node": "Check Success", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["backup", "ml-companion"],
+  "triggerCount": 1
+}

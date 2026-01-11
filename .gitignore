@@ -32,9 +32,8 @@ generated/
 
 # Development/prototype files
 .mcp.json
-.claude/
+.claude/settings.local.json
 prototypes/
-scripts/
 PROTOTYPE.md
 
 # Component development files

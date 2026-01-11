@@ -1,0 +1,947 @@
+{
+  "name": "weekly_postgres_backup_and_ntfy",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [0],
+              "triggerAtHour": 4,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Weekly Sunday 4am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Truncate all tables in backup database (reverse dependency order)\nTRUNCATE TABLE \n  group_messages,\n  round_awards,\n  votes,\n  submissions,\n  rounds,\n  season_competitors,\n  group_settings,\n  group_members,\n  invites,\n  leagues,\n  family_groups,\n  profiles\nCASCADE;",
+        "options": {}
+      },
+      "id": "truncate-backup-tables",
+      "name": "Truncate Backup Tables",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [460, 300],
+      "credentials": {
+        "postgres": {
+          "id": "tVzVbHvI6KffimfO",
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM profiles",
+        "options": {}
+      },
+      "id": "export-profiles",
+      "name": "Export profiles",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 100],
+      "credentials": {
+        "postgres": {
+          "id": "r9ljWY9Y2iDVxROv",
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "profiles",
+        "columns": "={{ Object.keys($json).join(',') }}",
+        "options": {
+          "onConflict": "nothing"
+        }
+      },
+      "id": "import-profiles",
+      "name": "Import profiles",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [900, 100],
+      "credentials": {
+        "postgres": {
+          "id": "tVzVbHvI6KffimfO",
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM family_groups WHERE id != '00000000-0000-0000-0001-000000000001'",
+        "options": {}
+      },
+      "id": "export-family-groups",
+      "name": "Export family_groups",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 200],
+      "credentials": {
+        "postgres": {
+          "id": "r9ljWY9Y2iDVxROv",
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "family_groups",
+        "columns": "={{ Object.keys($json).join(',') }}",
+        "options": {
+          "onConflict": "nothing"
+        }
+      },
+      "id": "import-family-groups",
+      "name": "Import family_groups",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [900, 200],
+      "credentials": {
+        "postgres": {
+          "id": "tVzVbHvI6KffimfO",
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM leagues WHERE id != '00000000-0000-0000-0002-000000000002'",
+        "options": {}
+      },
+      "id": "export-leagues",
+      "name": "Export leagues",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "id": "r9ljWY9Y2iDVxROv",
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "leagues",
+        "columns": "={{ Object.keys($json).join(',') }}",
+        "options": {
+          "onConflict": "nothing"
+        }
+      },
+      "id": "import-leagues",
+      "name": "Import leagues",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [900, 300],
+      "credentials": {
+        "postgres": {
+          "id": "tVzVbHvI6KffimfO",
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM group_members WHERE group_id != '00000000-0000-0000-0001-000000000001'",
+        "options": {}
+      },
+      "id": "export-group-members",
+      "name": "Export group_members",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 400],
+      "credentials": {
+        "postgres": {
+          "id": "r9ljWY9Y2iDVxROv",
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "group_members",
+        "columns": "={{ Object.keys($json).join(',') }}",
+        "options": {
+          "onConflict": "nothing"
+        }
+      },
+      "id": "import-group-members",
+      "name": "Import group_members",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [900, 400],
+      "credentials": {
+        "postgres": {
+          "id": "tVzVbHvI6KffimfO",
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM rounds WHERE league_id != '00000000-0000-0000-0002-000000000002'",
+        "options": {}
+      },
+      "id": "export-rounds",
+      "name": "Export rounds",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 500],
+      "credentials": {
+        "postgres": {
+          "id": "r9ljWY9Y2iDVxROv",
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "rounds",
+        "columns": "={{ Object.keys($json).join(',') }}",
+        "options": {
+          "onConflict": "nothing"
+        }
+      },
+      "id": "import-rounds",
+      "name": "Import rounds",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [900, 500],
+      "credentials": {
+        "postgres": {
+          "id": "tVzVbHvI6KffimfO",
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM submissions",
+        "options": {}
+      },
+      "id": "export-submissions",
+      "name": "Export submissions",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 600],
+      "credentials": {
+        "postgres": {
+          "id": "r9ljWY9Y2iDVxROv",
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "submissions",
+        "columns": "={{ Object.keys($json).join(',') }}",
+        "options": {
+          "onConflict": "nothing"
+        }
+      },
+      "id": "import-submissions",
+      "name": "Import submissions",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [900, 600],
+      "credentials": {
+        "postgres": {
+          "id": "tVzVbHvI6KffimfO",
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM votes",
+        "options": {}
+      },
+      "id": "export-votes",
+      "name": "Export votes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 700],
+      "credentials": {
+        "postgres": {
+          "id": "r9ljWY9Y2iDVxROv",
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "votes",
+        "columns": "={{ Object.keys($json).join(',') }}",
+        "options": {
+          "onConflict": "nothing"
+        }
+      },
+      "id": "import-votes",
+      "name": "Import votes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [900, 700],
+      "credentials": {
+        "postgres": {
+          "id": "tVzVbHvI6KffimfO",
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM season_competitors WHERE group_id != '00000000-0000-0000-0001-000000000001'",
+        "options": {}
+      },
+      "id": "export-season-competitors",
+      "name": "Export season_competitors",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1120, 100],
+      "credentials": {
+        "postgres": {
+          "id": "r9ljWY9Y2iDVxROv",
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "season_competitors",
+        "columns": "={{ Object.keys($json).join(',') }}",
+        "options": {
+          "onConflict": "nothing"
+        }
+      },
+      "id": "import-season-competitors",
+      "name": "Import season_competitors",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 100],
+      "credentials": {
+        "postgres": {
+          "id": "tVzVbHvI6KffimfO",
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM group_settings WHERE group_id != '00000000-0000-0000-0001-000000000001'",
+        "options": {}
+      },
+      "id": "export-group-settings",
+      "name": "Export group_settings",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1120, 200],
+      "credentials": {
+        "postgres": {
+          "id": "r9ljWY9Y2iDVxROv",
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "group_settings",
+        "columns": "={{ Object.keys($json).join(',') }}",
+        "options": {
+          "onConflict": "nothing"
+        }
+      },
+      "id": "import-group-settings",
+      "name": "Import group_settings",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 200],
+      "credentials": {
+        "postgres": {
+          "id": "tVzVbHvI6KffimfO",
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM round_awards",
+        "options": {}
+      },
+      "id": "export-round-awards",
+      "name": "Export round_awards",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1120, 300],
+      "credentials": {
+        "postgres": {
+          "id": "r9ljWY9Y2iDVxROv",
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "round_awards",
+        "columns": "={{ Object.keys($json).join(',') }}",
+        "options": {
+          "onConflict": "nothing"
+        }
+      },
+      "id": "import-round-awards",
+      "name": "Import round_awards",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 300],
+      "credentials": {
+        "postgres": {
+          "id": "tVzVbHvI6KffimfO",
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM group_messages WHERE group_id != '00000000-0000-0000-0001-000000000001'",
+        "options": {}
+      },
+      "id": "export-group-messages",
+      "name": "Export group_messages",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1120, 400],
+      "credentials": {
+        "postgres": {
+          "id": "r9ljWY9Y2iDVxROv",
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "group_messages",
+        "columns": "={{ Object.keys($json).join(',') }}",
+        "options": {
+          "onConflict": "nothing"
+        }
+      },
+      "id": "import-group-messages",
+      "name": "Import group_messages",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 400],
+      "credentials": {
+        "postgres": {
+          "id": "tVzVbHvI6KffimfO",
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM invites",
+        "options": {}
+      },
+      "id": "export-invites",
+      "name": "Export invites",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1120, 500],
+      "credentials": {
+        "postgres": {
+          "id": "r9ljWY9Y2iDVxROv",
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "invites",
+        "columns": "={{ Object.keys($json).join(',') }}",
+        "options": {
+          "onConflict": "nothing"
+        }
+      },
+      "id": "import-invites",
+      "name": "Import invites",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 500],
+      "credentials": {
+        "postgres": {
+          "id": "tVzVbHvI6KffimfO",
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO backup_log (backup_type, status, completed_at) VALUES ('postgres_sync', 'success', NOW()) RETURNING id",
+        "options": {}
+      },
+      "id": "log-backup",
+      "name": "Log Backup Success",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1560, 300],
+      "credentials": {
+        "postgres": {
+          "id": "tVzVbHvI6KffimfO",
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the log result\nconst logResult = $('Log Backup Success').first().json;\n\n// Build notification\nconst title = '✅ TML Weekly Postgres Sync Complete';\nconst message = `Backup Log ID: ${logResult.id || 'N/A'}\\nTime: ${new Date().toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', hour12: true})}\\n\\n12 tables synced to Orange Pi backup DB`;\n\nreturn [{\n  json: {\n    topic: 'tml-backup',\n    title: title,\n    message: message,\n    priority: 3,\n    tags: ['white_check_mark', 'floppy_disk'],\n    click: 'https://n8n2.mattmariani.com'\n  }\n}];"
+      },
+      "id": "build-notification",
+      "name": "Build Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntfy.mattmariani.com",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer tk_yufbb6v1kter9go6tfhwm028gp3qg"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"topic\": \"tml-backup\",\n  \"title\": \"✅ TML Weekly Postgres Sync Complete\",\n  \"message\": \"12 tables synced to Orange Pi backup DB\",\n  \"priority\": 3,\n  \"tags\": [\n    \"white_check_mark\",\n    \"floppy_disk\"\n  ],\n  \"click\": \"https://n8n2.mattmariani.com\"\n}",
+        "options": {}
+      },
+      "id": "send-success-notification",
+      "name": "Send Success Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 220]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntfy.mattmariani.com",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer tk_yufbb6v1kter9go6tfhwm028gp3qg"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"topic\": \"tml-backup\",\n  \"title\": \"❌ TML Weekly Postgres Sync FAILED\",\n  \"message\": \"Weekly postgres backup workflow failed - check n8n for details\",\n  \"priority\": 5,\n  \"tags\": [\n    \"x\",\n    \"warning\"\n  ]\n}",
+        "options": {}
+      },
+      "id": "send-failure-notification",
+      "name": "Send Failure Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 420]
+    },
+    {
+      "parameters": {
+        "content": "## ML Companion Weekly Postgres Sync\n\n**Credentials:**\n- Source: TML_Supabase_direct\n- Target: TML_backup_DB\n\n**Flow:**\n1. Truncate backup tables\n2. Export/Import 12 tables sequentially\n3. Log to backup_log table\n4. Send ntfy notification\n\n**Tables synced:**\nprofiles, family_groups, leagues, group_members, rounds, submissions, votes, season_competitors, group_settings, round_awards, group_messages, invites\n\n**Excludes test data:**\n- Test League: 00000000-0000-0000-0002-000000000002\n- Test Group: 00000000-0000-0000-0001-000000000001",
+        "height": 400,
+        "width": 340
+      },
+      "id": "setup-instructions",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, 60]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Weekly Sunday 4am": {
+      "main": [
+        [
+          {
+            "node": "Truncate Backup Tables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Truncate Backup Tables": {
+      "main": [
+        [
+          {
+            "node": "Export profiles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export profiles": {
+      "main": [
+        [
+          {
+            "node": "Import profiles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import profiles": {
+      "main": [
+        [
+          {
+            "node": "Export family_groups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export family_groups": {
+      "main": [
+        [
+          {
+            "node": "Import family_groups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import family_groups": {
+      "main": [
+        [
+          {
+            "node": "Export leagues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export leagues": {
+      "main": [
+        [
+          {
+            "node": "Import leagues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import leagues": {
+      "main": [
+        [
+          {
+            "node": "Export group_members",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export group_members": {
+      "main": [
+        [
+          {
+            "node": "Import group_members",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import group_members": {
+      "main": [
+        [
+          {
+            "node": "Export rounds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export rounds": {
+      "main": [
+        [
+          {
+            "node": "Import rounds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import rounds": {
+      "main": [
+        [
+          {
+            "node": "Export submissions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export submissions": {
+      "main": [
+        [
+          {
+            "node": "Import submissions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import submissions": {
+      "main": [
+        [
+          {
+            "node": "Export votes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export votes": {
+      "main": [
+        [
+          {
+            "node": "Import votes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import votes": {
+      "main": [
+        [
+          {
+            "node": "Export season_competitors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export season_competitors": {
+      "main": [
+        [
+          {
+            "node": "Import season_competitors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import season_competitors": {
+      "main": [
+        [
+          {
+            "node": "Export group_settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export group_settings": {
+      "main": [
+        [
+          {
+            "node": "Import group_settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import group_settings": {
+      "main": [
+        [
+          {
+            "node": "Export round_awards",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export round_awards": {
+      "main": [
+        [
+          {
+            "node": "Import round_awards",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import round_awards": {
+      "main": [
+        [
+          {
+            "node": "Export group_messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export group_messages": {
+      "main": [
+        [
+          {
+            "node": "Import group_messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import group_messages": {
+      "main": [
+        [
+          {
+            "node": "Export invites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export invites": {
+      "main": [
+        [
+          {
+            "node": "Import invites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import invites": {
+      "main": [
+        [
+          {
+            "node": "Log Backup Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Backup Success": {
+      "main": [
+        [
+          {
+            "node": "Build Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Notification": {
+      "main": [
+        [
+          {
+            "node": "Send Success Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Failure Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d17a1e6a168977dc6004ac61f07bc0cdd3ccce814f6962a4975530c6d6118"
+  },
+  "tags": []
+}

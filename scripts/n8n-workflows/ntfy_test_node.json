@@ -1,0 +1,26 @@
+{
+    "parameters": {
+      "method": "POST",
+      "url": "https://ntfy.mattmariani.com",
+      "sendHeaders": true,
+      "headerParameters": {
+        "parameters": [
+          {
+            "name": "Authorization",
+            "value": "Bearer YOUR_TOKEN_HERE"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      },
+      "sendBody": true,
+      "specifyBody": "json",
+      "jsonBody": "={{ JSON.stringify($json) }}"
+    },
+    "name": "Send Notification",
+    "type": "n8n-nodes-base.httpRequest",
+    "typeVersion": 4.2,
+    "position": [880, 300]
+  }

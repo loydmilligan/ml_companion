@@ -1,0 +1,132 @@
+{
+  "name": "ML Companion - Daily JSON Backup (Simple)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24,
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily 3am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'backup_date', now(),\n  'tables', json_build_object(\n    'leagues', json_build_object('count', (SELECT count(*) FROM leagues WHERE id != '00000000-0000-0000-0002-000000000002'), 'data', (SELECT COALESCE(json_agg(t), '[]') FROM leagues t WHERE id != '00000000-0000-0000-0002-000000000002')),\n    'rounds', json_build_object('count', (SELECT count(*) FROM rounds WHERE league_id != '00000000-0000-0000-0002-000000000002'), 'data', (SELECT COALESCE(json_agg(t), '[]') FROM rounds t WHERE league_id != '00000000-0000-0000-0002-000000000002')),\n    'submissions', json_build_object('count', (SELECT count(*) FROM submissions), 'data', (SELECT COALESCE(json_agg(t), '[]') FROM submissions t)),\n    'votes', json_build_object('count', (SELECT count(*) FROM votes), 'data', (SELECT COALESCE(json_agg(t), '[]') FROM votes t)),\n    'profiles', json_build_object('count', (SELECT count(*) FROM profiles), 'data', (SELECT COALESCE(json_agg(t), '[]') FROM profiles t)),\n    'family_groups', json_build_object('count', (SELECT count(*) FROM family_groups WHERE id != '00000000-0000-0000-0001-000000000001'), 'data', (SELECT COALESCE(json_agg(t), '[]') FROM family_groups t WHERE id != '00000000-0000-0000-0001-000000000001')),\n    'group_members', json_build_object('count', (SELECT count(*) FROM group_members WHERE group_id != '00000000-0000-0000-0001-000000000001'), 'data', (SELECT COALESCE(json_agg(t), '[]') FROM group_members t WHERE group_id != '00000000-0000-0000-0001-000000000001')),\n    'season_competitors', json_build_object('count', (SELECT count(*) FROM season_competitors WHERE group_id != '00000000-0000-0000-0001-000000000001'), 'data', (SELECT COALESCE(json_agg(t), '[]') FROM season_competitors t WHERE group_id != '00000000-0000-0000-0001-000000000001')),\n    'round_awards', json_build_object('count', (SELECT count(*) FROM round_awards), 'data', (SELECT COALESCE(json_agg(t), '[]') FROM round_awards t)),\n    'group_messages', json_build_object('count', (SELECT count(*) FROM group_messages WHERE group_id != '00000000-0000-0000-0001-000000000001'), 'data', (SELECT COALESCE(json_agg(t), '[]') FROM group_messages t WHERE group_id != '00000000-0000-0000-0001-000000000001')),\n    'group_settings', json_build_object('count', (SELECT count(*) FROM group_settings WHERE group_id != '00000000-0000-0000-0001-000000000001'), 'data', (SELECT COALESCE(json_agg(t), '[]') FROM group_settings t WHERE group_id != '00000000-0000-0000-0001-000000000001')),\n    'invites', json_build_object('count', (SELECT count(*) FROM invites), 'data', (SELECT COALESCE(json_agg(t), '[]') FROM invites t))\n  )\n) as backup",
+        "options": {}
+      },
+      "id": "export-all",
+      "name": "Export All Tables",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [220, 300],
+      "credentials": {
+        "postgres": {
+          "name": "TML_Supabase_direct"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO json_backups (backup_date, backup_data) VALUES (NOW(), $1::jsonb) RETURNING id, backup_date",
+        "options": {
+          "queryReplacement": "={{ JSON.stringify($json.backup) }}"
+        }
+      },
+      "id": "save-to-db",
+      "name": "Save to Backup DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [440, 300],
+      "credentials": {
+        "postgres": {
+          "name": "TML_backup_DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the backup data from Export node and save result\nconst backupData = $('Export All Tables').first().json.backup;\nconst saveResult = $('Save to Backup DB').first().json;\n\n// Calculate stats\nconst tables = backupData.tables;\nconst tableNames = Object.keys(tables);\nconst tableCount = tableNames.length;\nlet totalRecords = 0;\nlet tableDetails = [];\n\nfor (const name of tableNames) {\n  const count = tables[name].count || 0;\n  totalRecords += count;\n  tableDetails.push(`${name}: ${count}`);\n}\n\nconst backupSize = Math.round(JSON.stringify(backupData).length / 1024);\nconst success = saveResult.id ? true : false;\nconst icon = success ? '✅' : '❌';\nconst priority = success ? 3 : 5;\nconst tag = success ? 'white_check_mark' : 'x';\n\n// Build notification\nconst title = `${icon} TML Backup: ${tableCount} tables | ${totalRecords} records`;\nconst message = `Backup ID: ${saveResult.id || 'FAILED'}\\nSize: ~${backupSize}KB\\nTime: ${new Date().toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', hour12: true})}\\n\\n${tableDetails.join('\\n')}`;\n\nreturn [{\n  json: {\n    topic: 'tml-backup',\n    title: title,\n    message: message,\n    priority: priority,\n    tags: [tag, 'floppy_disk'],\n    click: 'https://n8n2.mattmariani.com'\n  }\n}];"
+      },
+      "id": "build-notification",
+      "name": "Build Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntfy.mattmariani.com",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "send-ntfy",
+      "name": "Send Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "content": "## ML Companion Daily Backup (Simple)\n\n**Credentials:**\n- Export: TML_Supabase_direct\n- Save: TML_backup_DB\n\n**Flow:**\n1. Export all 12 tables in one query\n2. Save combined JSON to backup DB\n3. Send ntfy notification\n\n**Notification:**\n✅ = success, ❌ = failure\nShows table count, record count, size",
+        "height": 280,
+        "width": 300
+      },
+      "id": "sticky-note",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-280, 180]
+    }
+  ],
+  "connections": {
+    "Daily 3am": {
+      "main": [
+        [
+          { "node": "Export All Tables", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Export All Tables": {
+      "main": [
+        [
+          { "node": "Save to Backup DB", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Save to Backup DB": {
+      "main": [
+        [
+          { "node": "Build Notification", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Notification": {
+      "main": [
+        [
+          { "node": "Send Notification", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["backup", "ml-companion"],
+  "triggerCount": 1
+}
