@@ -67,6 +67,7 @@ type TrackerProps = {
   competitors: Competitor[];
   deadline: string | null;
   defaultExpanded: boolean;
+  isPhaseComplete: boolean; // True when phase ended (accelerated mode or deadline passed)
 };
 
 function ProgressTracker({
@@ -75,6 +76,7 @@ function ProgressTracker({
   competitors,
   deadline,
   defaultExpanded,
+  isPhaseComplete,
 }: TrackerProps) {
   const storageKey = `${STORAGE_KEY_PREFIX}${type}`;
 
@@ -99,8 +101,10 @@ function ProgressTracker({
 
   const label = type === "submitted" ? "Submitted" : "Voted";
   const icon = type === "submitted" ? "📝" : "🗳️";
-  const urgency = computeUrgency(deadline);
-  const timeRemaining = formatTimeRemaining(deadline);
+
+  // If phase is complete (accelerated mode or all done), don't show urgency/time
+  const urgency = isPhaseComplete ? "safe" : computeUrgency(deadline);
+  const timeRemaining = isPhaseComplete ? "Complete" : formatTimeRemaining(deadline);
 
   // Build list of all competitors with their status
   const competitorStatuses = competitors.map((c) => {
@@ -131,7 +135,7 @@ function ProgressTracker({
         <div className="progress-tracker-title-group">
           <span className="progress-tracker-label">{label}</span>
           {timeRemaining && (
-            <span className={clsx("progress-tracker-time", urgency)}>{timeRemaining}</span>
+            <span className={clsx("progress-tracker-time", isPhaseComplete ? "complete" : urgency)}>{timeRemaining}</span>
           )}
         </div>
         <span className="progress-tracker-count">{count}/{total}</span>
@@ -190,6 +194,12 @@ export default function ProgressSection({
   const submittedDefaultExpanded = roundStatus === "open";
   const votedDefaultExpanded = roundStatus === "voting";
 
+  // Phase completion logic for accelerated mode:
+  // - Submissions are complete when we're past open phase (voting, revealed, archived)
+  // - Voting is complete when we're in revealed or archived phase
+  const isSubmissionPhaseComplete = roundStatus !== "open";
+  const isVotingPhaseComplete = roundStatus === "revealed" || roundStatus === "archived";
+
   return (
     <div className="progress-section">
       <ProgressTracker
@@ -198,6 +208,7 @@ export default function ProgressSection({
         competitors={competitors}
         deadline={submissionDeadline}
         defaultExpanded={submittedDefaultExpanded}
+        isPhaseComplete={isSubmissionPhaseComplete}
       />
       <ProgressTracker
         type="voted"
@@ -205,6 +216,7 @@ export default function ProgressSection({
         competitors={competitors}
         deadline={votingDeadline}
         defaultExpanded={votedDefaultExpanded}
+        isPhaseComplete={isVotingPhaseComplete}
       />
 
       <style>{`
@@ -261,6 +273,9 @@ export default function ProgressSection({
         .progress-tracker-time.urgent,
         .progress-tracker-time.overdue {
           color: var(--error);
+        }
+        .progress-tracker-time.complete {
+          color: var(--success);
         }
         .progress-tracker-count {
           font-size: 0.8rem;
