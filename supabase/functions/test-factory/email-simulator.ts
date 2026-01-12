@@ -9,6 +9,10 @@
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getMockAIResponse } from "./mock-ai-responses.ts";
+import { getRandomSongs, getSpotifyLink, type SampleSong } from "./sample-songs.ts";
+
+// Track which songs have been used in the current round to avoid duplicates
+const usedSongsPerRound: Map<string, Set<string>> = new Map();
 
 export type EmailEventType =
   | "round_start"
@@ -94,6 +98,36 @@ async function findCompetitor(
 
 function log(message: string, data?: unknown) {
   console.log(`[EmailSimulator] ${message}`, data ? JSON.stringify(data) : "");
+}
+
+/**
+ * Get a unique song for a round (no duplicates within same round)
+ */
+function getUniqueSongForRound(roundId: string): SampleSong | null {
+  if (!usedSongsPerRound.has(roundId)) {
+    usedSongsPerRound.set(roundId, new Set());
+  }
+  const usedSongs = usedSongsPerRound.get(roundId)!;
+
+  // Get random songs and find one that hasn't been used
+  const songs = getRandomSongs(20);
+  for (const song of songs) {
+    if (!usedSongs.has(song.uri)) {
+      usedSongs.add(song.uri);
+      return song;
+    }
+  }
+
+  // Fallback: get more songs if all 20 were used
+  const moreSongs = getRandomSongs(50);
+  for (const song of moreSongs) {
+    if (!usedSongs.has(song.uri)) {
+      usedSongs.add(song.uri);
+      return song;
+    }
+  }
+
+  return null;
 }
 
 // ============================================================================
@@ -189,7 +223,7 @@ export async function simulateRoundStart(
 
 /**
  * Simulate user_submitted event.
- * Records user submission activity.
+ * Creates actual submission with song data AND records activity.
  */
 export async function simulateUserSubmitted(
   supabase: SupabaseClient,
@@ -224,8 +258,52 @@ export async function simulateUserSubmitted(
   // Find competitor to get profile_id
   const competitor = await findCompetitor(supabase, league.group_id, actorName);
 
+  // Get a unique song for this submission
+  const song = getUniqueSongForRound(roundId);
+  if (!song) {
+    return {
+      eventType: "user_submitted",
+      success: false,
+      action: "no_songs_available",
+      roundId,
+      error: "No unique songs available for this round",
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  // Create the actual submission with song data
+  const spotifyLink = getSpotifyLink(song.uri);
+
+  const { error: submissionError } = await supabase.from("submissions").upsert(
+    {
+      round_id: roundId,
+      submitter_name: actorName,
+      profile_id: competitor?.profile_id || null,
+      title: song.title,
+      artist: song.artist,
+      link: spotifyLink,
+      artwork_url: `https://via.placeholder.com/300x300.png?text=${encodeURIComponent(song.title.slice(0, 15))}`,
+      created_at: new Date().toISOString(),
+    },
+    {
+      onConflict: "round_id,submitter_name",
+    }
+  );
+
+  if (submissionError) {
+    log("Failed to create submission", { error: submissionError.message });
+    return {
+      eventType: "user_submitted",
+      success: false,
+      action: "create_submission_failed",
+      roundId,
+      error: submissionError.message,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   // Insert activity record
-  const { error } = await supabase.from("round_user_activity").upsert(
+  const { error: activityError } = await supabase.from("round_user_activity").upsert(
     {
       round_id: roundId,
       actor_name: actorName,
@@ -239,23 +317,17 @@ export async function simulateUserSubmitted(
     }
   );
 
-  if (error) {
-    return {
-      eventType: "user_submitted",
-      success: false,
-      action: "insert_activity_failed",
-      roundId,
-      error: error.message,
-      timestamp: new Date().toISOString(),
-    };
+  if (activityError) {
+    log("Failed to record activity", { error: activityError.message });
+    // Don't fail the whole operation - submission was created
   }
 
-  log("Recorded submission", { roundId, actorName });
+  log("Created submission", { roundId, actorName, song: song.title });
 
   return {
     eventType: "user_submitted",
     success: true,
-    action: "recorded_submission",
+    action: "created_submission",
     roundId,
     timestamp: new Date().toISOString(),
   };
