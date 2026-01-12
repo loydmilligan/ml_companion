@@ -8,6 +8,7 @@ type CollapsibleSectionProps = {
   title: string;
   icon?: ReactNode;
   badge?: string | number;
+  headerRight?: ReactNode; // Content to show on right side of header (before chevron)
   defaultExpanded?: boolean;
   children: ReactNode;
   className?: string;
@@ -18,6 +19,7 @@ export default function CollapsibleSection({
   title,
   icon,
   badge,
+  headerRight,
   defaultExpanded = true,
   children,
   className,
@@ -51,6 +53,9 @@ export default function CollapsibleSection({
         <span className="collapsible-section-title">{title}</span>
         {badge !== undefined && (
           <span className="collapsible-section-badge">{badge}</span>
+        )}
+        {headerRight && (
+          <span className="collapsible-section-header-right">{headerRight}</span>
         )}
         <span className="collapsible-section-chevron">
           <svg
@@ -126,11 +131,18 @@ export default function CollapsibleSection({
           border-radius: 10px;
           flex-shrink: 0;
         }
+        .collapsible-section-header-right {
+          display: flex;
+          align-items: center;
+          flex-shrink: 0;
+          margin-left: auto;
+        }
         .collapsible-section-chevron {
           display: flex;
           align-items: center;
           color: var(--text-muted);
           flex-shrink: 0;
+          margin-left: 8px;
         }
         .collapsible-section-content {
           padding: 12px;

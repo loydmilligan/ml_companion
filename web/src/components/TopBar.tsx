@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRound } from "../contexts/RoundContext";
@@ -8,9 +9,10 @@ import DMDrawer from "./DMDrawer";
 import SettingsGear from "./SettingsGear";
 import ProfileDrawer from "./ProfileDrawer";
 import SettingsDrawer from "./SettingsDrawer";
-import { DualNeedleGauge, PinnedBar, PeekPanel, usePeekPanel } from "./pinned-peek";
+import { PeekPanel, usePeekPanel } from "./pinned-peek";
 
 export default function TopBar() {
+  const navigate = useNavigate();
   const { profile, group, refresh } = useAuth();
   const {
     round,
@@ -30,7 +32,6 @@ export default function TopBar() {
   void _openPanel; // Used in PeekButton
 
   const isLead = group?.role === "lead";
-  const [pinnedBarOpen, setPinnedBarOpen] = useState(false);
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
   const [dmDrawerOpen, setDmDrawerOpen] = useState(false);
@@ -51,29 +52,19 @@ export default function TopBar() {
   };
 
   // Close other drawers when one opens
-  const openPinnedBar = () => {
-    setProfileDrawerOpen(false);
-    setSettingsDrawerOpen(false);
-    setDmDrawerOpen(false);
-    setPinnedBarOpen((prev) => !prev);
-  };
-
   const openProfileDrawer = () => {
-    setPinnedBarOpen(false);
     setSettingsDrawerOpen(false);
     setDmDrawerOpen(false);
     setProfileDrawerOpen((prev) => !prev);
   };
 
   const openDMDrawer = () => {
-    setPinnedBarOpen(false);
     setProfileDrawerOpen(false);
     setSettingsDrawerOpen(false);
     setDmDrawerOpen((prev) => !prev);
   };
 
   const openSettingsDrawer = () => {
-    setPinnedBarOpen(false);
     setProfileDrawerOpen(false);
     setDmDrawerOpen(false);
     setSettingsDrawerOpen((prev) => !prev);
@@ -167,15 +158,17 @@ export default function TopBar() {
   return (
     <>
       <header className="top-bar">
-        <div className="top-bar-brand">
+        <button
+          type="button"
+          className="top-bar-brand"
+          onClick={() => navigate("/app/chat")}
+          aria-label="Go to Chat"
+        >
           <div className="brand-mark" aria-hidden="true">
             <img className="brand-mark-img" src="/brand-logo.png" alt="Talking Music League logo" />
           </div>
-          <div>
-            <div className="brand-title">Talking Music League</div>
-            <div className="brand-subtitle">Your family's league, connected.</div>
-          </div>
-        </div>
+          <div className="brand-title">Talking Music League</div>
+        </button>
         <nav className="top-bar-actions">
           {/* Avatar - opens profile drawer */}
           <button
@@ -187,20 +180,6 @@ export default function TopBar() {
             <Avatar src={profile?.avatar_url} name={displayName} size="md" framed />
           </button>
 
-          {/* Gauge - only show if there's an active round */}
-          {round && (
-            <DualNeedleGauge
-              submissionPct={submissionUrgency.pct}
-              votingPct={votingUrgency.pct}
-              submissionLevel={submissionUrgency.level}
-              votingLevel={votingUrgency.level}
-              size="md"
-              onClick={openPinnedBar}
-              showExpandIndicator
-              roundStatus={round.status}
-            />
-          )}
-
           {/* DM Icon - opens DM drawer (second from right) */}
           <DMIcon
             onClick={openDMDrawer}
@@ -211,16 +190,6 @@ export default function TopBar() {
           <SettingsGear onClick={openSettingsDrawer} />
         </nav>
       </header>
-
-      {/* Pinned Bar Dropdown (Gauge drawer) */}
-      <PinnedBar
-        round={round}
-        isOpen={pinnedBarOpen}
-        onClose={() => setPinnedBarOpen(false)}
-        submittedCount={submittedCount}
-        votedCount={votedCount}
-        totalMembers={totalMembers}
-      />
 
       {/* Profile Drawer (Avatar drawer) */}
       <ProfileDrawer

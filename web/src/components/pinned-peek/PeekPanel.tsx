@@ -7,8 +7,10 @@ import ProgressSection from "./ProgressSection";
 import RoundCountdown from "./RoundCountdown";
 import TimelineGameModal from "./TimelineGameModal";
 import RoundChallengeModal from "./RoundChallengeModal";
+import DualNeedleGauge from "./DualNeedleGauge";
 import { useYouTubeSidebar } from "../youtube-sidebar";
 import { useSubmitterGuess } from "./useSubmitterGuess";
+import { useRound } from "../../contexts/RoundContext";
 
 type SubmissionRow = {
   id: string;
@@ -107,6 +109,7 @@ export default function PeekPanel({
   isTimelineTester = false,
 }: PeekPanelProps) {
   const { openPlaylist } = useYouTubeSidebar();
+  const { submissionUrgency, votingUrgency } = useRound();
   const [isTimelineGameOpen, setIsTimelineGameOpen] = useState(false);
   const [isRoundChallengeOpen, setIsRoundChallengeOpen] = useState(false);
 
@@ -312,6 +315,16 @@ export default function PeekPanel({
                   title="Progress"
                   icon="📊"
                   defaultExpanded={true}
+                  headerRight={
+                    <DualNeedleGauge
+                      submissionPct={submissionUrgency.pct}
+                      votingPct={votingUrgency.pct}
+                      submissionLevel={submissionUrgency.level}
+                      votingLevel={votingUrgency.level}
+                      size="sm"
+                      roundStatus={round.status}
+                    />
+                  }
                 >
                   <ProgressSection
                     activity={activity}

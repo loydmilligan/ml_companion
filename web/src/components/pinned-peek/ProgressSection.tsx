@@ -36,6 +36,29 @@ function computeUrgency(deadlineStr: string | null): UrgencyLevel {
   return "safe";
 }
 
+function formatTimeRemaining(deadlineStr: string | null): string {
+  if (!deadlineStr) return "";
+  const deadlineMs = new Date(deadlineStr).getTime();
+  const now = Date.now();
+  const remaining = deadlineMs - now;
+
+  if (remaining <= 0) return "Past due";
+
+  const hours = Math.floor(remaining / (1000 * 60 * 60));
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+
+  if (days > 0) {
+    return remainingHours > 0 ? `${days}d ${remainingHours}h left` : `${days}d left`;
+  }
+  if (hours > 0) {
+    const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+    return minutes > 0 ? `${hours}h ${minutes}m left` : `${hours}h left`;
+  }
+  const minutes = Math.floor(remaining / (1000 * 60));
+  return `${minutes}m left`;
+}
+
 const STORAGE_KEY_PREFIX = "peek-progress-v1-";
 
 type TrackerProps = {
@@ -77,6 +100,7 @@ function ProgressTracker({
   const label = type === "submitted" ? "Submitted" : "Voted";
   const icon = type === "submitted" ? "📝" : "🗳️";
   const urgency = computeUrgency(deadline);
+  const timeRemaining = formatTimeRemaining(deadline);
 
   // Build list of all competitors with their status
   const competitorStatuses = competitors.map((c) => {
@@ -104,7 +128,12 @@ function ProgressTracker({
         aria-expanded={expanded}
       >
         <span className="progress-tracker-icon">{icon}</span>
-        <span className="progress-tracker-label">{label}</span>
+        <div className="progress-tracker-title-group">
+          <span className="progress-tracker-label">{label}</span>
+          {timeRemaining && (
+            <span className={clsx("progress-tracker-time", urgency)}>{timeRemaining}</span>
+          )}
+        </div>
         <span className="progress-tracker-count">{count}/{total}</span>
         <span className="progress-tracker-chevron">
           <svg
@@ -211,9 +240,27 @@ export default function ProgressSection({
           font-size: 1rem;
           flex-shrink: 0;
         }
+        .progress-tracker-title-group {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          flex: 1;
+          min-width: 0;
+        }
         .progress-tracker-label {
           font-weight: 600;
-          flex: 1;
+        }
+        .progress-tracker-time {
+          font-size: 0.7rem;
+          font-weight: 500;
+          color: var(--text-muted);
+        }
+        .progress-tracker-time.warning {
+          color: var(--warning, #f59e0b);
+        }
+        .progress-tracker-time.urgent,
+        .progress-tracker-time.overdue {
+          color: var(--error);
         }
         .progress-tracker-count {
           font-size: 0.8rem;

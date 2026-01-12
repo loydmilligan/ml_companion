@@ -323,26 +323,29 @@ export default function SubmitterGuess({
                 </div>
               ) : (
                 <div className="submitter-guess-form">
-                  <select
-                    value={guessedId || ""}
-                    onChange={(e) => handleGuessChange(sub.id, e.target.value)}
-                    disabled={isSaving}
-                  >
-                    <option value="">Select a competitor...</option>
-                    {competitors.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => handleSaveGuess(sub.id)}
-                    disabled={!guessedId || isSaving}
-                    className="submitter-guess-save"
-                  >
-                    {isSaving ? "..." : "Save"}
-                  </button>
+                  <span className="submitter-guess-label">Your guess:</span>
+                  <div className="submitter-guess-controls">
+                    <select
+                      value={guessedId || ""}
+                      onChange={(e) => handleGuessChange(sub.id, e.target.value)}
+                      disabled={isSaving}
+                    >
+                      <option value="">Select a competitor...</option>
+                      {competitors.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => handleSaveGuess(sub.id)}
+                      disabled={!guessedId || isSaving}
+                      className="submitter-guess-save"
+                    >
+                      {isSaving ? "..." : "Save"}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

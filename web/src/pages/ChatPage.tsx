@@ -120,17 +120,6 @@ function renderMessageBody(text: string, onPeekClick?: () => void) {
   });
 }
 
-const allEmojis = [
-  // Reactions
-  "👍", "❤️", "😂", "😮", "😢", "😡",
-  // Music
-  "🎧", "🎵", "🎶", "🎤", "🎸", "🥁", "🎹", "🎺", "🎷", "🎻",
-  // Expressions
-  "🔥", "👏", "😍", "🤔", "💜", "💙",
-  "💃", "🕺", "🙌", "✨", "💯", "🤘",
-  "👀", "🤩", "😭", "💀", "🫡", "🙏",
-];
-
 export default function ChatPage() {
   const navigate = useNavigate();
   const { group, profile } = useAuth();
@@ -143,9 +132,7 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const [aiTyping, setAiTyping] = useState(false);
   const [aiChatEnabled, setAiChatEnabled] = useState(true);
-  const [emojiDrawerOpen, setEmojiDrawerOpen] = useState(false);
   const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null);
-  const [defaultEmoji, setDefaultEmoji] = useState(() => localStorage.getItem("tml_default_emoji") ?? "👍");
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const composeRef = useRef<HTMLDivElement>(null);
@@ -314,15 +301,6 @@ export default function ChatPage() {
       onDeleteReaction: handleRealtimeReactionDelete,
     }
   );
-
-  // Listen for localStorage changes (when settings change)
-  useEffect(() => {
-    const handleStorage = () => {
-      setDefaultEmoji(localStorage.getItem("tml_default_emoji") ?? "👍");
-    };
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
 
   // Helper to group reactions by message
   const groupReactionsByMessage = useCallback((reactionData: MessageReaction[]): Map<string, ReactionCount[]> => {
@@ -560,36 +538,6 @@ export default function ChatPage() {
       clearQuotedSong();
     }
   }, [quotedSong, clearQuotedSong]);
-
-  const sendQuickEmoji = async (emoji: string) => {
-    if (!group || !profile) return;
-    setSending(true);
-    const { error } = await supabase.from("group_messages").insert({
-      group_id: group.id,
-      author_id: profile.id,
-      body: emoji,
-    });
-    if (!error) {
-      const { data } = await supabase
-        .from("group_messages")
-        .select("id,body,author_id,created_at,reply_to_id, profiles(display_name,avatar_url)")
-        .eq("group_id", group.id)
-        .order("created_at", { ascending: true });
-
-      let msgs = (data as unknown as ChatMessage[]) ?? [];
-      const replyToIds = msgs.filter(m => m.reply_to_id).map(m => m.reply_to_id) as string[];
-      if (replyToIds.length > 0) {
-        const { data: replyData } = await supabase
-          .from("group_messages")
-          .select("id,body,author_id,profiles(display_name)")
-          .in("id", replyToIds);
-        const replyMap = new Map((replyData ?? []).map((r: any) => [r.id, r]));
-        msgs = msgs.map(m => m.reply_to_id ? { ...m, reply_to: replyMap.get(m.reply_to_id) } : m);
-      }
-      setMessages(msgs);
-    }
-    setSending(false);
-  };
 
   // Toggle reaction on a message (add if not exists, remove if exists)
   const toggleReaction = async (messageId: string, emoji: string) => {
@@ -1003,42 +951,6 @@ export default function ChatPage() {
             </button>
           </div>
         )}
-        {/* Emoji drawer */}
-        <div className={`chat-emoji-drawer ${emojiDrawerOpen ? "open" : ""}`}>
-          {allEmojis.map((emoji) => (
-            <button
-              key={emoji}
-              type="button"
-              className="emoji-button"
-              onClick={() => {
-                setMessage((prev) => `${prev}${emoji}`);
-                setEmojiDrawerOpen(false);
-              }}
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-        {/* Quick emoji button + arrow */}
-        <div className="chat-emoji-group">
-          <button
-            type="button"
-            className="chat-emoji-quick-btn"
-            onClick={() => sendQuickEmoji(defaultEmoji)}
-            disabled={sending}
-            aria-label={`Send ${defaultEmoji}`}
-          >
-            {defaultEmoji}
-          </button>
-          <button
-            type="button"
-            className="chat-emoji-arrow"
-            onClick={() => setEmojiDrawerOpen((prev) => !prev)}
-            aria-label={emojiDrawerOpen ? "Close emoji picker" : "Open emoji picker"}
-          >
-            {emojiDrawerOpen ? "▼" : "▲"}
-          </button>
-        </div>
         <input
           className="field-input"
           placeholder="Type a message..."

@@ -7,8 +7,6 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 
-const defaultEmojiOptions = ["👍", "❤️", "🔥", "😂", "👏", "🎵", "✨", "🙌"];
-
 // Music provider icons
 const SpotifyIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -44,7 +42,6 @@ export default function SettingsPage() {
   // Theme settings
   const [theme, setTheme] = useState(() => localStorage.getItem("tml_theme") ?? "ocean");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("tml_mode") === "dark");
-  const [defaultEmoji, setDefaultEmoji] = useState(() => localStorage.getItem("tml_default_emoji") ?? "👍");
 
   // Notification type settings
   const [emailNotifyEnabled, setEmailNotifyEnabled] = useState(profile?.email_notify_enabled ?? true);
@@ -99,12 +96,6 @@ export default function SettingsPage() {
     localStorage.setItem("tml_theme", theme);
     localStorage.setItem("tml_mode", darkMode ? "dark" : "light");
   }, [theme, darkMode]);
-
-  // Apply default emoji
-  useEffect(() => {
-    localStorage.setItem("tml_default_emoji", defaultEmoji);
-    window.dispatchEvent(new Event("storage"));
-  }, [defaultEmoji]);
 
   // Save notification type toggles
   const saveEmailToggle = async (enabled: boolean) => {
@@ -270,24 +261,6 @@ export default function SettingsPage() {
           <input type="checkbox" checked={darkMode} onChange={(e) => setDarkMode(e.target.checked)} />
           <span>Dark mode</span>
         </label>
-        <div className="field" style={{ marginTop: "16px" }}>
-          <span className="field-label">Quick reaction emoji</span>
-          <p className="muted" style={{ marginBottom: "8px", fontSize: "0.85rem" }}>
-            This emoji appears next to the chat input for quick reactions.
-          </p>
-          <div className="emoji-selector">
-            {defaultEmojiOptions.map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                className={`emoji-option ${defaultEmoji === emoji ? "selected" : ""}`}
-                onClick={() => setDefaultEmoji(emoji)}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        </div>
       </Card>
 
       {/* Music Links Card */}
