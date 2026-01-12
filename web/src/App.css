@@ -712,6 +712,94 @@
   flex-shrink: 0;
 }
 
+/* Responsive sizing for small screens - make icons fit */
+@media (max-width: 420px) {
+  .top-bar {
+    padding: 8px 12px;
+  }
+
+  .top-bar-actions {
+    gap: 6px;
+  }
+
+  /* Scale down all action icons on small screens */
+  .dual-needle-gauge-md {
+    width: 40px;
+    height: 40px;
+  }
+
+  .avatar-frame-md {
+    width: 40px;
+    height: 40px;
+  }
+
+  .avatar-frame .avatar-md {
+    width: 32px;
+    height: 32px;
+  }
+
+  .dm-icon-md {
+    width: 40px;
+    height: 40px;
+  }
+
+  .settings-gear-md {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Scale down brand mark on very small screens */
+  .brand-mark {
+    width: 72px;
+    height: 72px;
+  }
+
+  .brand-title {
+    font-size: 0.9rem;
+  }
+
+  .brand-subtitle {
+    font-size: 0.7rem;
+  }
+}
+
+/* Extra small screens - even more compact */
+@media (max-width: 360px) {
+  .top-bar {
+    padding: 6px 8px;
+  }
+
+  .top-bar-actions {
+    gap: 4px;
+  }
+
+  .dual-needle-gauge-md,
+  .avatar-frame-md,
+  .dm-icon-md,
+  .settings-gear-md {
+    width: 36px;
+    height: 36px;
+  }
+
+  .avatar-frame .avatar-md {
+    width: 28px;
+    height: 28px;
+  }
+
+  .brand-mark {
+    width: 60px;
+    height: 60px;
+  }
+
+  .brand-title {
+    font-size: 0.8rem;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+}
+
 .top-menu {
   position: relative;
 }
@@ -1086,11 +1174,20 @@
   border-radius: 50%;
   /* Match settings gear depth effect */
   filter: drop-shadow(0 3px 6px rgba(10, 26, 47, 0.3));
-  /* Raised circle with shimmer border like settings gear */
+  /* Raised circle with shimmer border - matches settings gear exactly */
   background:
     linear-gradient(#3a5a7a, #2a4a6a) padding-box,
-    linear-gradient(135deg, #7aaddf 0%, #4a7cb5 25%, #9ac5eb 50%, #4a7cb5 75%, #3a6ca5 100%) border-box;
+    linear-gradient(180deg,
+      rgba(255,255,255,0.12) 0%,
+      rgba(255,255,255,0.12) 50%,
+      rgba(255,255,255,0.4) 75%,
+      rgba(255,255,255,0.65) 85%,
+      rgba(255,255,255,0.4) 95%,
+      rgba(255,255,255,0.12) 100%
+    ) border-box;
   border: 2px solid transparent;
+  /* Shimmer animation always on - matches settings gear */
+  animation: shimmerBorderIron 2s ease-in-out infinite;
 }
 
 .dm-icon-sm {
@@ -1099,8 +1196,8 @@
 }
 
 .dm-icon-md {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
 }
 
 .dm-icon:hover {
@@ -1145,22 +1242,36 @@
   border: 2px solid var(--surface, #fff);
 }
 
-/* Shimmer animation for unread messages */
+/* Red shimmer animation for unread messages - overrides the default iron shimmer */
 .dm-icon.has-unread {
-  animation: dm-shimmer 2s ease-in-out infinite;
+  animation: dm-shimmer-red 2s ease-in-out infinite;
 }
 
-@keyframes dm-shimmer {
+@keyframes dm-shimmer-red {
   0%, 100% {
     background:
       linear-gradient(#3a5a7a, #2a4a6a) padding-box,
-      linear-gradient(135deg, #7aaddf 0%, #4a7cb5 25%, #9ac5eb 50%, #4a7cb5 75%, #3a6ca5 100%) border-box;
+      linear-gradient(180deg,
+        rgba(255,255,255,0.12) 0%,
+        rgba(255,255,255,0.12) 50%,
+        rgba(255,255,255,0.4) 75%,
+        rgba(255,255,255,0.65) 85%,
+        rgba(255,255,255,0.4) 95%,
+        rgba(255,255,255,0.12) 100%
+      ) border-box;
     filter: drop-shadow(0 3px 6px rgba(10, 26, 47, 0.3));
   }
   50% {
     background:
       linear-gradient(#3a5a7a, #2a4a6a) padding-box,
-      linear-gradient(135deg, #f21b3f 0%, #ff6b8a 25%, #f21b3f 50%, #ff6b8a 75%, #f21b3f 100%) border-box;
+      linear-gradient(180deg,
+        rgba(242,27,63,0.3) 0%,
+        rgba(242,27,63,0.3) 50%,
+        rgba(255,107,138,0.7) 75%,
+        rgba(255,150,170,1) 85%,
+        rgba(255,107,138,0.7) 95%,
+        rgba(242,27,63,0.3) 100%
+      ) border-box;
     filter: drop-shadow(0 4px 12px rgba(242, 27, 63, 0.5));
   }
 }
