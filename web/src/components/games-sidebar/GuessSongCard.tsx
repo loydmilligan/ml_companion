@@ -23,6 +23,7 @@ type GuessSongCardProps = {
     link: string | null;
     artwork_url: string | null;
     submitter_name?: string | null;
+    submitter_comment?: string | null;
     youtube_url?: string | null;
     spotify_url?: string | null;
     apple_music_url?: string | null;
@@ -157,6 +158,11 @@ export default function GuessSongCard({
         {/* Title and Artist */}
         <h4 className="guess-song-card-title">{song.title}</h4>
         <p className="guess-song-card-artist">{song.artist ?? "Unknown artist"}</p>
+
+        {/* Show submitter comment */}
+        {song.submitter_comment && (
+          <p className="guess-song-card-comment">"{song.submitter_comment}"</p>
+        )}
 
         {/* Show submitter name if revealed */}
         {isRevealed && song.submitter_name && (
