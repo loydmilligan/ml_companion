@@ -10,6 +10,7 @@ import SettingsGear from "./SettingsGear";
 import ProfileDrawer from "./ProfileDrawer";
 import SettingsDrawer from "./SettingsDrawer";
 import { PeekPanel, usePeekPanel } from "./pinned-peek";
+import { GamesSidebar } from "./games-sidebar";
 
 export default function TopBar() {
   const navigate = useNavigate();
@@ -220,6 +221,16 @@ export default function TopBar() {
         competitors={competitors}
         isVotingComplete={isVotingComplete}
         onQuoteSong={handleQuoteSong}
+        roundChallengeEnabled={roundChallengeEnabled}
+        roundChallengePhase={roundChallengePhase}
+        submitterGuessEnabled={submitterGuessEnabled}
+        timelineGameEnabled={timelineGameEnabled}
+        timelineGamePhase={timelineGamePhase}
+        isTimelineTester={isTimelineTester}
+      />
+
+      {/* Games Sidebar (slide-out from right) */}
+      <GamesSidebar
         roundChallengeEnabled={roundChallengeEnabled}
         roundChallengePhase={roundChallengePhase}
         submitterGuessEnabled={submitterGuessEnabled}

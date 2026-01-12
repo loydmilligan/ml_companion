@@ -1,15 +1,21 @@
-import React, { useState } from "react";
 import clsx from "clsx";
 import { useYouTubeSidebar, extractYouTubeId } from "../youtube-sidebar";
 import { useAuth } from "../../contexts/AuthContext";
 
-type VoteRow = {
-  voter_id: string | null;
-  voter_name: string | null;
-  points: number | null;
+type Competitor = {
+  id: string;
+  name: string;
+  profile_id: string | null;
 };
 
-type SongCardProps = {
+type GuessState = {
+  guessedCompetitorId: string | null;
+  result: boolean | null; // true = correct, false = incorrect, null = not revealed
+  isSaving: boolean;
+  isOwnSong: boolean;
+};
+
+type GuessSongCardProps = {
   song: {
     id: string;
     title: string;
@@ -23,46 +29,34 @@ type SongCardProps = {
     youtube_music_url?: string | null;
     source_uri?: string | null;
   };
-  votes?: VoteRow[];
-  rank?: number; // 1, 2, 3 for top songs
-  showSubmitter: boolean;
-  showVotes: boolean;
-  onQuote?: () => void;
+  guessEnabled?: boolean;
+  guessState?: GuessState;
+  competitors?: Competitor[];
+  isRevealed?: boolean;
+  onGuessChange?: (competitorId: string) => void;
+  onSaveGuess?: () => void;
 };
 
-function getTrophyClass(rank: number): string {
-  switch (rank) {
-    case 1: return "gold";
-    case 2: return "silver";
-    case 3: return "bronze";
-    default: return "";
-  }
-}
-
-function getTrophyEmoji(rank: number): string {
-  switch (rank) {
-    case 1: return "🥇";
-    case 2: return "🥈";
-    case 3: return "🥉";
-    default: return "";
-  }
-}
-
-export default function SongCard({
+export default function GuessSongCard({
   song,
-  votes = [],
-  rank,
-  showSubmitter,
-  showVotes,
-  onQuote,
-}: SongCardProps) {
-  const [votersExpanded, setVotersExpanded] = useState(false);
+  guessEnabled = false,
+  guessState,
+  competitors = [],
+  isRevealed = false,
+  onGuessChange,
+  onSaveGuess,
+}: GuessSongCardProps) {
   const { openSidebar } = useYouTubeSidebar();
   const { profile } = useAuth();
 
   // User preferences with defaults
   const preferredProvider = profile?.preferred_music_provider ?? "spotify";
   const showYoutubeVideo = profile?.show_youtube_video ?? true;
+
+  // Find guessed competitor name for display
+  const guessedCompetitor = guessState?.guessedCompetitorId
+    ? competitors.find((c) => c.id === guessState.guessedCompetitorId)
+    : null;
 
   // Helper to convert Spotify URI to URL
   const spotifyUriToUrl = (uri: string | null | undefined): string | null => {
@@ -84,7 +78,7 @@ export default function SongCard({
     switch (preferredProvider) {
       case "apple_music":
         return {
-          url: appleMusicUrl || spotifyUrl, // Fallback to Spotify if no Apple Music
+          url: appleMusicUrl || spotifyUrl,
           provider: appleMusicUrl ? "Apple Music" : "Spotify",
           icon: appleMusicUrl ? (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -98,7 +92,7 @@ export default function SongCard({
         };
       case "youtube_music":
         return {
-          url: youtubeMusicUrl || spotifyUrl, // Fallback to Spotify if no YT Music
+          url: youtubeMusicUrl || spotifyUrl,
           provider: youtubeMusicUrl ? "YouTube Music" : "Spotify",
           icon: youtubeMusicUrl ? (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -141,53 +135,92 @@ export default function SongCard({
     );
   };
 
-  const totalPoints = votes.reduce((sum, v) => sum + (v.points ?? 0), 0);
-  const voterNames = votes
-    .filter((v) => v.points && v.points > 0)
-    .map((v) => v.voter_name || "Anonymous");
-
-  const isRanked = rank && rank <= 3;
-
   return (
-    <div
-      className={clsx(
-        "song-card",
-        isRanked && "ranked",
-        isRanked && `rank-${rank}`
-      )}
-    >
-      {isRanked && (
-        <div className={clsx("song-card-trophy", getTrophyClass(rank))}>
-          {getTrophyEmoji(rank)}
-        </div>
-      )}
-
+    <div className="guess-song-card">
+      {/* Artwork */}
       {song.artwork_url ? (
         <img
           src={song.artwork_url}
           alt={song.title}
-          className="song-card-artwork"
+          className="guess-song-card-artwork"
         />
       ) : (
-        <div className="song-card-artwork" />
+        <div className="guess-song-card-artwork guess-song-card-artwork-placeholder">
+          🎵
+        </div>
       )}
 
-      <div className="song-card-info">
-        <h4 className="song-card-title">{song.title}</h4>
-        <p className="song-card-artist">{song.artist ?? "Unknown artist"}</p>
+      <div className="guess-song-card-info">
+        {/* Title and Artist */}
+        <h4 className="guess-song-card-title">{song.title}</h4>
+        <p className="guess-song-card-artist">{song.artist ?? "Unknown artist"}</p>
 
         {/* Show submitter name if revealed */}
-        {showSubmitter && song.submitter_name && (
-          <p className="song-card-submitter">by {song.submitter_name}</p>
+        {isRevealed && song.submitter_name && (
+          <p className="guess-song-card-submitter">by {song.submitter_name}</p>
         )}
 
-        <div className="song-card-actions">
+        {/* Submitter guess UI - only during voting phase when enabled */}
+        {guessEnabled && !isRevealed && onGuessChange && onSaveGuess && (
+          guessState?.isOwnSong ? (
+            <div className="guess-song-card-own">Your song</div>
+          ) : (
+            <div className="guess-song-card-guess">
+              <span className="guess-song-card-guess-label">Your guess:</span>
+              <select
+                value={guessState?.guessedCompetitorId || ""}
+                onChange={(e) => onGuessChange(e.target.value)}
+                disabled={guessState?.isSaving}
+                className="guess-song-card-guess-select"
+              >
+                <option value="">Select...</option>
+                {competitors.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={onSaveGuess}
+                disabled={!guessState?.guessedCompetitorId || guessState?.isSaving}
+                className="guess-song-card-guess-save"
+              >
+                {guessState?.isSaving ? "..." : "Save"}
+              </button>
+            </div>
+          )
+        )}
+
+        {/* Guess result - shown after reveal */}
+        {guessEnabled && isRevealed && guessState && !guessState.isOwnSong && (
+          <div
+            className={clsx(
+              "guess-song-card-result",
+              guessState.result === true && "correct",
+              guessState.result === false && "incorrect"
+            )}
+          >
+            {guessState.result === true && <span>✓ Correct!</span>}
+            {guessState.result === false && guessedCompetitor && (
+              <span>✗ You guessed {guessedCompetitor.name}</span>
+            )}
+            {guessState.result === null && guessState.guessedCompetitorId && guessedCompetitor && (
+              <span className="guess-song-card-result-pending">
+                You guessed {guessedCompetitor.name}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Music links */}
+        <div className="guess-song-card-actions">
           {primaryMusic.url && (
             <a
               href={primaryMusic.url}
               target="_blank"
               rel="noopener noreferrer"
-              className={`song-card-action music-provider ${preferredProvider}`}
+              className={`guess-song-card-action music-provider ${preferredProvider}`}
               title={`Listen on ${primaryMusic.provider}`}
             >
               {primaryMusic.icon}
@@ -196,7 +229,7 @@ export default function SongCard({
           {showYoutubeVideo && (
             <button
               type="button"
-              className={`song-card-action youtube ${song.youtube_url ? "has-link" : ""}`}
+              className={`guess-song-card-action youtube ${song.youtube_url ? "has-link" : ""}`}
               onClick={handleYouTubeClick}
               title={song.youtube_url ? "Play on YouTube" : "Search on YouTube"}
             >
@@ -205,40 +238,7 @@ export default function SongCard({
               </svg>
             </button>
           )}
-          {onQuote && (
-            <button
-              type="button"
-              className="song-card-action quote"
-              onClick={onQuote}
-              title="Quote in chat"
-            >
-              @
-            </button>
-          )}
         </div>
-
-        {showVotes && votes.length > 0 && (
-          <div className={clsx("song-card-voters", votersExpanded && "expanded")}>
-            <button
-              type="button"
-              className="song-card-voters-toggle"
-              onClick={() => setVotersExpanded(!votersExpanded)}
-            >
-              <span>{totalPoints} pts</span>
-              <span>•</span>
-              <span>{voterNames.length} voters</span>
-              <span>{votersExpanded ? "▲" : "▼"}</span>
-            </button>
-
-            <div className="song-card-voters-list">
-              {voterNames.map((name, index) => (
-                <span key={index} className="song-card-voter">
-                  {name}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

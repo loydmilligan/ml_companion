@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRound } from "../contexts/RoundContext";
 import { usePeekPanel, PeekTab } from "../components/pinned-peek";
+import { useGamesSidebar, GamesTab } from "../components/games-sidebar";
 import { useRealtimeChat, type ChatMessage, type MessageReaction } from "../hooks/useRealtimeChat";
 
 // AI mention detection pattern
@@ -125,6 +126,7 @@ export default function ChatPage() {
   const { group, profile } = useAuth();
   const { round } = useRound(); // Get round for AI context
   const { quotedSong, clearQuotedSong, openPanel } = usePeekPanel();
+  const { openSidebar: openGamesSidebar } = useGamesSidebar();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [reactions, setReactions] = useState<Map<string, ReactionCount[]>>(new Map());
   const [message, setMessage] = useState("");
@@ -762,6 +764,8 @@ export default function ChatPage() {
     <div className="chat-page">
       {/* Peek tab - cassette spine on right edge */}
       <PeekTab onClick={openPanel} variant="cassette" />
+      {/* Games tab - below Peek tab */}
+      <GamesTab onClick={() => openGamesSidebar()} />
 
       {/* Connection status banner */}
       {!isConnected && connectionState !== "connecting" && (

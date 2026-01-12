@@ -176,14 +176,10 @@ export default function PeekPanel({
     (roundChallengePhase === "open" && (round?.status === "voting" || round?.status === "revealed")) ||
     ((roundChallengePhase === "voting" || roundChallengePhase === "both") && round?.status === "revealed");
   const {
-    competitors: guessCompetitors,
-    guessStates,
     leaderboard,
     correctCount,
     totalGuessed,
     maxPossibleGuesses,
-    handleGuessChange,
-    handleSaveGuess,
   } = useSubmitterGuess(
     round?.id ?? null,
     groupId,
@@ -518,12 +514,6 @@ export default function PeekPanel({
                         showSubmitter={isVotingComplete}
                         showVotes={isVotingComplete}
                         onQuote={() => onQuoteSong(song)}
-                        guessEnabled={showGuessUI}
-                        guessState={guessStates[song.id]}
-                        competitors={guessCompetitors}
-                        isRevealed={isRevealed ?? false}
-                        onGuessChange={(competitorId) => handleGuessChange(song.id, competitorId)}
-                        onSaveGuess={() => handleSaveGuess(song.id)}
                       />
                     ))}
                   </div>
@@ -580,12 +570,6 @@ export default function PeekPanel({
                         showSubmitter={isVotingComplete}
                         showVotes={isVotingComplete}
                         onQuote={() => onQuoteSong(song)}
-                        guessEnabled={showGuessUI}
-                        guessState={guessStates[song.id]}
-                        competitors={guessCompetitors}
-                        isRevealed={isRevealed ?? false}
-                        onGuessChange={(competitorId) => handleGuessChange(song.id, competitorId)}
-                        onSaveGuess={() => handleSaveGuess(song.id)}
                       />
                     ))}
                   </div>
@@ -602,12 +586,6 @@ export default function PeekPanel({
                         showSubmitter={isVotingComplete}
                         showVotes={isVotingComplete}
                         onQuote={() => onQuoteSong(song)}
-                        guessEnabled={showGuessUI}
-                        guessState={guessStates[song.id]}
-                        competitors={guessCompetitors}
-                        isRevealed={isRevealed ?? false}
-                        onGuessChange={(competitorId) => handleGuessChange(song.id, competitorId)}
-                        onSaveGuess={() => handleSaveGuess(song.id)}
                       />
                     ))}
                     {submissions.length === 0 && (
