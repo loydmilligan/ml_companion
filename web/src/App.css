@@ -4378,6 +4378,7 @@
 
 .song-card-guess {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   margin: 8px 0;
@@ -4387,6 +4388,7 @@
   font-size: 0.8rem;
   color: var(--text-muted);
   white-space: nowrap;
+  width: 100%; /* Force label onto its own row */
 }
 
 .song-card-guess-select {
@@ -4397,7 +4399,7 @@
   border-radius: 6px;
   background: var(--surface-primary);
   color: var(--text-primary);
-  min-width: 0;
+  min-width: 100px;
 }
 
 /* Force readable text in dropdown options */
