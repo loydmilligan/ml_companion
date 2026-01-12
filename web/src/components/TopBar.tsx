@@ -21,11 +21,6 @@ export default function TopBar() {
     awards,
     activity,
     competitors,
-    submittedCount,
-    votedCount,
-    totalMembers,
-    submissionUrgency,
-    votingUrgency,
     isVotingComplete,
   } = useRound();
   const { isOpen: isPeekOpen, openPanel: _openPanel, closePanel, setQuotedSong } = usePeekPanel();
