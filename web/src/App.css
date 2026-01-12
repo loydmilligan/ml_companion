@@ -6763,8 +6763,8 @@
 .games-tab {
   position: fixed;
   right: 0;
-  /* Position below the cassette spine (peek tab at 35%, cassette ~280px tall, so bottom at ~35% + 140px) */
-  top: calc(35% + 144px);
+  /* Position 3px below the cassette spine (peek tab at 35%, cassette ~280px tall centered, bottom at ~35% + 140px) */
+  top: calc(35% + 143px);
   z-index: 40;
   padding: 0;
   margin: 0;
@@ -6787,8 +6787,9 @@
 
 .games-tab-img {
   display: block;
-  width: 20px;
+  width: auto;
   height: auto;
+  max-height: 100px;
   filter: drop-shadow(-2px 2px 4px rgba(0, 0, 0, 0.2));
 }
 
@@ -7873,15 +7874,17 @@
   background: rgba(255, 0, 0, 0.2);
 }
 
-/* Responsive adjustments for games tab */
+/* Responsive adjustments for games tab - maintain 3px gap below cassette */
 @media (max-height: 700px) {
   .games-tab {
-    top: calc(30% + 104px);
+    /* peek-tab moves to 30%, cassette still 280px max-height (140px from center) */
+    top: calc(30% + 143px);
   }
 }
 
 @media (max-height: 500px) {
   .games-tab {
-    top: calc(30% + 80px);
+    /* peek-tab at 30%, cassette shrinks to 200px max-height (100px from center) */
+    top: calc(30% + 103px);
   }
 }
