@@ -6766,36 +6766,46 @@
   top: calc(35% + 150px);
   transform: translateY(-50%);
   z-index: 40;
-  padding: 12px 8px;
+  padding: 0;
   margin: 0;
   border: none;
-  background: var(--coral);
+  background: transparent;
   cursor: pointer;
-  transition: transform 0.2s ease, background-color 0.2s ease;
+  transition: transform 0.2s ease;
   -webkit-tap-highlight-color: transparent;
-  border-radius: 8px 0 0 8px;
-  box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .games-tab:hover,
 .games-tab:focus {
   transform: translateY(-50%) translateX(-4px);
   outline: none;
-  background: #e87662;
 }
 
 .games-tab:active {
   transform: translateY(-50%) translateX(-6px);
 }
 
-.games-tab-text {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: white;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+.games-tab-img {
+  display: block;
+  width: 45px;
+  height: auto;
+  filter: drop-shadow(-2px 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* Light mode: show light image, hide dark */
+.games-tab-img-light {
+  display: block;
+}
+.games-tab-img-dark {
+  display: none;
+}
+
+/* Dark mode: show dark image, hide light */
+[data-mode="dark"] .games-tab-img-light {
+  display: none;
+}
+[data-mode="dark"] .games-tab-img-dark {
+  display: block;
 }
 
 /* Games Sidebar Backdrop */
@@ -7355,6 +7365,297 @@
   margin: 0;
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+/* Timeline Game (inline in sidebar) */
+.timeline-game {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.timeline-game-intro {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.timeline-game-intro h3 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.timeline-game-intro p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.timeline-game-attempt {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--coral);
+  color: white;
+  border-radius: 12px;
+}
+
+.timeline-game-loading,
+.timeline-game-unavailable {
+  text-align: center;
+  padding: 24px 16px;
+}
+
+.timeline-game-unavailable h3 {
+  margin: 12px 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.timeline-game-promo-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 16px;
+  object-fit: cover;
+  margin-bottom: 8px;
+}
+
+.timeline-game-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.timeline-game-hint-message {
+  background: var(--coral);
+  color: white;
+  padding: 10px 14px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-radius: 8px;
+}
+
+.timeline-game-leaderboard {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.timeline-game-leaderboard h4 {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.timeline-game-leaderboard .leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timeline-game-leaderboard .leaderboard-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  background: rgba(10, 26, 47, 0.03);
+  border-radius: 6px;
+}
+
+[data-mode="dark"] .timeline-game-leaderboard .leaderboard-entry {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.timeline-game-score {
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 12px;
+  background: var(--surface);
+  border-radius: 12px;
+}
+
+.timeline-game-score-value {
+  color: var(--coral);
+  font-size: 1.3rem;
+}
+
+/* Timeline track with songs */
+.timeline-game-track-wrapper {
+  display: flex;
+  gap: 8px;
+}
+
+.timeline-game-track {
+  width: 32px;
+  flex-shrink: 0;
+  background: linear-gradient(to bottom, var(--coral), #e87662);
+  border-radius: 8px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+}
+
+.timeline-game-track-line {
+  position: absolute;
+  left: 50%;
+  top: 48px;
+  bottom: 48px;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.4);
+  transform: translateX(-50%);
+}
+
+.timeline-game-track-label {
+  font-size: 0.55rem;
+  color: white;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.2;
+  z-index: 1;
+}
+
+.timeline-game-track-label-top {
+  margin-bottom: auto;
+}
+
+.timeline-game-track-label-bottom {
+  margin-top: auto;
+}
+
+.timeline-game-songs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Timeline Song Item */
+.timeline-song-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  background: rgba(10, 26, 47, 0.03);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  touch-action: none;
+  user-select: none;
+}
+
+[data-mode="dark"] .timeline-song-item {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.timeline-song-item.dragging {
+  opacity: 0.5;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.timeline-song-item.disabled {
+  cursor: default;
+}
+
+.timeline-song-item.correct {
+  border-color: var(--success, #22c55e);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.timeline-song-item.incorrect {
+  border-color: var(--error, #ef4444);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.timeline-song-item-art {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-secondary, rgba(10, 26, 47, 0.03));
+  flex-shrink: 0;
+}
+
+.timeline-song-item-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.timeline-song-item-art-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.timeline-song-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.timeline-song-item-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeline-song-item-artist {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeline-song-item-year {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--coral);
+}
+
+.timeline-song-item-result {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.timeline-song-item.correct .timeline-song-item-result {
+  background: var(--success, #22c55e);
+  color: white;
+}
+
+.timeline-song-item.incorrect .timeline-song-item-result {
+  background: var(--error, #ef4444);
+  color: white;
+}
+
+.timeline-game-actions {
+  margin-top: 8px;
 }
 
 /* Guess Song Card */

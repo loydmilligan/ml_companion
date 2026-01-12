@@ -1,12 +1,12 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import clsx from "clsx";
 import { useGamesSidebar, type GameTab } from "./GamesSidebarContext";
 import { useSubmitterGuess } from "../pinned-peek/useSubmitterGuess";
 import { useRound } from "../../contexts/RoundContext";
 import { useAuth } from "../../contexts/AuthContext";
-import TimelineGameModal from "../pinned-peek/TimelineGameModal";
 import GuessSongCard from "./GuessSongCard";
 import RoundChallengeGame from "./RoundChallengeGame";
+import TimelineGame from "./TimelineGame";
 
 type GamesSidebarProps = {
   roundChallengeEnabled?: boolean;
@@ -29,8 +29,6 @@ export default function GamesSidebar({
   const { round, submissions } = useRound();
   const { group } = useAuth();
   const groupId = group?.id ?? null;
-
-  const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
 
   // Swipe-to-close state
   const panelRef = useRef<HTMLElement>(null);
@@ -181,17 +179,10 @@ export default function GamesSidebar({
     { id: "round-challenge", label: "Challenge", icon: "🎮", available: showRoundChallenge, disabledReason: getChallengeDisabledReason() },
   ];
 
-  // Handle tab click for modal-based games
+  // Handle tab click
   const handleTabClick = (tabId: GameTab, isAvailable: boolean) => {
     if (!isAvailable) return; // Don't do anything for disabled tabs
-
-    if (tabId === "timeline") {
-      setIsTimelineModalOpen(true);
-      closeSidebar();
-    } else {
-      // For submitter-guess and round-challenge, just set the tab
-      setActiveTab(tabId);
-    }
+    setActiveTab(tabId);
   };
 
   // Render content based on active tab
@@ -264,25 +255,11 @@ export default function GamesSidebar({
     if (activeTab === "timeline" && showTimelineGame) {
       return (
         <div className="games-sidebar-content">
-          <div className="games-sidebar-section games-sidebar-coming-soon">
-            <img
-              src="/images/minigames/timeline-game.png"
-              alt="Timeline Game"
-              className="games-sidebar-game-image"
-            />
-            <h3>Timeline Game</h3>
-            <p>Arrange songs by release year</p>
-            <button
-              type="button"
-              className="games-sidebar-play-btn"
-              onClick={() => {
-                setIsTimelineModalOpen(true);
-                closeSidebar();
-              }}
-            >
-              Play Now
-            </button>
-          </div>
+          <TimelineGame
+            roundId={round?.id ?? null}
+            groupId={groupId}
+            isRevealed={isRevealed ?? false}
+          />
         </div>
       );
     }
@@ -372,14 +349,6 @@ export default function GamesSidebar({
         {renderContent()}
       </aside>
 
-      {/* Timeline Game Modal */}
-      <TimelineGameModal
-        isOpen={isTimelineModalOpen}
-        onClose={() => setIsTimelineModalOpen(false)}
-        roundId={round?.id ?? null}
-        groupId={groupId}
-        isRevealed={isRevealed ?? false}
-      />
     </>
   );
 }
