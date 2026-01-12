@@ -5,8 +5,8 @@ import { useSubmitterGuess } from "../pinned-peek/useSubmitterGuess";
 import { useRound } from "../../contexts/RoundContext";
 import { useAuth } from "../../contexts/AuthContext";
 import TimelineGameModal from "../pinned-peek/TimelineGameModal";
-import RoundChallengeModal from "../pinned-peek/RoundChallengeModal";
 import GuessSongCard from "./GuessSongCard";
+import RoundChallengeGame from "./RoundChallengeGame";
 
 type GamesSidebarProps = {
   roundChallengeEnabled?: boolean;
@@ -31,7 +31,6 @@ export default function GamesSidebar({
   const groupId = group?.id ?? null;
 
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
-  const [isRoundChallengeModalOpen, setIsRoundChallengeModalOpen] = useState(false);
 
   // Swipe-to-close state
   const panelRef = useRef<HTMLElement>(null);
@@ -135,24 +134,62 @@ export default function GamesSidebar({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, closeSidebar]);
 
-  // Tab definitions
-  const tabs: { id: GameTab; label: string; icon: string; available: boolean }[] = [
-    { id: "submitter-guess", label: "Guess", icon: "🎯", available: showGuessUI },
-    { id: "timeline", label: "Timeline", icon: "📅", available: showTimelineGame },
-    { id: "round-challenge", label: "Challenge", icon: "🎮", available: showRoundChallenge },
+  // Determine disabled reasons for each game
+  const getGuessDisabledReason = (): string | null => {
+    if (!submitterGuessEnabled) return "Disabled by admin";
+    if (!round) return "No active round";
+    if (round.status === "open") return "Available during voting";
+    if (round.status === "archived") return "Round archived";
+    return null;
+  };
+
+  const getTimelineDisabledReason = (): string | null => {
+    if (!timelineGameEnabled) return "Disabled by admin";
+    if (!isTimelineTester) return "Beta testers only";
+    if (!round) return "No active round";
+    const inPhase =
+      (timelineGamePhase === "voting" && round.status === "voting") ||
+      (timelineGamePhase === "revealed" && round.status === "revealed") ||
+      (timelineGamePhase === "both" && (round.status === "voting" || round.status === "revealed"));
+    if (!inPhase) {
+      if (timelineGamePhase === "voting") return "Available during voting";
+      if (timelineGamePhase === "revealed") return "Available after reveal";
+      return "Not available this phase";
+    }
+    return null;
+  };
+
+  const getChallengeDisabledReason = (): string | null => {
+    if (!roundChallengeEnabled) return "Disabled by admin";
+    if (!round) return "No active round";
+    const inPhase =
+      (roundChallengePhase === "open" && round.status === "open") ||
+      (roundChallengePhase === "voting" && round.status === "voting") ||
+      (roundChallengePhase === "both" && (round.status === "open" || round.status === "voting"));
+    if (!inPhase) {
+      if (roundChallengePhase === "open") return "Available during submissions";
+      if (roundChallengePhase === "voting") return "Available during voting";
+      return "Not available this phase";
+    }
+    return null;
+  };
+
+  // Tab definitions with disabled reasons
+  const tabs: { id: GameTab; label: string; icon: string; available: boolean; disabledReason: string | null }[] = [
+    { id: "submitter-guess", label: "Guess", icon: "🎯", available: showGuessUI, disabledReason: getGuessDisabledReason() },
+    { id: "timeline", label: "Timeline", icon: "📅", available: showTimelineGame, disabledReason: getTimelineDisabledReason() },
+    { id: "round-challenge", label: "Challenge", icon: "🎮", available: showRoundChallenge, disabledReason: getChallengeDisabledReason() },
   ];
 
-  const availableTabs = tabs.filter((t) => t.available);
-
   // Handle tab click for modal-based games
-  const handleTabClick = (tabId: GameTab) => {
+  const handleTabClick = (tabId: GameTab, isAvailable: boolean) => {
+    if (!isAvailable) return; // Don't do anything for disabled tabs
+
     if (tabId === "timeline") {
       setIsTimelineModalOpen(true);
       closeSidebar();
-    } else if (tabId === "round-challenge") {
-      setIsRoundChallengeModalOpen(true);
-      closeSidebar();
     } else {
+      // For submitter-guess and round-challenge, just set the tab
       setActiveTab(tabId);
     }
   };
@@ -253,25 +290,11 @@ export default function GamesSidebar({
     if (activeTab === "round-challenge" && showRoundChallenge) {
       return (
         <div className="games-sidebar-content">
-          <div className="games-sidebar-section games-sidebar-coming-soon">
-            <img
-              src="/images/minigames/round-challenge.png"
-              alt="Round Challenge"
-              className="games-sidebar-game-image"
-            />
-            <h3>Round Challenge</h3>
-            <p>Match songs to Season 1 themes</p>
-            <button
-              type="button"
-              className="games-sidebar-play-btn"
-              onClick={() => {
-                setIsRoundChallengeModalOpen(true);
-                closeSidebar();
-              }}
-            >
-              Play Now
-            </button>
-          </div>
+          <RoundChallengeGame
+            roundId={round?.id ?? null}
+            groupId={groupId}
+            isRevealed={isRoundChallengeRevealed ?? false}
+          />
         </div>
       );
     }
@@ -321,25 +344,29 @@ export default function GamesSidebar({
           </button>
         </div>
 
-        {/* Tab bar */}
-        {availableTabs.length > 0 && (
-          <div className="games-sidebar-tabs">
-            {availableTabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                className={clsx(
-                  "games-sidebar-tab",
-                  activeTab === tab.id && "active"
-                )}
-                onClick={() => handleTabClick(tab.id)}
-              >
-                <span className="games-sidebar-tab-icon">{tab.icon}</span>
-                <span className="games-sidebar-tab-label">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Tab bar - always show all tabs */}
+        <div className="games-sidebar-tabs">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={clsx(
+                "games-sidebar-tab",
+                activeTab === tab.id && tab.available && "active",
+                !tab.available && "disabled"
+              )}
+              onClick={() => handleTabClick(tab.id, tab.available)}
+              disabled={!tab.available}
+              title={tab.disabledReason ?? undefined}
+            >
+              <span className="games-sidebar-tab-icon">{tab.icon}</span>
+              <span className="games-sidebar-tab-label">{tab.label}</span>
+              {tab.disabledReason && (
+                <span className="games-sidebar-tab-hint">{tab.disabledReason}</span>
+              )}
+            </button>
+          ))}
+        </div>
 
         {/* Content */}
         {renderContent()}
@@ -352,15 +379,6 @@ export default function GamesSidebar({
         roundId={round?.id ?? null}
         groupId={groupId}
         isRevealed={isRevealed ?? false}
-      />
-
-      {/* Round Challenge Modal */}
-      <RoundChallengeModal
-        isOpen={isRoundChallengeModalOpen}
-        onClose={() => setIsRoundChallengeModalOpen(false)}
-        roundId={round?.id ?? null}
-        groupId={groupId}
-        isRevealed={isRoundChallengeRevealed ?? false}
       />
     </>
   );

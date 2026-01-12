@@ -1,15 +1,12 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import clsx from "clsx";
 import SongCard from "./SongCard";
 import AIAssistant from "./AIAssistant";
 import CollapsibleSection from "./CollapsibleSection";
 import ProgressSection from "./ProgressSection";
 import RoundCountdown from "./RoundCountdown";
-import TimelineGameModal from "./TimelineGameModal";
-import RoundChallengeModal from "./RoundChallengeModal";
 import DualNeedleGauge from "./DualNeedleGauge";
 import { useYouTubeSidebar } from "../youtube-sidebar";
-import { useSubmitterGuess } from "./useSubmitterGuess";
 import { useRound } from "../../contexts/RoundContext";
 
 type SubmissionRow = {
@@ -46,12 +43,6 @@ type ActivityRecord = {
   profile_id: string | null;
 };
 
-type Competitor = {
-  id: string;
-  name: string;
-  profile_id: string | null;
-};
-
 type RoundSummary = {
   id: string;
   theme: string;
@@ -71,47 +62,29 @@ type PeekPanelProps = {
   isOpen: boolean;
   onClose: () => void;
   round: RoundSummary | null;
-  groupId: string | null;
   submissions: SubmissionRow[];
   votes: VoteRow[];
   awards: RoundAwardRow[];
   activity: ActivityRecord[];
-  competitors: Competitor[];
   isVotingComplete: boolean;
   onQuoteSong: (song: SubmissionRow) => void;
   narrative?: string | null;
-  roundChallengeEnabled?: boolean;
-  roundChallengePhase?: "open" | "voting" | "both";
-  submitterGuessEnabled?: boolean;
-  timelineGameEnabled?: boolean;
-  timelineGamePhase?: "voting" | "revealed" | "both";
-  isTimelineTester?: boolean;
 };
 
 export default function PeekPanel({
   isOpen,
   onClose,
   round,
-  groupId,
   submissions,
   votes,
   awards,
   activity,
-  competitors,
   isVotingComplete,
   onQuoteSong,
   narrative,
-  roundChallengeEnabled = true,
-  roundChallengePhase = "open",
-  submitterGuessEnabled = true,
-  timelineGameEnabled = false,
-  timelineGamePhase = "voting",
-  isTimelineTester = false,
 }: PeekPanelProps) {
   const { openPlaylist } = useYouTubeSidebar();
-  const { submissionUrgency, votingUrgency } = useRound();
-  const [isTimelineGameOpen, setIsTimelineGameOpen] = useState(false);
-  const [isRoundChallengeOpen, setIsRoundChallengeOpen] = useState(false);
+  const { submissionUrgency, votingUrgency, competitors } = useRound();
 
   // Swipe-to-close state
   const panelRef = useRef<HTMLElement>(null);
@@ -142,50 +115,6 @@ export default function PeekPanel({
     touchStartX.current = null;
     touchStartY.current = null;
   }, [onClose]);
-
-  // Submitter guess state
-  const isRevealed = round?.status === "revealed";
-  const showGuessUI = submitterGuessEnabled && (round?.status === "voting" || round?.status === "revealed");
-
-  // Timeline game visibility
-  const showTimelineGame =
-    timelineGameEnabled &&
-    isTimelineTester &&
-    round &&
-    (
-      (timelineGamePhase === "voting" && round.status === "voting") ||
-      (timelineGamePhase === "revealed" && round.status === "revealed") ||
-      (timelineGamePhase === "both" && (round.status === "voting" || round.status === "revealed"))
-    );
-
-  // Round Challenge visibility based on phase setting
-  const showRoundChallenge =
-    roundChallengeEnabled &&
-    round &&
-    (
-      (roundChallengePhase === "open" && round.status === "open") ||
-      (roundChallengePhase === "voting" && round.status === "voting") ||
-      (roundChallengePhase === "both" && (round.status === "open" || round.status === "voting"))
-    );
-
-  // Round Challenge answer revelation:
-  // - "open" phase: reveal when voting starts (status becomes "voting" or "revealed")
-  // - "voting" phase: reveal when voting ends (status becomes "revealed")
-  // - "both" phases: reveal when voting ends (status becomes "revealed")
-  const isRoundChallengeRevealed =
-    (roundChallengePhase === "open" && (round?.status === "voting" || round?.status === "revealed")) ||
-    ((roundChallengePhase === "voting" || roundChallengePhase === "both") && round?.status === "revealed");
-  const {
-    leaderboard,
-    correctCount,
-    totalGuessed,
-    maxPossibleGuesses,
-  } = useSubmitterGuess(
-    round?.id ?? null,
-    groupId,
-    submissions,
-    isRevealed ?? false
-  );
 
   // Prevent body scroll when panel is open
   useEffect(() => {
@@ -382,117 +311,6 @@ export default function PeekPanel({
                 </CollapsibleSection>
               )}
 
-              {/* Minigames Section */}
-              {((round.status === "open" && showRoundChallenge) ||
-                (round.status === "voting" && (showTimelineGame || showGuessUI)) ||
-                (round.status === "revealed" && (showTimelineGame || showGuessUI))) && (
-                <CollapsibleSection
-                  id="minigames"
-                  title="Minigames"
-                  icon="🎮"
-                  defaultExpanded={true}
-                >
-                  {/* Round Challenge - visibility based on phase setting */}
-                  {showRoundChallenge && (
-                    <button
-                      type="button"
-                      className="minigame-card"
-                      onClick={() => {
-                        setIsRoundChallengeOpen(true);
-                        onClose();
-                      }}
-                    >
-                      <img
-                        src="/images/minigames/round-challenge.png"
-                        srcSet="/images/minigames/round-challenge.png 1x,
-                                /images/minigames/round-challenge@2x.png 2x,
-                                /images/minigames/round-challenge@3x.png 3x"
-                        alt=""
-                        className="minigame-card-bg"
-                      />
-                      <div className="minigame-card-content">
-                        <span className="minigame-card-title">Round Challenge</span>
-                        <span className="minigame-card-subtitle">Match songs to Season 1 themes</span>
-                      </div>
-                    </button>
-                  )}
-
-                  {/* Timeline Game Card */}
-                  {showTimelineGame && (
-                    <button
-                      type="button"
-                      className="minigame-card"
-                      onClick={() => {
-                        setIsTimelineGameOpen(true);
-                        onClose();
-                      }}
-                    >
-                      <img
-                        src="/images/minigames/timeline-game.png"
-                        srcSet="/images/minigames/timeline-game.png 1x,
-                                /images/minigames/timeline-game@2x.png 2x,
-                                /images/minigames/timeline-game@3x.png 3x"
-                        alt=""
-                        className="minigame-card-bg"
-                      />
-                      <div className="minigame-card-content">
-                        <span className="minigame-card-title">Timeline Game</span>
-                        <span className="minigame-card-subtitle">Arrange songs by release year</span>
-                      </div>
-                    </button>
-                  )}
-
-                  {/* Submitter Guess Header */}
-                  {showGuessUI && groupId && (
-                    <div className="minigame-item minigame-with-card">
-                      <div className="minigame-card-header">
-                        <img
-                          src="/images/minigames/guess-submitter.png"
-                          srcSet="/images/minigames/guess-submitter.png 1x,
-                                  /images/minigames/guess-submitter@2x.png 2x,
-                                  /images/minigames/guess-submitter@3x.png 3x"
-                          alt=""
-                          className="minigame-card-bg"
-                        />
-                        <div className="minigame-card-content">
-                          <span className="minigame-card-title">Guess the Submitter</span>
-                          <span className="minigame-card-subtitle">
-                            {isRevealed
-                              ? "Results are in! See how you did below."
-                              : "Choose who submitted each song below"}
-                          </span>
-                        </div>
-                        {maxPossibleGuesses > 0 && (
-                          <span className="minigame-card-badge">
-                            {isRevealed
-                              ? `${correctCount}/${maxPossibleGuesses}`
-                              : `${totalGuessed}/${maxPossibleGuesses}`}
-                          </span>
-                        )}
-                      </div>
-                      {isRevealed && leaderboard.length > 0 && (
-                        <div className="submitter-guess-leaderboard">
-                          <h5>Top Guessers</h5>
-                          <div className="leaderboard-list">
-                            {leaderboard.map((entry, index) => (
-                              <div key={entry.guesser_id} className="leaderboard-entry">
-                                <span className="leaderboard-rank">
-                                  {index === 0 ? "1st" : index === 1 ? "2nd" : "3rd"}
-                                </span>
-                                <span className="leaderboard-name">{entry.guesser_name}</span>
-                                <span className="leaderboard-score">
-                                  {entry.correct_count}/{entry.total_guesses}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CollapsibleSection>
-              )}
-
               {/* Songs Section */}
               <CollapsibleSection
                 id="songs"
@@ -606,24 +424,6 @@ export default function PeekPanel({
           )}
         </div>
       </aside>
-
-      {/* Timeline Game Modal */}
-      <TimelineGameModal
-        isOpen={isTimelineGameOpen}
-        onClose={() => setIsTimelineGameOpen(false)}
-        roundId={round?.id ?? null}
-        groupId={groupId}
-        isRevealed={isRevealed ?? false}
-      />
-
-      {/* Round Challenge Modal */}
-      <RoundChallengeModal
-        isOpen={isRoundChallengeOpen}
-        onClose={() => setIsRoundChallengeOpen(false)}
-        roundId={round?.id ?? null}
-        groupId={groupId}
-        isRevealed={isRoundChallengeRevealed ?? false}
-      />
     </>
   );
 }

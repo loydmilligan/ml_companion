@@ -6916,6 +6916,30 @@
   letter-spacing: 0.3px;
 }
 
+.games-sidebar-tab-hint {
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+  text-transform: none;
+  font-weight: 400;
+  max-width: 100%;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.games-sidebar-tab.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.games-sidebar-tab.disabled:hover {
+  background: transparent;
+}
+
+.games-sidebar-tab.disabled .games-sidebar-tab-icon {
+  filter: grayscale(1);
+}
+
 /* Games Sidebar Content */
 .games-sidebar-content {
   flex: 1;
@@ -7071,6 +7095,266 @@
   font-size: 0.8rem;
   color: var(--text-muted);
   opacity: 0.7;
+}
+
+/* Round Challenge Game (inline in sidebar) */
+.rc-game {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rc-game-intro {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.rc-game-intro h3 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.rc-game-intro p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.rc-game-loading,
+.rc-game-unavailable,
+.rc-game-error {
+  text-align: center;
+  padding: 24px 16px;
+}
+
+.rc-game-unavailable h3 {
+  margin: 12px 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.rc-game-promo-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 16px;
+  object-fit: cover;
+  margin-bottom: 8px;
+}
+
+.rc-game-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.rc-game-songs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rc-game-song-card {
+  background: var(--surface);
+  border: 2px solid var(--border, rgba(10, 26, 47, 0.1));
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rc-game-song-card.correct {
+  border-color: var(--success, #22c55e);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.rc-game-song-card.incorrect {
+  border-color: var(--error, #ef4444);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.rc-game-song-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rc-game-song-art {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-secondary, rgba(10, 26, 47, 0.03));
+  flex-shrink: 0;
+}
+
+.rc-game-song-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rc-game-song-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.rc-game-song-play {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 22px;
+  height: 22px;
+  background: #ff0000;
+  border-radius: 50%;
+  color: white;
+  font-size: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.rc-game-song-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rc-game-song-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rc-game-song-artist {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rc-game-result {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.rc-game-result.correct {
+  background: var(--success, #22c55e);
+  color: white;
+}
+
+.rc-game-result.incorrect {
+  background: var(--error, #ef4444);
+  color: white;
+}
+
+.rc-game-song-select-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rc-game-song-select-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.rc-game-song-select {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border, rgba(10, 26, 47, 0.15));
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+.rc-game-song-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rc-game-song-select:focus {
+  outline: none;
+  border-color: var(--coral);
+  box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.2);
+}
+
+.rc-game-correct-answer {
+  font-size: 0.8rem;
+  color: var(--error, #ef4444);
+  padding: 4px 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 6px;
+}
+
+.rc-game-actions {
+  margin-top: 8px;
+}
+
+.rc-game-actions-hint {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 8px 0 0 0;
+}
+
+.rc-game-score {
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 16px;
+  background: var(--surface);
+  border-radius: 12px;
+}
+
+.rc-game-score-value {
+  color: var(--coral);
+  font-size: 1.3rem;
+}
+
+.rc-game-locked {
+  text-align: center;
+  padding: 16px;
+  background: var(--surface);
+  border-radius: 12px;
+}
+
+.rc-game-locked p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 /* Guess Song Card */

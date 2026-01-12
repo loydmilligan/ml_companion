@@ -21,7 +21,6 @@ export default function TopBar() {
     votes,
     awards,
     activity,
-    competitors,
     isVotingComplete,
   } = useRound();
   const { isOpen: isPeekOpen, openPanel: _openPanel, closePanel, setQuotedSong } = usePeekPanel();
@@ -213,20 +212,12 @@ export default function TopBar() {
         isOpen={isPeekOpen}
         onClose={closePanel}
         round={round}
-        groupId={group?.id ?? null}
         submissions={submissions}
         votes={votes}
         awards={awards}
         activity={activity}
-        competitors={competitors}
         isVotingComplete={isVotingComplete}
         onQuoteSong={handleQuoteSong}
-        roundChallengeEnabled={roundChallengeEnabled}
-        roundChallengePhase={roundChallengePhase}
-        submitterGuessEnabled={submitterGuessEnabled}
-        timelineGameEnabled={timelineGameEnabled}
-        timelineGamePhase={timelineGamePhase}
-        isTimelineTester={isTimelineTester}
       />
 
       {/* Games Sidebar (slide-out from right) */}
