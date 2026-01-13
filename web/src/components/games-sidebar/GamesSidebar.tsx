@@ -7,6 +7,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import GuessSongCard from "./GuessSongCard";
 import RoundChallengeGame from "./RoundChallengeGame";
 import TimelineGame from "./TimelineGame";
+import RotatedCassetteBanner from "../side-panels/RotatedCassetteBanner";
 
 type GamesSidebarProps = {
   roundChallengeEnabled?: boolean;
@@ -308,18 +309,11 @@ export default function GamesSidebar({
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Header */}
-        <div className="games-sidebar-header">
-          <h2 className="games-sidebar-title">Minigames</h2>
-          <button
-            type="button"
-            className="games-sidebar-close"
-            onClick={closeSidebar}
-            aria-label="Close panel"
-          >
-            ✕
-          </button>
-        </div>
+        {/* Rotated Cassette Banner Header */}
+        <RotatedCassetteBanner
+          roundNumber={round?.round_number}
+          onClose={closeSidebar}
+        />
 
         {/* Tab bar - always show all tabs */}
         <div className="games-sidebar-tabs">

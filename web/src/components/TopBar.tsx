@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
@@ -40,8 +40,31 @@ export default function TopBar() {
   const [roundChallengePhase, setRoundChallengePhase] = useState<"open" | "voting" | "both">("open");
   const [isTimelineTester, setIsTimelineTester] = useState(false);
   const [dmUnreadCount, setDmUnreadCount] = useState(0);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const displayName = profile?.display_name ?? "Family Lead";
+
+  // Detect dark mode for title image
+  useEffect(() => {
+    const checkDarkMode = () => {
+      const mode = document.documentElement.getAttribute("data-mode");
+      setIsDarkMode(mode === "dark");
+    };
+
+    checkDarkMode();
+
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-mode"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const titleImageSrc = useMemo(() =>
+    isDarkMode ? "/images/title_text_dark.png" : "/images/title_text_light.png"
+  , [isDarkMode]);
 
   const handleQuoteSong = (song: { id: string; title: string; artist: string | null; link: string | null; artwork_url: string | null }) => {
     setQuotedSong(song);
@@ -164,7 +187,12 @@ export default function TopBar() {
           <div className="brand-mark" aria-hidden="true">
             <img className="brand-mark-img" src="/brand-logo.png" alt="Talking Music League logo" />
           </div>
-          <div className="brand-title">Talking Music League</div>
+          <img
+            className="brand-title-img"
+            src={titleImageSrc}
+            alt="Talking Music League"
+            draggable={false}
+          />
         </button>
         <nav className="top-bar-actions">
           {/* Avatar - opens profile drawer */}

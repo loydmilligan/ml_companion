@@ -55,25 +55,13 @@ export default function RotatedCassetteBanner({
       : `/images/peek-tab/${prefix}-light.png`;
   }, [isDarkMode, roundNumber]);
 
-  const titleSrc = isDarkMode
-    ? "/images/title_text_dark.png"
-    : "/images/title_text_light.png";
-
   return (
     <div className="rotated-cassette-banner">
-      <div className="rotated-cassette-banner-content">
-        <div className="rotated-cassette-banner-wrapper">
-          <img
-            src={imageSrc}
-            alt={roundNumber ? `Round ${roundNumber}` : ""}
-            className="rotated-cassette-banner-img"
-            draggable={false}
-          />
-        </div>
+      <div className="rotated-cassette-banner-wrapper">
         <img
-          src={titleSrc}
-          alt="Talking Music League"
-          className="rotated-cassette-banner-title"
+          src={imageSrc}
+          alt={roundNumber ? `Round ${roundNumber}` : ""}
+          className="rotated-cassette-banner-img"
           draggable={false}
         />
       </div>
