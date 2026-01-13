@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useRoundChallenge } from "../pinned-peek/useRoundChallenge";
 import type { ChallengeSong } from "../pinned-peek/useRoundChallenge";
 import Button from "../Button";
+import ThemeLegendModal from "./ThemeLegendModal";
 
 type RoundChallengeGameProps = {
   roundId: string | null;
@@ -33,6 +34,7 @@ export default function RoundChallengeGame({
   } = useRoundChallenge(roundId, groupId, isRevealed);
 
   const [selectedSongInfo, setSelectedSongInfo] = useState<ChallengeSong | null>(null);
+  const [showThemeLegend, setShowThemeLegend] = useState(false);
 
   // Reload data when component mounts
   useEffect(() => {
@@ -107,7 +109,23 @@ export default function RoundChallengeGame({
             ? "Your answers are locked. Results will be shown when the round ends."
             : "Match each song to the Season 1 theme it belongs to."}
         </p>
+        {/* Theme Legend trigger */}
+        <button
+          type="button"
+          className="rc-game-theme-legend-btn"
+          onClick={() => setShowThemeLegend(true)}
+        >
+          <span className="rc-game-theme-legend-icon">📋</span>
+          <span className="rc-game-theme-legend-text">Theme Legend</span>
+        </button>
       </div>
+
+      {/* Theme Legend Modal */}
+      <ThemeLegendModal
+        isOpen={showThemeLegend}
+        onClose={() => setShowThemeLegend(false)}
+        themes={themes}
+      />
 
       {/* Song cards with dropdowns */}
       <div className="rc-game-songs">

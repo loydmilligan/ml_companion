@@ -168,7 +168,7 @@ export function RoundProvider({ children }: { children: ReactNode }) {
         // Get submissions
         supabase
           .from("submissions")
-          .select("id,title,artist,link,artwork_url,release_year,genres,submitter_name,youtube_url,spotify_url,submitter_comment")
+          .select("id,title,artist,link,artwork_url,release_year,genres,submitter_name,youtube_url,spotify_url,apple_music_url,youtube_music_url,submitter_comment")
           .eq("round_id", roundData.id)
           .order("created_at", { ascending: true }),
         // Get awards if revealed
