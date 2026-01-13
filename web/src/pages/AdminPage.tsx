@@ -1012,17 +1012,49 @@ export default function AdminPage() {
         }
       }
 
-      // Load challenge data from round_challenge_v2 table
-      const { data: challengeData } = await supabase
-        .from("round_challenge_v2")
-        .select("songs, correct_answers")
-        .eq("round_id", roundId)
-        .eq("group_id", group.id)
-        .maybeSingle();
+      // First check for admin picks for this round
+      const { data: adminPicks } = await supabase
+        .from("round_challenge_admin_picks")
+        .select(`
+          submission_id,
+          theme_id,
+          submissions!inner(id, title, artist)
+        `)
+        .eq("target_round_id", roundId);
 
-      if (!challengeData) {
-        setChallengeV2Data(null);
-        return;
+      let songs: { id: string; title: string; artist: string; category_id: string }[];
+      let correctAnswers: Record<string, string>;
+
+      if (adminPicks && adminPicks.length > 0) {
+        // Use admin picks
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        songs = adminPicks.map((pick: any) => ({
+          id: pick.submissions.id,
+          title: pick.submissions.title,
+          artist: pick.submissions.artist ?? "Unknown",
+          category_id: pick.theme_id,
+        }));
+        correctAnswers = {};
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        adminPicks.forEach((pick: any) => {
+          correctAnswers[pick.submission_id] = pick.theme_id;
+        });
+      } else {
+        // Fall back to round_challenge_v2 table
+        const { data: challengeData } = await supabase
+          .from("round_challenge_v2")
+          .select("songs, correct_answers")
+          .eq("round_id", roundId)
+          .eq("group_id", group.id)
+          .maybeSingle();
+
+        if (!challengeData) {
+          setChallengeV2Data(null);
+          return;
+        }
+
+        songs = challengeData.songs as { id: string; title: string; artist: string; category_id: string }[];
+        correctAnswers = challengeData.correct_answers as Record<string, string>;
       }
 
       // Load player guesses and scores
@@ -1049,8 +1081,8 @@ export default function AdminPage() {
       const playerCount = Object.keys(scoresByUser).length;
 
       setChallengeV2Data({
-        songs: challengeData.songs as { id: string; title: string; artist: string; category_id: string }[],
-        correct_answers: challengeData.correct_answers as Record<string, string>,
+        songs,
+        correct_answers: correctAnswers,
         player_count: playerCount,
         scores,
       });
@@ -1103,12 +1135,13 @@ export default function AdminPage() {
 
       setAdminPicksSongs(songsData ?? []);
 
-      // Find the target round (source round_number + 1)
+      // Find the target round (source round_number + 1) - prefer non-archived rounds
       const sourceRound = rounds.find((r) => r.id === sourceRoundId);
       if (sourceRound?.round_number) {
-        const targetRound = rounds.find(
+        const possibleTargets = rounds.filter(
           (r) => r.round_number === sourceRound.round_number! + 1 && r.season_number === sourceRound.season_number
         );
+        const targetRound = possibleTargets.find((r) => r.status !== "archived") || possibleTargets[0];
         if (targetRound) {
           // Load existing picks for the target round
           const { data: existingPicks } = await supabase
@@ -1177,9 +1210,12 @@ export default function AdminPage() {
         return;
       }
 
-      const targetRound = rounds.find(
+      // Find target round - prefer non-archived rounds
+      const possibleTargets = rounds.filter(
         (r) => r.round_number === sourceRound.round_number! + 1 && r.season_number === sourceRound.season_number
       );
+      // Prefer non-archived rounds (open, voting, revealed)
+      const targetRound = possibleTargets.find((r) => r.status !== "archived") || possibleTargets[0];
       if (!targetRound) {
         setAdminPicksStatus(`No Round ${sourceRound.round_number + 1} found in Season ${sourceRound.season_number}.`);
         return;
