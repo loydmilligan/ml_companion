@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
-import { usePeekPanel, PeekTab } from "../components/pinned-peek";
+import { useSidePanel, SidePanelTab } from "../components/side-panels";
 import { uploadBase64Image } from "../lib/imageUpload";
 import CardStack from "../components/CardStack/CardStack";
 import type {
@@ -145,7 +145,7 @@ type SeasonStatsRow = {
 export default function HistoryPage() {
   const { group } = useAuth();
   const isLead = group?.role === "lead";
-  const { openPanel } = usePeekPanel();
+  const { togglePanel } = useSidePanel();
 
   // Data state
   const [leagues, setLeagues] = useState<LeagueRow[]>([]);
@@ -1447,7 +1447,10 @@ export default function HistoryPage() {
 
   return (
     <div className="history-page">
-      <PeekTab onClick={openPanel} variant="cassette" />
+      {/* Side panel tabs - stacked on right edge */}
+      <SidePanelTab panel="playlist" onClick={() => togglePanel("playlist")} />
+      <SidePanelTab panel="progress" onClick={() => togglePanel("progress")} />
+      <SidePanelTab panel="games" onClick={() => togglePanel("games")} />
       <CardStack
         cards={cardData}
         onCardChange={handleCardChange}

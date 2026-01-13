@@ -2,8 +2,7 @@ import { lazy, Suspense, useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { RoundProvider } from "./contexts/RoundContext";
-import { PeekPanelProvider } from "./components/pinned-peek";
-import { GamesSidebarProvider } from "./components/games-sidebar";
+import { SidePanelProvider } from "./components/side-panels";
 import { YouTubeSidebarProvider, YouTubeSidebar } from "./components/youtube-sidebar";
 import TopBar from "./components/TopBar";
 import BottomNav from "./components/BottomNav";
@@ -55,10 +54,9 @@ function AppShell() {
 
   return (
     <RoundProvider>
-      <PeekPanelProvider>
-        <GamesSidebarProvider>
-          <YouTubeSidebarProvider>
-            <div className="app-shell">
+      <SidePanelProvider>
+        <YouTubeSidebarProvider>
+          <div className="app-shell">
               <TopBar />
               <div className="app-shell-body">
                 <main className="app-shell-main">
@@ -86,8 +84,7 @@ function AppShell() {
               <YouTubeSidebar />
             </div>
           </YouTubeSidebarProvider>
-        </GamesSidebarProvider>
-      </PeekPanelProvider>
+      </SidePanelProvider>
     </RoundProvider>
   );
 }

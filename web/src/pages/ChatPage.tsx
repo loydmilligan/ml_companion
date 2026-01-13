@@ -4,8 +4,7 @@ import Button from "../components/Button";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRound } from "../contexts/RoundContext";
-import { usePeekPanel, PeekTab } from "../components/pinned-peek";
-import { useGamesSidebar, GamesTab } from "../components/games-sidebar";
+import { useSidePanel, SidePanelTab } from "../components/side-panels";
 import { useRealtimeChat, type ChatMessage, type MessageReaction } from "../hooks/useRealtimeChat";
 
 // AI mention detection pattern
@@ -125,8 +124,7 @@ export default function ChatPage() {
   const navigate = useNavigate();
   const { group, profile } = useAuth();
   const { round } = useRound(); // Get round for AI context
-  const { quotedSong, clearQuotedSong, openPanel } = usePeekPanel();
-  const { openSidebar: openGamesSidebar } = useGamesSidebar();
+  const { quotedSong, clearQuotedSong, openPanel, togglePanel } = useSidePanel();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [reactions, setReactions] = useState<Map<string, ReactionCount[]>>(new Map());
   const [message, setMessage] = useState("");
@@ -762,10 +760,10 @@ export default function ChatPage() {
 
   return (
     <div className="chat-page">
-      {/* Peek tab - cassette spine on right edge */}
-      <PeekTab onClick={openPanel} variant="cassette" />
-      {/* Games tab - below Peek tab */}
-      <GamesTab onClick={() => openGamesSidebar()} />
+      {/* Side panel tabs - stacked on right edge */}
+      <SidePanelTab panel="playlist" onClick={() => togglePanel("playlist")} />
+      <SidePanelTab panel="progress" onClick={() => togglePanel("progress")} />
+      <SidePanelTab panel="games" onClick={() => togglePanel("games")} />
 
       {/* Connection status banner */}
       {!isConnected && connectionState !== "connecting" && (
@@ -860,7 +858,7 @@ export default function ChatPage() {
                 <span className="reply-text">{item.reply_to.body.length > 80 ? item.reply_to.body.slice(0, 80) + "..." : item.reply_to.body}</span>
               </div>
             )}
-            <p>{renderMessageBody(item.body, openPanel)}</p>
+            <p>{renderMessageBody(item.body, () => openPanel("playlist"))}</p>
             {(() => {
               const ytInfo = extractYouTubeInfo(item.body);
               if (!ytInfo) return null;

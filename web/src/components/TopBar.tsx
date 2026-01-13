@@ -9,7 +9,7 @@ import DMDrawer from "./DMDrawer";
 import SettingsGear from "./SettingsGear";
 import ProfileDrawer from "./ProfileDrawer";
 import SettingsDrawer from "./SettingsDrawer";
-import { PeekPanel, usePeekPanel } from "./pinned-peek";
+import { useSidePanel, PlaylistPanel, ProgressPanel } from "./side-panels";
 import { GamesSidebar } from "./games-sidebar";
 
 export default function TopBar() {
@@ -21,10 +21,12 @@ export default function TopBar() {
     votes,
     awards,
     activity,
+    competitors,
+    submissionUrgency,
+    votingUrgency,
     isVotingComplete,
   } = useRound();
-  const { isOpen: isPeekOpen, openPanel: _openPanel, closePanel, setQuotedSong } = usePeekPanel();
-  void _openPanel; // Used in PeekButton
+  const { activePanel, closePanel, setQuotedSong } = useSidePanel();
 
   const isLead = group?.role === "lead";
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
@@ -207,17 +209,29 @@ export default function TopBar() {
         onClose={() => setDmDrawerOpen(false)}
       />
 
-      {/* Peek Panel (slide-out from right) */}
-      <PeekPanel
-        isOpen={isPeekOpen}
+      {/* Playlist Panel (slide-out from right) */}
+      <PlaylistPanel
+        isOpen={activePanel === "playlist"}
         onClose={closePanel}
         round={round}
         submissions={submissions}
         votes={votes}
         awards={awards}
-        activity={activity}
         isVotingComplete={isVotingComplete}
         onQuoteSong={handleQuoteSong}
+        leagueName={group?.name}
+      />
+
+      {/* Progress Panel (slide-out from right) */}
+      <ProgressPanel
+        isOpen={activePanel === "progress"}
+        onClose={closePanel}
+        round={round}
+        activity={activity}
+        competitors={competitors}
+        submissionUrgency={submissionUrgency}
+        votingUrgency={votingUrgency}
+        leagueName={group?.name}
       />
 
       {/* Games Sidebar (slide-out from right) */}

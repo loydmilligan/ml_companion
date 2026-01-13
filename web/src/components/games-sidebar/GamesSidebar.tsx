@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from "react";
 import clsx from "clsx";
-import { useGamesSidebar, type GameTab } from "./GamesSidebarContext";
+import { useGamesSidebar, type GameTab } from "../side-panels";
 import { useSubmitterGuess } from "../pinned-peek/useSubmitterGuess";
 import { useRound } from "../../contexts/RoundContext";
 import { useAuth } from "../../contexts/AuthContext";
