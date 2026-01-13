@@ -184,62 +184,98 @@ export function useRoundChallenge(
     setError(null);
 
     try {
-      // Load song list
+      // Load song list data (always needed for theme descriptions)
       const data = await loadSongList();
       if (!data) {
         setLoading(false);
         return;
       }
 
-      // Check for existing challenge for this round
-      const { data: existingChallenge } = await supabase
-        .from("round_challenge_v2")
-        .select("*")
-        .eq("round_id", roundId)
-        .eq("group_id", groupId)
-        .maybeSingle();
+      // First, check for admin picks for this round
+      const { data: adminPicks } = await supabase
+        .from("round_challenge_admin_picks")
+        .select(`
+          submission_id,
+          theme_id,
+          submissions!inner(id, title, artist, artwork_url, youtube_url)
+        `)
+        .eq("target_round_id", roundId);
 
       let songs: ChallengeSong[];
       let correctMap: Record<string, string>;
 
-      if (existingChallenge) {
-        // Use existing challenge
-        songs = existingChallenge.songs as ChallengeSong[];
-        correctMap = existingChallenge.correct_answers as Record<string, string>;
-      } else {
-        // Generate new challenge
-        const { songs: selectedSongs, correctMap: newCorrectMap } = selectChallengeSongs(data.songs, data.categories);
-
-        // Convert to ChallengeSong format with IDs
-        songs = selectedSongs.map((s, idx) => ({
-          id: `song-${idx}-${s.title.replace(/\s/g, '-').toLowerCase()}`,
-          title: s.title,
-          artist: s.artist,
-          category_id: s.category_id,
-          artwork_url: null, // Will be fetched later or use placeholder
-          youtube_url: s.youtube_url ?? null,
-        }));
-
-        // Update correctMap with new IDs
-        correctMap = {};
-        songs.forEach(s => {
-          const key = `${s.title}-${s.artist}`;
-          if (newCorrectMap[key]) {
-            correctMap[s.id] = newCorrectMap[key];
-          } else {
-            correctMap[s.id] = s.category_id;
-          }
+      if (adminPicks && adminPicks.length > 0) {
+        // Use admin picks - these are songs from a previous S2 round
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        songs = adminPicks.map((pick: any) => {
+          const sub = pick.submissions;
+          return {
+            id: sub.id,
+            title: sub.title,
+            artist: sub.artist ?? "Unknown",
+            category_id: pick.theme_id,
+            artwork_url: sub.artwork_url,
+            youtube_url: sub.youtube_url,
+          };
         });
 
-        // Save the challenge to database
-        await supabase
+        // Build correct answers map from admin picks
+        correctMap = {};
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        adminPicks.forEach((pick: any) => {
+          correctMap[pick.submission_id] = pick.theme_id;
+        });
+
+        // Note: We don't save to round_challenge_v2 when using admin picks
+        // The admin picks table IS the source of truth
+      } else {
+        // Fallback to existing behavior - check for round_challenge_v2 or generate new
+        const { data: existingChallenge } = await supabase
           .from("round_challenge_v2")
-          .insert({
-            round_id: roundId,
-            group_id: groupId,
-            songs: songs,
-            correct_answers: correctMap,
+          .select("*")
+          .eq("round_id", roundId)
+          .eq("group_id", groupId)
+          .maybeSingle();
+
+        if (existingChallenge) {
+          // Use existing challenge
+          songs = existingChallenge.songs as ChallengeSong[];
+          correctMap = existingChallenge.correct_answers as Record<string, string>;
+        } else {
+          // Generate new challenge from JSON song list
+          const { songs: selectedSongs, correctMap: newCorrectMap } = selectChallengeSongs(data.songs, data.categories);
+
+          // Convert to ChallengeSong format with IDs
+          songs = selectedSongs.map((s, idx) => ({
+            id: `song-${idx}-${s.title.replace(/\s/g, '-').toLowerCase()}`,
+            title: s.title,
+            artist: s.artist,
+            category_id: s.category_id,
+            artwork_url: null, // Will be fetched later or use placeholder
+            youtube_url: s.youtube_url ?? null,
+          }));
+
+          // Update correctMap with new IDs
+          correctMap = {};
+          songs.forEach(s => {
+            const key = `${s.title}-${s.artist}`;
+            if (newCorrectMap[key]) {
+              correctMap[s.id] = newCorrectMap[key];
+            } else {
+              correctMap[s.id] = s.category_id;
+            }
           });
+
+          // Save the challenge to database
+          await supabase
+            .from("round_challenge_v2")
+            .insert({
+              round_id: roundId,
+              group_id: groupId,
+              songs: songs,
+              correct_answers: correctMap,
+            });
+        }
       }
 
       setChallengeSongs(songs);
