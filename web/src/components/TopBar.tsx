@@ -219,7 +219,6 @@ export default function TopBar() {
         awards={awards}
         isVotingComplete={isVotingComplete}
         onQuoteSong={handleQuoteSong}
-        leagueName={group?.name}
       />
 
       {/* Progress Panel (slide-out from right) */}
@@ -231,7 +230,6 @@ export default function TopBar() {
         competitors={competitors}
         submissionUrgency={submissionUrgency}
         votingUrgency={votingUrgency}
-        leagueName={group?.name}
       />
 
       {/* Games Sidebar (slide-out from right) */}

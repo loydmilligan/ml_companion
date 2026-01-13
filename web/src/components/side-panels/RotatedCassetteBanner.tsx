@@ -1,23 +1,18 @@
 import { useEffect, useState, useMemo } from "react";
 
 type RotatedCassetteBannerProps = {
-  leagueName?: string;
-  roundName?: string;
-  customImageLight?: string | null;
-  customImageDark?: string | null;
+  roundNumber?: number | null;
   onClose: () => void;
 };
 
 /**
  * Rotated cassette spine image used as banner header in side panels.
  * The cassette image is rotated 90 degrees clockwise to display horizontally.
- * Supports dynamic text overlay and custom round-specific images.
+ * Uses round-specific images with the round number baked in (e.g., round 2, 3, etc.)
+ * Falls back to blank cassette for rounds without specific images.
  */
 export default function RotatedCassetteBanner({
-  leagueName,
-  roundName,
-  customImageLight,
-  customImageDark,
+  roundNumber,
   onClose,
 }: RotatedCassetteBannerProps) {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -41,53 +36,34 @@ export default function RotatedCassetteBanner({
     return () => observer.disconnect();
   }, []);
 
-  // Use blank images when dynamic text is provided
-  const useDynamicText = Boolean(leagueName || roundName);
-  const hasCustomImages = Boolean(customImageLight || customImageDark);
+  // Round numbers that have specific cassette images (2, 3, etc.)
+  // Add more numbers here as images are created
+  const availableRoundImages = [2, 3];
 
   const imageSrc = useMemo(() => {
-    // Priority 1: Custom round-specific images
-    if (hasCustomImages) {
-      const customImage = isDarkMode ? customImageDark : customImageLight;
-      if (customImage) return customImage;
-      return customImageDark || customImageLight || "";
-    }
-
-    // Priority 2: Default cassette images
-    if (useDynamicText) {
-      // Use blank images for dynamic CSS text overlay
-      const prefix = "peek-tab-cassette-blank";
+    // Use round-specific cassette spine image if available
+    if (roundNumber && availableRoundImages.includes(roundNumber)) {
       return isDarkMode
-        ? `/images/peek-tab/${prefix}-dark.png`
-        : `/images/peek-tab/${prefix}-light.png`;
+        ? `/images/cassette-spine/bg_remove_cass_spine_w_text_dark_${roundNumber}.png`
+        : `/images/cassette-spine/bg_remove_cass_spine_w_text_light_${roundNumber}.png`;
     }
 
-    // Use AI-generated images with baked-in text
+    // Fallback to blank cassette for rounds without specific images
+    const prefix = "peek-tab-cassette-blank";
     return isDarkMode
-      ? `/images/peek-tab/peek-tab-cassette-ai-dark.png`
-      : `/images/peek-tab/peek-tab-cassette-ai-light.png`;
-  }, [isDarkMode, useDynamicText, hasCustomImages, customImageLight, customImageDark]);
+      ? `/images/peek-tab/${prefix}-dark.png`
+      : `/images/peek-tab/${prefix}-light.png`;
+  }, [isDarkMode, roundNumber]);
 
   return (
     <div className="rotated-cassette-banner">
       <div className="rotated-cassette-banner-wrapper">
         <img
           src={imageSrc}
-          alt=""
+          alt={roundNumber ? `Round ${roundNumber}` : ""}
           className="rotated-cassette-banner-img"
           draggable={false}
         />
-        {/* Dynamic text overlay */}
-        {useDynamicText && (
-          <div className="rotated-cassette-banner-text">
-            {leagueName && (
-              <span className="rotated-cassette-banner-league">{leagueName}</span>
-            )}
-            {roundName && (
-              <span className="rotated-cassette-banner-round">{roundName}</span>
-            )}
-          </div>
-        )}
       </div>
       <button
         type="button"

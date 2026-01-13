@@ -27,6 +27,7 @@ type UrgencyState = {
 
 type RoundSummary = {
   id: string;
+  round_number: number | null;
   theme: string;
   status: "open" | "voting" | "revealed" | "archived";
   submission_deadline: string | null;
@@ -42,7 +43,6 @@ type ProgressPanelProps = {
   competitors: Competitor[];
   submissionUrgency: UrgencyState;
   votingUrgency: UrgencyState;
-  leagueName?: string;
 };
 
 /**
@@ -59,7 +59,6 @@ export default function ProgressPanel({
   competitors,
   submissionUrgency,
   votingUrgency,
-  leagueName,
 }: ProgressPanelProps) {
   // Swipe-to-close state
   const panelRef = useRef<HTMLElement>(null);
@@ -140,8 +139,7 @@ export default function ProgressPanel({
       >
         {/* Rotated Cassette Banner Header */}
         <RotatedCassetteBanner
-          leagueName={leagueName}
-          roundName={round?.theme}
+          roundNumber={round?.round_number}
           onClose={onClose}
         />
 

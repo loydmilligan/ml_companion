@@ -35,6 +35,7 @@ type RoundAwardRow = {
 
 type RoundSummary = {
   id: string;
+  round_number: number | null;
   theme: string;
   theme_description: string | null;
   theme_author: string | null;
@@ -58,7 +59,6 @@ type PlaylistPanelProps = {
   isVotingComplete: boolean;
   onQuoteSong: (song: SubmissionRow) => void;
   narrative?: string | null;
-  leagueName?: string;
 };
 
 /**
@@ -77,7 +77,6 @@ export default function PlaylistPanel({
   isVotingComplete,
   onQuoteSong,
   narrative,
-  leagueName,
 }: PlaylistPanelProps) {
   const { openPlaylist } = useYouTubeSidebar();
 
@@ -172,8 +171,7 @@ export default function PlaylistPanel({
       >
         {/* Rotated Cassette Banner Header */}
         <RotatedCassetteBanner
-          leagueName={leagueName}
-          roundName={round?.theme}
+          roundNumber={round?.round_number}
           onClose={onClose}
         />
 
