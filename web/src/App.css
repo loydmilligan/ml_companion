@@ -6944,6 +6944,19 @@
   background: rgba(0, 0, 0, 0.3);
 }
 
+.rotated-cassette-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+}
+
+.rotated-cassette-banner-title {
+  height: 60px;
+  width: auto;
+  object-fit: contain;
+}
+
 /* ========================================
    Side Panels (Playlist, Progress)
    ======================================== */
