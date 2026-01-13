@@ -8039,10 +8039,23 @@
   text-overflow: ellipsis;
 }
 
+.guess-song-card-comment-block {
+  margin: 6px 0 0 0;
+}
+
+.guess-song-card-comment-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 2px;
+}
+
 .guess-song-card-comment {
   font-size: 0.75rem;
   color: var(--text-secondary);
-  margin: 4px 0 0 0;
+  margin: 0;
   font-style: italic;
   line-height: 1.3;
   /* Allow comment to wrap */

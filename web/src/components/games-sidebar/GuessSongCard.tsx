@@ -161,7 +161,10 @@ export default function GuessSongCard({
 
         {/* Show submitter comment */}
         {song.submitter_comment && (
-          <p className="guess-song-card-comment">"{song.submitter_comment}"</p>
+          <div className="guess-song-card-comment-block">
+            <span className="guess-song-card-comment-label">Submitter's comment:</span>
+            <p className="guess-song-card-comment">"{song.submitter_comment}"</p>
+          </div>
         )}
 
         {/* Show submitter name if revealed */}
