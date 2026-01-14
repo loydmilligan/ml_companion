@@ -101,8 +101,12 @@ export default function TestDashboardPage() {
 
   const addLog = useCallback(
     (action: string, success: boolean, details?: string, phase?: PhaseType) => {
+      // Use crypto.randomUUID if available, otherwise fallback for non-secure contexts
+      const id = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
       const entry: LogEntry = {
-        id: crypto.randomUUID(),
+        id,
         timestamp: new Date().toISOString(),
         action,
         success,
