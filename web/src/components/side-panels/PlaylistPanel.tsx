@@ -1,13 +1,10 @@
 import { useEffect, useRef, useCallback } from "react";
 import clsx from "clsx";
-import SongCard from "./SongCard";
-import AIAssistant from "./AIAssistant";
-import CollapsibleSection from "./CollapsibleSection";
-import ProgressSection from "./ProgressSection";
-import RoundCountdown from "./RoundCountdown";
-import DualNeedleGauge from "./DualNeedleGauge";
+import SongCard from "../pinned-peek/SongCard";
+import AIAssistant from "../pinned-peek/AIAssistant";
+import CollapsibleSection from "../pinned-peek/CollapsibleSection";
+import RotatedCassetteBanner from "./RotatedCassetteBanner";
 import { useYouTubeSidebar } from "../youtube-sidebar";
-import { useRound } from "../../contexts/RoundContext";
 
 type SubmissionRow = {
   id: string;
@@ -36,15 +33,9 @@ type RoundAwardRow = {
   winner_name: string | null;
 };
 
-type ActivityRecord = {
-  id: string;
-  actor_name: string;
-  activity_type: "submitted" | "voted";
-  profile_id: string | null;
-};
-
 type RoundSummary = {
   id: string;
+  round_number: number | null;
   theme: string;
   theme_description: string | null;
   theme_author: string | null;
@@ -58,33 +49,36 @@ type RoundSummary = {
   youtube_playlist_url: string | null;
 };
 
-type PeekPanelProps = {
+type PlaylistPanelProps = {
   isOpen: boolean;
   onClose: () => void;
   round: RoundSummary | null;
   submissions: SubmissionRow[];
   votes: VoteRow[];
   awards: RoundAwardRow[];
-  activity: ActivityRecord[];
   isVotingComplete: boolean;
   onQuoteSong: (song: SubmissionRow) => void;
   narrative?: string | null;
 };
 
-export default function PeekPanel({
+/**
+ * Panel containing playlist-related content:
+ * - AI Assistance (during open phase)
+ * - Playlist links (Spotify, YouTube)
+ * - Songs list with rankings and awards
+ */
+export default function PlaylistPanel({
   isOpen,
   onClose,
   round,
   submissions,
   votes,
   awards,
-  activity,
   isVotingComplete,
   onQuoteSong,
   narrative,
-}: PeekPanelProps) {
+}: PlaylistPanelProps) {
   const { openPlaylist } = useYouTubeSidebar();
-  const { submissionUrgency, votingUrgency, competitors } = useRound();
 
   // Swipe-to-close state
   const panelRef = useRef<HTMLElement>(null);
@@ -104,7 +98,6 @@ export default function PeekPanel({
     const deltaX = touchEndX - touchStartX.current;
     const deltaY = touchEndY - touchStartY.current;
 
-    // Require horizontal swipe: deltaX > 80px and more horizontal than vertical
     const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
     const isRightSwipe = deltaX > 80;
 
@@ -160,7 +153,7 @@ export default function PeekPanel({
     <>
       {/* Backdrop */}
       <div
-        className={clsx("peek-panel-backdrop", isOpen && "open")}
+        className={clsx("side-panel-backdrop", isOpen && "open")}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -168,62 +161,39 @@ export default function PeekPanel({
       {/* Panel */}
       <aside
         ref={panelRef}
-        className={clsx("peek-panel", isOpen && "open")}
+        className={clsx("side-panel side-panel-playlist", isOpen && "open")}
         role="dialog"
         aria-modal="true"
-        aria-label="Round details"
+        aria-label="Playlist and songs"
         aria-hidden={!isOpen}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Header with banner */}
-        <div className="peek-panel-header">
-          {round?.theme_image_url ? (
-            <img
-              src={round.theme_image_url}
-              alt={round.theme}
-              className="peek-panel-banner"
-            />
-          ) : (
-            <div className="peek-panel-banner" />
-          )}
-          <button
-            type="button"
-            className="peek-panel-close"
-            onClick={onClose}
-            aria-label="Close panel"
-          >
-            ✕
-          </button>
-        </div>
+        {/* Rotated Cassette Banner Header */}
+        <RotatedCassetteBanner
+          roundNumber={round?.round_number}
+          onClose={onClose}
+        />
 
         {/* Round title and status */}
         {round && (
-          <div className="peek-panel-title-row">
-            <h2 className="peek-panel-round-title">{round.theme}</h2>
-            <span className={clsx("peek-panel-status-badge", `status-${round.status}`)}>
-              {round.status === "open" ? "Submissions Open" :
+          <div className="side-panel-title-row">
+            <h2 className="side-panel-round-title">{round.theme}</h2>
+            <span className={clsx("side-panel-status-badge", `status-${round.status}`)}>
+              {round.status === "open" ? "Submissions" :
                round.status === "voting" ? "Voting" :
                round.status === "revealed" ? "Revealed" : round.status}
             </span>
           </div>
         )}
 
-        {/* Countdown Timer - only for revealed phase (2hr until new round) */}
-        {round && round.status === "revealed" && (
-          <RoundCountdown
-            status={round.status}
-            revealUntil={round.reveal_until}
-          />
-        )}
-
         {/* Content */}
-        <div className="peek-panel-content">
+        <div className="side-panel-content">
           {round && (
             <>
               {/* Theme description and author */}
               {(round.theme_description || round.theme_author) && (
-                <div className="peek-panel-section peek-panel-theme-info">
+                <div className="side-panel-section side-panel-theme-info">
                   {round.theme_description && (
                     <p className="theme-description">{round.theme_description}</p>
                   )}
@@ -233,31 +203,15 @@ export default function PeekPanel({
                 </div>
               )}
 
-              {/* Progress Section (during open/voting phases) */}
-              {(round.status === "open" || round.status === "voting") && competitors.length > 0 && (
+              {/* AI Assistance Section (only during open phase) */}
+              {round.status === "open" && (
                 <CollapsibleSection
-                  id="progress"
-                  title="Progress"
-                  icon="📊"
-                  defaultExpanded={true}
-                  headerRight={
-                    <DualNeedleGauge
-                      submissionPct={submissionUrgency.pct}
-                      votingPct={votingUrgency.pct}
-                      submissionLevel={submissionUrgency.level}
-                      votingLevel={votingUrgency.level}
-                      size="sm"
-                      roundStatus={round.status}
-                    />
-                  }
+                  id="ai-assistance"
+                  title="AI Assistance"
+                  icon="🤖"
+                  defaultExpanded={false}
                 >
-                  <ProgressSection
-                    activity={activity}
-                    competitors={competitors}
-                    roundStatus={round.status}
-                    submissionDeadline={round.submission_deadline}
-                    votingDeadline={round.voting_deadline}
-                  />
+                  <AIAssistant round={round} />
                 </CollapsibleSection>
               )}
 
@@ -296,18 +250,6 @@ export default function PeekPanel({
                       </button>
                     )}
                   </div>
-                </CollapsibleSection>
-              )}
-
-              {/* AI Assistance Section (only during open phase) */}
-              {round.status === "open" && (
-                <CollapsibleSection
-                  id="ai-assistance"
-                  title="AI Assistance"
-                  icon="🤖"
-                  defaultExpanded={false}
-                >
-                  <AIAssistant round={round} />
                 </CollapsibleSection>
               )}
 

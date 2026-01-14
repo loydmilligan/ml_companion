@@ -1,12 +1,12 @@
 # Issues & Roadmap
 
-Version: v1.12
-Date: 2026-01-10
+Version: v1.13
+Date: 2026-01-12
 
 **Sync Status:**
-- Last Local Change: 2026-01-10
+- Last Local Change: 2026-01-12
 - Last Linear Sync: 2026-01-09
-- Pending Sync: Yes (TEST-002, DM-001 through DM-004 not yet in Linear)
+- Pending Sync: Yes (TEST-002, DM-001 through DM-004, PN-005 not yet in Linear)
 
 **Legend:**
 - **Effort:** Low (< 1 day) | Medium (1-3 days) | High (1+ week)
@@ -20,6 +20,7 @@ Date: 2026-01-10
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.13 | 2026-01-12 | Added PN-005 (Separate DM notification checkbox) |
 | v1.12 | 2026-01-10 | Added DM-001 through DM-004 (DM inbox bugs and icon styling) |
 | v1.11 | 2026-01-10 | Added TEST-002 Test Dashboard Song Tracking; updated TEST-001 to In Progress |
 | v1.10 | 2026-01-09 | Added TEST-001 Automated Test Environment & Data Factory |
@@ -44,6 +45,7 @@ Date: 2026-01-10
 | PN-002 | [LOYD-130](https://linear.app/loydmilligan/issue/LOYD-130) | iOS Push (APNs) | In Progress | High | High | Medium | PWA installed, needs Apple Developer account for native APNs |
 | PN-003 | — | Notification Preferences | **Complete** | Medium | Medium | Low | Type toggles (new_round, results, chat, deadline). Deployed 2026-01-03 |
 | PN-004 | — | ntfy.sh Fallback | **Complete** | Low | Medium | Low | Alternative push via ntfy.sh with subscribe guide. Deployed 2026-01-03 |
+| PN-005 | — | Separate DM Notification Toggle | Planned | Low | Medium | Low | Add distinct checkbox for DM messages separate from group chat notifications |
 
 ### Integrations
 

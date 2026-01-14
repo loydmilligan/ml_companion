@@ -1,10 +1,10 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type TouchEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Button from "../components/Button";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRound } from "../contexts/RoundContext";
-import { usePeekPanel, PeekTab } from "../components/pinned-peek";
+import { useSidePanel, SidePanelTab } from "../components/side-panels";
 import { useRealtimeChat, type ChatMessage, type MessageReaction } from "../hooks/useRealtimeChat";
 
 // AI mention detection pattern
@@ -122,9 +122,10 @@ function renderMessageBody(text: string, onPeekClick?: () => void) {
 
 export default function ChatPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { group, profile } = useAuth();
   const { round } = useRound(); // Get round for AI context
-  const { quotedSong, clearQuotedSong, openPanel } = usePeekPanel();
+  const { quotedSong, clearQuotedSong, openPanel, togglePanel } = useSidePanel();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [reactions, setReactions] = useState<Map<string, ReactionCount[]>>(new Map());
   const [message, setMessage] = useState("");
@@ -134,9 +135,11 @@ export default function ChatPage() {
   const [aiChatEnabled, setAiChatEnabled] = useState(true);
   const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  const [highlightedMsgId, setHighlightedMsgId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const composeRef = useRef<HTMLDivElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
+  const scrolledToTargetRef = useRef(false);
 
   // Pull-to-refresh state
   const [pullDistance, setPullDistance] = useState(0);
@@ -514,6 +517,30 @@ export default function ChatPage() {
   useEffect(() => {
     if (messages.length === 0) return;
 
+    // Check if we should scroll to a specific message
+    const targetMsgId = searchParams.get("msg");
+    if (targetMsgId && isInitialLoad.current) {
+      // Try to scroll to the target message
+      const targetEl = document.getElementById(`msg-${targetMsgId}`);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        setHighlightedMsgId(targetMsgId);
+        // Clear highlight after animation
+        setTimeout(() => setHighlightedMsgId(null), 3000);
+        // Clear URL param
+        setSearchParams({}, { replace: true });
+        scrolledToTargetRef.current = true;
+        isInitialLoad.current = false;
+        return;
+      }
+    }
+
+    // Skip auto-scroll if we just scrolled to a target message
+    if (scrolledToTargetRef.current) {
+      scrolledToTargetRef.current = false;
+      return;
+    }
+
     // Use instant scroll on initial load, smooth scroll for new messages
     const behavior = isInitialLoad.current ? "instant" : "smooth";
     chatEndRef.current?.scrollIntoView({ behavior });
@@ -522,7 +549,7 @@ export default function ChatPage() {
     if (isInitialLoad.current) {
       isInitialLoad.current = false;
     }
-  }, [messages]);
+  }, [messages, searchParams, setSearchParams]);
 
   // Handle quoted song from peek panel
   useEffect(() => {
@@ -567,16 +594,36 @@ export default function ChatPage() {
       if (msg && msg.author_id && msg.author_id !== profile.id) {
         const { data: authorProfile } = await supabase
           .from("profiles")
-          .select("email,reaction_notify_enabled")
+          .select("email,reaction_notify_enabled,email_notify_enabled")
           .eq("id", msg.author_id)
           .maybeSingle();
 
-        if (authorProfile?.reaction_notify_enabled && authorProfile?.email) {
+        if (authorProfile?.reaction_notify_enabled && authorProfile?.email_notify_enabled !== false && authorProfile?.email) {
+          // Get existing reactions on this message
+          const existingReactions = reactions.get(messageId) ?? [];
+          const otherReactionsText = existingReactions
+            .filter(r => r.emoji !== emoji) // Exclude the new reaction
+            .map(r => `${r.emoji}${r.count > 1 ? ` (${r.count})` : ""}`)
+            .join(" ");
+
+          // Build notification message
+          const truncatedMsg = msg.body.length > 100 ? msg.body.slice(0, 100) + "..." : msg.body;
+          let notificationMessage = `${profile.display_name ?? "Someone"} reacted ${emoji} to your message:\n↳ "${truncatedMsg}"`;
+          if (otherReactionsText) {
+            notificationMessage += `\n\nOther reactions: ${otherReactionsText}`;
+          }
+
+          // Deep link to the message
+          const appUrl = window.location.origin;
+          const deepLink = `${appUrl}/app?msg=${messageId}`;
+
           await supabase.functions.invoke("notify", {
             body: {
               title: "New reaction",
-              message: `${profile.display_name ?? "Someone"} reacted ${emoji} to your message`,
+              message: notificationMessage,
               recipients: [authorProfile.email],
+              link: deepLink,
+              linkText: "View message",
             },
           });
         }
@@ -746,11 +793,25 @@ export default function ChatPage() {
           .map((member) => member?.email)
           .filter(Boolean) as string[];
 
+        // Build notification message with optional quote context
+        let notificationMessage = `${profile.display_name ?? "Someone"}: ${trimmedMessage}`;
+        if (savedReplyingTo) {
+          const quotedAuthor = savedReplyingTo.profiles?.display_name ?? "User";
+          const quotedText = savedReplyingTo.body.length > 50 ? savedReplyingTo.body.slice(0, 50) + "..." : savedReplyingTo.body;
+          notificationMessage = `${profile.display_name ?? "Someone"} replied to ${quotedAuthor}:\n↳ "${quotedText}"\n\n${trimmedMessage}`;
+        }
+
+        // Include deep link to the specific message
+        const appUrl = window.location.origin;
+        const deepLink = `${appUrl}/app?msg=${data.id}`;
+
         supabase.functions.invoke("notify", {
           body: {
             title: "Group chat message",
-            message: `${profile.display_name ?? "Someone"}: ${trimmedMessage}`,
+            message: notificationMessage,
             recipients: emails,
+            link: deepLink,
+            linkText: "View message",
           },
         });
       });
@@ -760,8 +821,10 @@ export default function ChatPage() {
 
   return (
     <div className="chat-page">
-      {/* Peek tab - cassette spine on right edge */}
-      <PeekTab onClick={openPanel} variant="cassette" />
+      {/* Side panel tabs - stacked on right edge */}
+      <SidePanelTab panel="playlist" onClick={() => togglePanel("playlist")} />
+      <SidePanelTab panel="progress" onClick={() => togglePanel("progress")} />
+      <SidePanelTab panel="games" onClick={() => togglePanel("games")} />
 
       {/* Connection status banner */}
       {!isConnected && connectionState !== "connecting" && (
@@ -835,7 +898,8 @@ export default function ChatPage() {
           return (
           <div
             key={item.id}
-            className={item.author_id === profile?.id ? "chat-bubble own" : "chat-bubble"}
+            id={`msg-${item.id}`}
+            className={`chat-bubble${item.author_id === profile?.id ? " own" : ""}${highlightedMsgId === item.id ? " highlighted" : ""}`}
             style={bubbleStyle}
             onClick={() => setReactionPickerFor(reactionPickerFor === item.id ? null : item.id)}
           >
@@ -856,7 +920,7 @@ export default function ChatPage() {
                 <span className="reply-text">{item.reply_to.body.length > 80 ? item.reply_to.body.slice(0, 80) + "..." : item.reply_to.body}</span>
               </div>
             )}
-            <p>{renderMessageBody(item.body, openPanel)}</p>
+            <p>{renderMessageBody(item.body, () => openPanel("playlist"))}</p>
             {(() => {
               const ytInfo = extractYouTubeInfo(item.body);
               if (!ytInfo) return null;

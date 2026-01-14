@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { RoundProvider } from "./contexts/RoundContext";
-import { PeekPanelProvider } from "./components/pinned-peek";
+import { SidePanelProvider } from "./components/side-panels";
 import { YouTubeSidebarProvider, YouTubeSidebar } from "./components/youtube-sidebar";
 import TopBar from "./components/TopBar";
 import BottomNav from "./components/BottomNav";
@@ -54,37 +54,37 @@ function AppShell() {
 
   return (
     <RoundProvider>
-      <PeekPanelProvider>
+      <SidePanelProvider>
         <YouTubeSidebarProvider>
           <div className="app-shell">
-            <TopBar />
-            <div className="app-shell-body">
-              <main className="app-shell-main">
-                <Suspense fallback={<PageLoader />}>
-                  <Routes>
-                    <Route index element={<ChatPage />} />
-                    <Route path="chat" element={<ChatPage />} />
-                    <Route path="round" element={<Navigate to="/app/chat" replace />} />
-                    <Route path="round/:id" element={<RoundDetailPage />} />
-                    <Route path="rounds/:id" element={<RoundDetailPage />} />
-                    <Route path="leaderboard" element={<Navigate to="/app/history" replace />} />
-                    <Route path="history" element={<HistoryPage />} />
-                    <Route path="admin" element={<AdminPage />} />
-                    <Route path="profile" element={<ProfilePage />} />
-                    <Route path="settings" element={<SettingsPage />} />
-                    <Route path="dm" element={<DMInboxPage />} />
-                    <Route path="dm/:conversationId" element={<DMThreadPage />} />
-                    <Route path="test-dashboard" element={<TestDashboardPage />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Suspense>
-              </main>
+              <TopBar />
+              <div className="app-shell-body">
+                <main className="app-shell-main">
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      <Route index element={<ChatPage />} />
+                      <Route path="chat" element={<ChatPage />} />
+                      <Route path="round" element={<Navigate to="/app/chat" replace />} />
+                      <Route path="round/:id" element={<RoundDetailPage />} />
+                      <Route path="rounds/:id" element={<RoundDetailPage />} />
+                      <Route path="leaderboard" element={<Navigate to="/app/history" replace />} />
+                      <Route path="history" element={<HistoryPage />} />
+                      <Route path="admin" element={<AdminPage />} />
+                      <Route path="profile" element={<ProfilePage />} />
+                      <Route path="settings" element={<SettingsPage />} />
+                      <Route path="dm" element={<DMInboxPage />} />
+                      <Route path="dm/:conversationId" element={<DMThreadPage />} />
+                      <Route path="test-dashboard" element={<TestDashboardPage />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                </main>
+              </div>
+              <BottomNav />
+              <YouTubeSidebar />
             </div>
-            <BottomNav />
-            <YouTubeSidebar />
-          </div>
-        </YouTubeSidebarProvider>
-      </PeekPanelProvider>
+          </YouTubeSidebarProvider>
+      </SidePanelProvider>
     </RoundProvider>
   );
 }

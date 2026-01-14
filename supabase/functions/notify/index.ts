@@ -29,6 +29,8 @@ Deno.serve(async (req) => {
   const title = body?.title ?? "Talking Music League";
   const message = body?.message ?? "";
   const recipients = body?.recipients ?? [];
+  const link = body?.link ?? null;
+  const linkText = body?.linkText ?? "Open in App";
 
   if (!message) {
     return new Response(
@@ -36,6 +38,43 @@ Deno.serve(async (req) => {
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
+
+  // Build HTML email content
+  const escapeHtml = (str: string) => str.replace(/[&<>"']/g, (m) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[m] ?? m));
+
+  // Format message for HTML - convert newlines and handle quote formatting
+  const formatMessageHtml = (msg: string) => {
+    const escaped = escapeHtml(msg);
+    // Check if message has quote format (↳ "quoted text")
+    const quoteMatch = escaped.match(/^(.+?) replied to (.+?):\n↳ &quot;(.+?)&quot;\n\n(.+)$/s);
+    if (quoteMatch) {
+      const [, author, quotedAuthor, quotedText, actualMessage] = quoteMatch;
+      return `<p style="color:#6366f1;margin:0 0 8px 0;font-size:14px;">${author} replied to ${quotedAuthor}:</p>` +
+        `<div style="border-left:3px solid #6366f1;padding-left:12px;margin:0 0 16px 0;color:#64748b;font-style:italic;">${quotedText}</div>` +
+        `<p style="color:#334155;line-height:1.6;margin:0;font-size:16px;">${actualMessage.replace(/\n/g, '<br>')}</p>`;
+    }
+    // Regular message - just convert newlines
+    return `<p style="color:#334155;line-height:1.6;margin:0;font-size:16px;">${escaped.replace(/\n/g, '<br>')}</p>`;
+  };
+
+  // Build HTML without indentation to avoid quoted-printable encoding issues
+  const buttonHtml = link
+    ? `<table cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;"><tr><td style="background-color:#4f46e5;border-radius:8px;"><a href="${escapeHtml(link)}" style="display:inline-block;padding:12px 24px;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;">${escapeHtml(linkText)}</a></td></tr></table>`
+    : '';
+
+  const htmlMessage = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>' +
+    '<body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;margin:0;padding:20px;background-color:#f8fafc;">' +
+    '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;">' +
+    '<tr><td style="background-color:#ffffff;border-radius:12px;padding:24px;">' +
+    `<h2 style="color:#1e293b;margin:0 0 16px 0;font-size:18px;font-weight:600;">${escapeHtml(title)}</h2>` +
+    formatMessageHtml(message) +
+    buttonHtml +
+    '</td></tr>' +
+    '<tr><td style="padding-top:20px;text-align:center;">' +
+    '<p style="color:#64748b;font-size:12px;margin:0;">Talking Music League</p>' +
+    '</td></tr></table></body></html>';
 
   const results: Record<string, string> = {};
 
@@ -45,6 +84,10 @@ Deno.serve(async (req) => {
     if (NTFY_USERNAME && NTFY_PASSWORD) {
       const token = btoa(`${NTFY_USERNAME}:${NTFY_PASSWORD}`);
       headers.Authorization = `Basic ${token}`;
+    }
+    // Add click action if link is provided
+    if (link) {
+      headers.Click = link;
     }
 
     const url = `${NTFY_SERVER_URL.replace(/\/$/, "")}/${NTFY_TOPIC}`;
@@ -78,7 +121,7 @@ Deno.serve(async (req) => {
         to: recipients,
         subject: title,
         content: message,
-        contentType: "text/plain; charset=utf-8",
+        html: htmlMessage,
       });
       results.email = "sent";
     } catch (error) {

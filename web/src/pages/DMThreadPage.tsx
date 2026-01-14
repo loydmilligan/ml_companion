@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRealtimeDM, type DMMessage, type DMReaction } from "../hooks/useRealtimeDM";
@@ -59,9 +59,11 @@ const allEmojis = [
 export default function DMThreadPage() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { profile } = useAuth();
 
   const [messages, setMessages] = useState<DMMessage[]>([]);
+  const [highlightedMsgId, setHighlightedMsgId] = useState<string | null>(null);
   const [reactions, setReactions] = useState<Map<string, ReactionCount[]>>(new Map());
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -74,6 +76,8 @@ export default function DMThreadPage() {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const composeRef = useRef<HTMLDivElement>(null);
+  const isInitialLoad = useRef(true);
+  const scrolledToTargetRef = useRef(false);
 
   // Profile cache for realtime messages
   const profileCacheRef = useRef<Map<string, { display_name: string | null; avatar_url: string | null }>>(new Map());
@@ -287,10 +291,42 @@ export default function DMThreadPage() {
     loadConversation();
   }, [loadConversation]);
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change (or scroll to target message from URL)
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (messages.length === 0) return;
+
+    // Check if we should scroll to a specific message
+    const targetMsgId = searchParams.get("msg");
+    if (targetMsgId && isInitialLoad.current) {
+      // Try to scroll to the target message
+      const targetEl = document.getElementById(`dm-msg-${targetMsgId}`);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        setHighlightedMsgId(targetMsgId);
+        // Clear highlight after animation
+        setTimeout(() => setHighlightedMsgId(null), 3000);
+        // Clear URL param
+        setSearchParams({}, { replace: true });
+        scrolledToTargetRef.current = true;
+        isInitialLoad.current = false;
+        return;
+      }
+    }
+
+    // Skip auto-scroll if we just scrolled to a target message
+    if (scrolledToTargetRef.current) {
+      scrolledToTargetRef.current = false;
+      return;
+    }
+
+    // Default: scroll to bottom
+    const behavior = isInitialLoad.current ? "instant" : "smooth";
+    chatEndRef.current?.scrollIntoView({ behavior: behavior as ScrollBehavior });
+
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+    }
+  }, [messages, searchParams, setSearchParams]);
 
   // Send message
   const sendMessage = async () => {
@@ -342,6 +378,50 @@ export default function DMThreadPage() {
           ? { ...data, profiles: optimisticMsg.profiles, reply_to: optimisticMsg.reply_to }
           : m
       ));
+
+      // Send notification to other participant (fire and forget)
+      supabase
+        .from("conversation_participants")
+        .select("participant_id, profiles:participant_id (email, dm_notify_enabled, email_notify_enabled)")
+        .eq("conversation_id", conversationId)
+        .neq("participant_id", profile.id)
+        .then(({ data: participantData }) => {
+          if (!participantData?.length) return;
+
+          const otherProfile = participantData[0].profiles as unknown as {
+            email: string | null;
+            dm_notify_enabled: boolean | null;
+            email_notify_enabled: boolean | null;
+          };
+
+          if (
+            otherProfile?.email &&
+            otherProfile?.dm_notify_enabled !== false &&
+            otherProfile?.email_notify_enabled !== false
+          ) {
+            // Build notification message with optional quote context
+            let notificationMessage = `${profile.display_name ?? "Someone"}: ${messageText}`;
+            if (replyingTo) {
+              const quotedAuthor = replyingTo.profiles?.display_name ?? "User";
+              const quotedText = replyingTo.body.length > 50 ? replyingTo.body.slice(0, 50) + "..." : replyingTo.body;
+              notificationMessage = `${profile.display_name ?? "Someone"} replied to ${quotedAuthor}:\n↳ "${quotedText}"\n\n${messageText}`;
+            }
+
+            // Include deep link to the specific message
+            const appUrl = window.location.origin;
+            const deepLink = `${appUrl}/app/dm/${conversationId}?msg=${data.id}`;
+
+            supabase.functions.invoke("notify", {
+              body: {
+                title: `DM from ${profile.display_name ?? "Someone"}`,
+                message: notificationMessage,
+                recipients: [otherProfile.email],
+                link: deepLink,
+                linkText: "View message",
+              },
+            });
+          }
+        });
     } catch (err) {
       console.error("Error sending message:", err);
       // Revert optimistic update
@@ -445,7 +525,8 @@ export default function DMThreadPage() {
             return (
               <div
                 key={item.id}
-                className={`dm-bubble ${isOwn ? "own" : ""}`}
+                id={`dm-msg-${item.id}`}
+                className={`dm-bubble${isOwn ? " own" : ""}${highlightedMsgId === item.id ? " highlighted" : ""}`}
                 style={{ boxShadow: `0 ${shadowY}px ${shadowBlur}px rgba(0, 0, 0, ${shadowIntensity})` }}
                 onClick={() => setReactionPickerFor(reactionPickerFor === item.id ? null : item.id)}
               >
@@ -721,6 +802,23 @@ export default function DMThreadPage() {
         .dm-bubble.own {
           align-self: flex-end;
           flex-direction: row-reverse;
+        }
+
+        .dm-bubble.highlighted {
+          animation: dm-highlight-pulse 2s ease-out;
+          outline: 2px solid var(--primary, #4f46e5);
+          outline-offset: 2px;
+        }
+
+        @keyframes dm-highlight-pulse {
+          0% {
+            background-color: rgba(79, 70, 229, 0.3);
+            outline-color: rgba(79, 70, 229, 1);
+          }
+          100% {
+            background-color: transparent;
+            outline-color: transparent;
+          }
         }
 
         .dm-bubble-avatar {
