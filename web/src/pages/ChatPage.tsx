@@ -139,6 +139,7 @@ export default function ChatPage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const composeRef = useRef<HTMLDivElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
+  const scrolledToTargetRef = useRef(false);
 
   // Pull-to-refresh state
   const [pullDistance, setPullDistance] = useState(0);
@@ -528,9 +529,16 @@ export default function ChatPage() {
         setTimeout(() => setHighlightedMsgId(null), 3000);
         // Clear URL param
         setSearchParams({}, { replace: true });
+        scrolledToTargetRef.current = true;
         isInitialLoad.current = false;
         return;
       }
+    }
+
+    // Skip auto-scroll if we just scrolled to a target message
+    if (scrolledToTargetRef.current) {
+      scrolledToTargetRef.current = false;
+      return;
     }
 
     // Use instant scroll on initial load, smooth scroll for new messages

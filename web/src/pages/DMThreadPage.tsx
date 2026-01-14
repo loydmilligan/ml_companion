@@ -77,6 +77,7 @@ export default function DMThreadPage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const composeRef = useRef<HTMLDivElement>(null);
   const isInitialLoad = useRef(true);
+  const scrolledToTargetRef = useRef(false);
 
   // Profile cache for realtime messages
   const profileCacheRef = useRef<Map<string, { display_name: string | null; avatar_url: string | null }>>(new Map());
@@ -306,9 +307,16 @@ export default function DMThreadPage() {
         setTimeout(() => setHighlightedMsgId(null), 3000);
         // Clear URL param
         setSearchParams({}, { replace: true });
+        scrolledToTargetRef.current = true;
         isInitialLoad.current = false;
         return;
       }
+    }
+
+    // Skip auto-scroll if we just scrolled to a target message
+    if (scrolledToTargetRef.current) {
+      scrolledToTargetRef.current = false;
+      return;
     }
 
     // Default: scroll to bottom
