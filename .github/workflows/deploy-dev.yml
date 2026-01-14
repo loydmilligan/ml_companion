@@ -36,11 +36,14 @@ jobs:
           chmod 600 ~/.ssh/config
 
       - name: Deploy to Dev Pi
+        env:
+          DEV_SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
+          DEV_SUPABASE_ANON_KEY: ${{ secrets.DEV_SUPABASE_ANON_KEY }}
         run: |
           ssh dev-pi "cd ~/ml_companion && git fetch origin && git checkout develop && git pull origin develop"
-          ssh dev-pi "echo 'VITE_SUPABASE_URL=${{ secrets.DEV_SUPABASE_URL }}' > ~/ml_companion/web/.env.local"
-          ssh dev-pi "echo 'VITE_SUPABASE_ANON_KEY=${{ secrets.DEV_SUPABASE_ANON_KEY }}' >> ~/ml_companion/web/.env.local"
-          ssh dev-pi "echo 'VITE_APP_ENV=development' >> ~/ml_companion/web/.env.local"
+          ssh dev-pi "echo 'VITE_SUPABASE_URL=${DEV_SUPABASE_URL}' > ~/ml_companion/.env"
+          ssh dev-pi "echo 'VITE_SUPABASE_ANON_KEY=${DEV_SUPABASE_ANON_KEY}' >> ~/ml_companion/.env"
+          ssh dev-pi "echo 'VITE_APP_ENV=development' >> ~/ml_companion/.env"
           ssh dev-pi "cd ~/ml_companion && docker compose down && docker compose build --no-cache && docker compose up -d"
 
       - name: Health check
