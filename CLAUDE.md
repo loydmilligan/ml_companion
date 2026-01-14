@@ -29,14 +29,16 @@ git push origin main      # For PROD deployment (use sparingly)
 ```
 
 ### Supabase Edge Functions
-Deploy edge functions separately using Supabase CLI:
+Deploy edge functions separately using Supabase CLI. **ALWAYS use `--no-verify-jwt`**:
 ```bash
 # DEV environment
-npx supabase functions deploy <function-name> --project-ref rqtimlhqasmeymxhmkiz
+npx supabase functions deploy <function-name> --project-ref rqtimlhqasmeymxhmkiz --no-verify-jwt
 
 # PROD environment
-npx supabase functions deploy <function-name> --project-ref hxwecmhpxuqufomtcvgo
+npx supabase functions deploy <function-name> --project-ref hxwecmhpxuqufomtcvgo --no-verify-jwt
 ```
+
+**CRITICAL**: Always include `--no-verify-jwt` flag. The app handles its own JWT verification internally. Omitting this flag will break the functions.
 
 ### FORBIDDEN Actions
 - **NEVER** use `ssh pi` or `ssh frig` for deployments
