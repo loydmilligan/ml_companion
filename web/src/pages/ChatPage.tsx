@@ -594,16 +594,36 @@ export default function ChatPage() {
       if (msg && msg.author_id && msg.author_id !== profile.id) {
         const { data: authorProfile } = await supabase
           .from("profiles")
-          .select("email,reaction_notify_enabled")
+          .select("email,reaction_notify_enabled,email_notify_enabled")
           .eq("id", msg.author_id)
           .maybeSingle();
 
-        if (authorProfile?.reaction_notify_enabled && authorProfile?.email) {
+        if (authorProfile?.reaction_notify_enabled && authorProfile?.email_notify_enabled !== false && authorProfile?.email) {
+          // Get existing reactions on this message
+          const existingReactions = reactions.get(messageId) ?? [];
+          const otherReactionsText = existingReactions
+            .filter(r => r.emoji !== emoji) // Exclude the new reaction
+            .map(r => `${r.emoji}${r.count > 1 ? ` (${r.count})` : ""}`)
+            .join(" ");
+
+          // Build notification message
+          const truncatedMsg = msg.body.length > 100 ? msg.body.slice(0, 100) + "..." : msg.body;
+          let notificationMessage = `${profile.display_name ?? "Someone"} reacted ${emoji} to your message:\n↳ "${truncatedMsg}"`;
+          if (otherReactionsText) {
+            notificationMessage += `\n\nOther reactions: ${otherReactionsText}`;
+          }
+
+          // Deep link to the message
+          const appUrl = window.location.origin;
+          const deepLink = `${appUrl}/app?msg=${messageId}`;
+
           await supabase.functions.invoke("notify", {
             body: {
               title: "New reaction",
-              message: `${profile.display_name ?? "Someone"} reacted ${emoji} to your message`,
+              message: notificationMessage,
               recipients: [authorProfile.email],
+              link: deepLink,
+              linkText: "View message",
             },
           });
         }
