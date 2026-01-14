@@ -1,5 +1,56 @@
 # Claude Project Guide
 
+## DEPLOYMENT - READ FIRST
+
+**CRITICAL: Use CI/CD Pipeline - NEVER SSH to Pi manually**
+
+### How Deployment Works
+This project uses **GitHub Actions CI/CD pipelines** for all deployments. Pushing to a branch triggers automatic deployment.
+
+| Branch | Environment | Triggered By | URL |
+|--------|-------------|--------------|-----|
+| `develop` | DEV | Push to `develop` | `https://dev-tml.mattmariani.com` |
+| `main` | PROD | Push to `main` | `https://talking.mattmariani.com` |
+
+### Deployment Steps (ALWAYS follow this)
+
+```bash
+# 1. Make changes and commit
+git add -A && git commit -m "Your commit message"
+
+# 2. Push to trigger CI/CD
+git push origin develop   # For DEV deployment
+# OR
+git push origin main      # For PROD deployment (use sparingly)
+
+# 3. Monitor GitHub Actions
+# Go to: https://github.com/loydmilligan/ml_companion/actions
+# Wait for workflow to complete (green checkmark)
+```
+
+### Supabase Edge Functions
+Deploy edge functions separately using Supabase CLI:
+```bash
+# DEV environment
+npx supabase functions deploy <function-name> --project-ref rqtimlhqasmeymxhmkiz
+
+# PROD environment
+npx supabase functions deploy <function-name> --project-ref hxwecmhpxuqufomtcvgo
+```
+
+### FORBIDDEN Actions
+- **NEVER** use `ssh pi` or `ssh frig` for deployments
+- **NEVER** run `docker compose` commands on Pi manually
+- **NEVER** deploy directly to PROD without testing on DEV first
+- **NEVER** run local dev servers (`npm run dev`)
+
+### Verification
+After CI/CD completes, verify deployment at the appropriate URL:
+- DEV: `https://dev-tml.mattmariani.com`
+- PROD: `https://talking.mattmariani.com`
+
+---
+
 This repo is a documentation-first product spec for the Music League Family Companion App. Use the docs as the source of truth before proposing or implementing changes.
 
 ## Primary References
@@ -60,72 +111,6 @@ See `docs/design/style-guide.md` for:
 - Complete approved color palette with hex values
 - Pre-calculated WCAG contrast ratios
 - Copy-paste CSS snippets for common patterns
-
-## Deployment Workflow
-
-**CRITICAL**: After making ANY code changes, you MUST deploy using the steps below. Do NOT run dev servers locally - we deploy to a Raspberry Pi.
-
-### Raspberry Pi Deployment (REQUIRED)
-
-**Pi Address**: `192.168.4.158`
-**Production URL**: `https://talking.mattmariani.com` (via Cloudflare tunnel)
-**Local fallback**: `http://192.168.4.158:3080`
-
-### Deploy Steps (execute in order):
-
-```bash
-# 1. Commit changes
-git add -A && git commit -m "Your commit message"
-
-# 2. Push to remote
-git push
-
-# 3. SSH to Pi (use configured alias)
-ssh pi
-
-# 4. On Pi: Navigate to project
-cd ml_companion/
-
-# 5. Pull latest changes
-git pull
-
-# 6. Rebuild and restart Docker containers
-docker compose down
-docker compose build
-docker compose up -d
-```
-
-### Verification (Required)
-After deploy, verify using Chrome DevTools MCP:
-
-1. **Navigate to app**:
-   ```
-   mcp__chrome-devtools__new_page with url: "https://talking.mattmariani.com"
-   ```
-   If Cloudflare tunnel has issues (DO NOT try to fix tunnel issues), use local:
-   ```
-   mcp__chrome-devtools__new_page with url: "http://192.168.4.158:3080"
-   ```
-
-2. **Check page content**:
-   ```
-   mcp__chrome-devtools__take_snapshot
-   mcp__chrome-devtools__list_console_messages
-   ```
-
-3. **Confirm changes are visible** by interacting with the UI
-
-### Important Notes
-- **NEVER run local dev servers** - always deploy to Pi
-- **Stop any local processes** before deploying: `pkill -f vite; pkill -f "npm run"`
-- If Cloudflare tunnel is down, just use local IP - don't attempt to debug tunnel
-- Docker containers run the app on port 3080
-
-### Rollback
-If deployment fails:
-```bash
-ssh pi "cd ml_companion && git checkout HEAD~1 && docker compose down && docker compose build && docker compose up -d"
-```
 
 ## Linear Integration
 
