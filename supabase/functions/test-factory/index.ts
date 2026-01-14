@@ -38,6 +38,19 @@ import {
 } from "./csv-generators.ts";
 import { getMockAIResponse } from "./mock-ai-responses.ts";
 import {
+  simulateChatMessage,
+  simulateChatBurst,
+  simulateChatReaction,
+  simulateReactionBurst,
+  simulateDMThread,
+  simulateMultipleDMThreads,
+  generateVoteData,
+  validateRoundData,
+  type ChatSimulationOptions,
+  type DMSimulationOptions,
+  type VoteGenerationOptions,
+} from "./chat-simulator.ts";
+import {
   startTestRun,
   recordAction,
   completeTestRun,
@@ -136,11 +149,31 @@ Deno.serve(async (req) => {
         response = await handleExportAnalytics(supabase, params);
         break;
 
+      case "simulate-chat":
+        response = await handleSimulateChat(supabase, params);
+        break;
+
+      case "simulate-dm":
+        response = await handleSimulateDM(supabase, params);
+        break;
+
+      case "simulate-reaction":
+        response = await handleSimulateReaction(supabase, params);
+        break;
+
+      case "generate-votes":
+        response = await handleGenerateVotes(supabase, params);
+        break;
+
+      case "validate-round":
+        response = await handleValidateRound(supabase, params);
+        break;
+
       default:
         response = {
           success: false,
           action: action || "unknown",
-          error: `Unknown action: ${action}. Valid actions: create-round, simulate-email, advance-round, complete-round, generate-csvs, get-state, get-rounds, reset-round, get-analytics, get-test-runs, get-test-run-actions, export-analytics`,
+          error: `Unknown action: ${action}. Valid actions: create-round, simulate-email, advance-round, complete-round, generate-csvs, get-state, get-rounds, reset-round, get-analytics, get-test-runs, get-test-run-actions, export-analytics, simulate-chat, simulate-dm, simulate-reaction, generate-votes, validate-round`,
         };
     }
 
@@ -857,6 +890,232 @@ async function handleExportAnalytics(
     return {
       success: false,
       action: "export-analytics",
+      error: error.message,
+    };
+  }
+}
+
+// ============================================================================
+// Chat/DM/Reaction Simulation Handlers
+// ============================================================================
+
+/**
+ * Simulate chat messages in a group.
+ */
+async function handleSimulateChat(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    groupId?: string;
+    count?: number;
+    options?: ChatSimulationOptions;
+  }
+): Promise<ActionResponse> {
+  const groupId = params.groupId || TEST_GROUP_ID;
+  const count = params.count || 5;
+
+  try {
+    if (count === 1 && params.options) {
+      // Single message with specific options
+      const result = await simulateChatMessage(supabase, groupId, params.options);
+      return {
+        success: result.success,
+        action: "simulate-chat",
+        data: result,
+        error: result.error,
+      };
+    } else {
+      // Burst of random messages
+      const results = await simulateChatBurst(supabase, groupId, count);
+      const successCount = results.filter(r => r.success).length;
+      return {
+        success: successCount > 0,
+        action: "simulate-chat",
+        data: {
+          requested: count,
+          created: successCount,
+          results,
+        },
+        error: successCount === 0 ? "All messages failed" : undefined,
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      action: "simulate-chat",
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Simulate DM threads and messages.
+ */
+async function handleSimulateDM(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    groupId?: string;
+    threadCount?: number;
+    options?: DMSimulationOptions;
+  }
+): Promise<ActionResponse> {
+  const groupId = params.groupId || TEST_GROUP_ID;
+  const threadCount = params.threadCount || 3;
+
+  try {
+    if (params.options) {
+      // Single thread with specific options
+      const result = await simulateDMThread(supabase, groupId, params.options);
+      return {
+        success: result.success,
+        action: "simulate-dm",
+        data: result,
+        error: result.error,
+      };
+    } else {
+      // Multiple random threads
+      const results = await simulateMultipleDMThreads(supabase, groupId, threadCount);
+      const successCount = results.filter(r => r.success).length;
+      return {
+        success: successCount > 0,
+        action: "simulate-dm",
+        data: {
+          requested: threadCount,
+          created: successCount,
+          results,
+        },
+        error: successCount === 0 ? "All DM threads failed" : undefined,
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      action: "simulate-dm",
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Simulate reactions on chat messages.
+ */
+async function handleSimulateReaction(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    groupId?: string;
+    messageId?: string;
+    count?: number;
+    emoji?: string;
+    actorName?: string;
+  }
+): Promise<ActionResponse> {
+  const groupId = params.groupId || TEST_GROUP_ID;
+  const count = params.count || 10;
+
+  try {
+    if (params.messageId) {
+      // React to a specific message
+      const result = await simulateChatReaction(supabase, params.messageId, {
+        emoji: params.emoji,
+        actorName: params.actorName,
+        groupId,
+      });
+      return {
+        success: result.success,
+        action: "simulate-reaction",
+        data: result,
+        error: result.error,
+      };
+    } else {
+      // Burst of random reactions
+      const results = await simulateReactionBurst(supabase, groupId, count);
+      const successCount = results.filter(r => r.success).length;
+      return {
+        success: successCount > 0,
+        action: "simulate-reaction",
+        data: {
+          requested: count,
+          created: successCount,
+          results,
+        },
+        error: successCount === 0 ? "All reactions failed" : undefined,
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      action: "simulate-reaction",
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Generate vote data for a round.
+ */
+async function handleGenerateVotes(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    roundId: string;
+    options?: VoteGenerationOptions;
+  }
+): Promise<ActionResponse> {
+  if (!params.roundId) {
+    return {
+      success: false,
+      action: "generate-votes",
+      error: "roundId is required",
+    };
+  }
+
+  try {
+    const result = await generateVoteData(supabase, params.roundId, params.options || {});
+    return {
+      success: result.success,
+      action: "generate-votes",
+      data: result,
+      error: result.error,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      action: "generate-votes",
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Validate round data integrity.
+ */
+async function handleValidateRound(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    roundId: string;
+    groupId?: string;
+  }
+): Promise<ActionResponse> {
+  if (!params.roundId) {
+    return {
+      success: false,
+      action: "validate-round",
+      error: "roundId is required",
+    };
+  }
+
+  const groupId = params.groupId || TEST_GROUP_ID;
+
+  try {
+    const result = await validateRoundData(supabase, params.roundId, groupId);
+    return {
+      success: result.valid,
+      action: "validate-round",
+      data: result,
+      error: result.valid ? undefined : "Validation failed - see issues in data",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      action: "validate-round",
       error: error.message,
     };
   }

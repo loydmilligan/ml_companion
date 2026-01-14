@@ -31,7 +31,7 @@ import {
 // Types
 // ============================================================================
 
-type MainTab = "control" | "summary" | "analytics" | "preview";
+type MainTab = "control" | "summary" | "analytics" | "social" | "preview";
 
 interface SimulationOptions {
   revealDurationMinutes?: number;
@@ -669,6 +669,9 @@ export default function TestDashboardPage() {
         <TabButton active={activeTab === "analytics"} onClick={() => setActiveTab("analytics")}>
           Analytics
         </TabButton>
+        <TabButton active={activeTab === "social"} onClick={() => setActiveTab("social")}>
+          Social Simulation
+        </TabButton>
         <TabButton active={activeTab === "preview"} onClick={() => setActiveTab("preview")} disabled>
           App Preview (Soon)
         </TabButton>
@@ -724,6 +727,15 @@ export default function TestDashboardPage() {
           loading={loading}
           onRefresh={loadAnalytics}
           onExport={handleExportAnalytics}
+        />
+      )}
+
+      {activeTab === "social" && (
+        <SocialSimulationTab
+          loading={loading}
+          selectedRoundId={selectedRoundId}
+          callFactory={callFactory}
+          addLog={addLog}
         />
       )}
 
@@ -1756,6 +1768,262 @@ function RoundTabs({
         ▶ = Generate/Automate entire round (fills phases top to bottom)
       </div>
     </Card>
+  );
+}
+
+// ============================================================================
+// Social Simulation Tab
+// ============================================================================
+
+interface SocialSimulationTabProps {
+  loading: boolean;
+  selectedRoundId: string | null;
+  callFactory: (action: string, params?: Record<string, unknown>) => Promise<unknown>;
+  addLog: (action: string, success: boolean, details?: string, phase?: PhaseType) => void;
+}
+
+function SocialSimulationTab({
+  loading,
+  selectedRoundId,
+  callFactory,
+  addLog,
+}: SocialSimulationTabProps) {
+  const [chatCount, setChatCount] = useState(5);
+  const [dmCount, setDmCount] = useState(3);
+  const [reactionCount, setReactionCount] = useState(10);
+  const [chatType, setChatType] = useState<"normal" | "song_mention" | "youtube_link" | "quote_reply">("normal");
+  const [validationResult, setValidationResult] = useState<{
+    valid: boolean;
+    submissionCount: number;
+    voteCount: number;
+    issues: string[];
+  } | null>(null);
+
+  const handleSimulateChat = async () => {
+    const result = await callFactory("simulate-chat", {
+      count: chatCount,
+      options: chatCount === 1 ? { messageType: chatType } : undefined,
+    });
+    if (result) {
+      addLog("simulate-chat", true, `Created ${(result as { created?: number }).created || chatCount} chat messages`);
+    }
+  };
+
+  const handleSimulateDM = async () => {
+    const result = await callFactory("simulate-dm", {
+      threadCount: dmCount,
+    });
+    if (result) {
+      addLog("simulate-dm", true, `Created ${(result as { created?: number }).created || dmCount} DM threads`);
+    }
+  };
+
+  const handleSimulateReactions = async () => {
+    const result = await callFactory("simulate-reaction", {
+      count: reactionCount,
+    });
+    if (result) {
+      addLog("simulate-reaction", true, `Created ${(result as { created?: number }).created || reactionCount} reactions`);
+    }
+  };
+
+  const handleGenerateVotes = async () => {
+    if (!selectedRoundId) {
+      addLog("generate-votes", false, "No round selected");
+      return;
+    }
+    const result = await callFactory("generate-votes", {
+      roundId: selectedRoundId,
+    });
+    if (result) {
+      const r = result as { votesGenerated?: number };
+      addLog("generate-votes", true, `Generated ${r.votesGenerated || 0} votes for round`);
+    }
+  };
+
+  const handleValidateRound = async () => {
+    if (!selectedRoundId) {
+      addLog("validate-round", false, "No round selected");
+      return;
+    }
+    const result = await callFactory("validate-round", {
+      roundId: selectedRoundId,
+    });
+    if (result) {
+      setValidationResult(result as typeof validationResult);
+    }
+  };
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+      {/* Chat Simulation */}
+      <Card style={{ padding: "1rem" }}>
+        <h3 style={{ marginBottom: "1rem", borderBottom: "1px solid var(--color-border)", paddingBottom: "0.5rem" }}>
+          Chat Messages
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div>
+            <label style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" }}>
+              Message Count
+            </label>
+            <input
+              type="number"
+              value={chatCount}
+              onChange={(e) => setChatCount(Number(e.target.value))}
+              min={1}
+              max={50}
+              style={{ width: "100px", padding: "0.35rem" }}
+            />
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" }}>
+              Message Type (for single messages)
+            </label>
+            <select
+              value={chatType}
+              onChange={(e) => setChatType(e.target.value as typeof chatType)}
+              style={{ width: "100%", padding: "0.35rem" }}
+            >
+              <option value="normal">Normal Chat</option>
+              <option value="song_mention">Song Mention (Spotify link)</option>
+              <option value="youtube_link">YouTube Link</option>
+              <option value="quote_reply">Quote Reply</option>
+            </select>
+          </div>
+          <ActionBtn onClick={handleSimulateChat} disabled={loading}>
+            Generate Chat Messages
+          </ActionBtn>
+          <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", margin: 0 }}>
+            Creates group chat messages with random content. When count is 1, uses the selected message type.
+          </p>
+        </div>
+      </Card>
+
+      {/* DM Simulation */}
+      <Card style={{ padding: "1rem" }}>
+        <h3 style={{ marginBottom: "1rem", borderBottom: "1px solid var(--color-border)", paddingBottom: "0.5rem" }}>
+          Direct Messages
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div>
+            <label style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" }}>
+              Thread Count
+            </label>
+            <input
+              type="number"
+              value={dmCount}
+              onChange={(e) => setDmCount(Number(e.target.value))}
+              min={1}
+              max={20}
+              style={{ width: "100px", padding: "0.35rem" }}
+            />
+          </div>
+          <ActionBtn onClick={handleSimulateDM} disabled={loading}>
+            Generate DM Threads
+          </ActionBtn>
+          <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", margin: 0 }}>
+            Creates DM conversation threads between random pairs of test users with 2-5 messages each.
+          </p>
+        </div>
+      </Card>
+
+      {/* Reaction Simulation */}
+      <Card style={{ padding: "1rem" }}>
+        <h3 style={{ marginBottom: "1rem", borderBottom: "1px solid var(--color-border)", paddingBottom: "0.5rem" }}>
+          Reactions
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div>
+            <label style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" }}>
+              Reaction Count
+            </label>
+            <input
+              type="number"
+              value={reactionCount}
+              onChange={(e) => setReactionCount(Number(e.target.value))}
+              min={1}
+              max={100}
+              style={{ width: "100px", padding: "0.35rem" }}
+            />
+          </div>
+          <ActionBtn onClick={handleSimulateReactions} disabled={loading}>
+            Generate Reactions
+          </ActionBtn>
+          <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", margin: 0 }}>
+            Adds emoji reactions to random existing chat messages from random test users.
+          </p>
+        </div>
+      </Card>
+
+      {/* Vote Data Generation */}
+      <Card style={{ padding: "1rem" }}>
+        <h3 style={{ marginBottom: "1rem", borderBottom: "1px solid var(--color-border)", paddingBottom: "0.5rem" }}>
+          Vote Data
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+            Selected Round: {selectedRoundId ? selectedRoundId.slice(0, 8) + "..." : "None"}
+          </div>
+          <ActionBtn onClick={handleGenerateVotes} disabled={loading || !selectedRoundId}>
+            Generate Vote Records
+          </ActionBtn>
+          <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", margin: 0 }}>
+            Creates actual vote records with point distributions for the selected round. Each voter allocates points to all other submissions.
+          </p>
+        </div>
+      </Card>
+
+      {/* Data Validation */}
+      <Card style={{ padding: "1rem", gridColumn: "1 / -1" }}>
+        <h3 style={{ marginBottom: "1rem", borderBottom: "1px solid var(--color-border)", paddingBottom: "0.5rem" }}>
+          Data Validation
+        </h3>
+        <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", minWidth: "200px" }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+              Selected Round: {selectedRoundId ? selectedRoundId.slice(0, 8) + "..." : "None"}
+            </div>
+            <ActionBtn onClick={handleValidateRound} disabled={loading || !selectedRoundId}>
+              Validate Round Data
+            </ActionBtn>
+          </div>
+          {validationResult && (
+            <div
+              style={{
+                flex: 1,
+                padding: "0.75rem",
+                borderRadius: "6px",
+                backgroundColor: validationResult.valid ? "#f0fdf4" : "#fef2f2",
+                border: `1px solid ${validationResult.valid ? "#22c55e" : "#ef4444"}`,
+              }}
+            >
+              <div style={{ fontWeight: "bold", marginBottom: "0.5rem", color: validationResult.valid ? "#22c55e" : "#ef4444" }}>
+                {validationResult.valid ? "✓ Valid" : "✗ Invalid"}
+              </div>
+              <div style={{ fontSize: "0.85rem", marginBottom: "0.25rem" }}>
+                Submissions: {validationResult.submissionCount}
+              </div>
+              <div style={{ fontSize: "0.85rem", marginBottom: "0.25rem" }}>
+                Vote Records: {validationResult.voteCount}
+              </div>
+              {validationResult.issues.length > 0 && (
+                <div style={{ marginTop: "0.5rem" }}>
+                  <div style={{ fontWeight: "bold", fontSize: "0.85rem" }}>Issues:</div>
+                  <ul style={{ margin: "0.25rem 0 0 1rem", padding: 0, fontSize: "0.8rem" }}>
+                    {validationResult.issues.map((issue, idx) => (
+                      <li key={idx} style={{ color: "#ef4444" }}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", margin: "0.75rem 0 0 0" }}>
+          Validates round data integrity including submission counts, vote coverage, and required fields.
+        </p>
+      </Card>
+    </div>
   );
 }
 

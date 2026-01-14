@@ -1,7 +1,7 @@
 # Issues & Roadmap
 
-Version: v1.13
-Date: 2026-01-12
+Version: v1.14
+Date: 2026-01-14
 
 **Sync Status:**
 - Last Local Change: 2026-01-12
@@ -20,6 +20,7 @@ Date: 2026-01-12
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.14 | 2026-01-14 | Marked HIST-001, ML-001, ML-002, AWD-005, INT-002, YT-001, PN-005, CHAT-001 complete; added notification deep links |
 | v1.13 | 2026-01-12 | Added PN-005 (Separate DM notification checkbox) |
 | v1.12 | 2026-01-10 | Added DM-001 through DM-004 (DM inbox bugs and icon styling) |
 | v1.11 | 2026-01-10 | Added TEST-002 Test Dashboard Song Tracking; updated TEST-001 to In Progress |
@@ -45,14 +46,14 @@ Date: 2026-01-12
 | PN-002 | [LOYD-130](https://linear.app/loydmilligan/issue/LOYD-130) | iOS Push (APNs) | In Progress | High | High | Medium | PWA installed, needs Apple Developer account for native APNs |
 | PN-003 | — | Notification Preferences | **Complete** | Medium | Medium | Low | Type toggles (new_round, results, chat, deadline). Deployed 2026-01-03 |
 | PN-004 | — | ntfy.sh Fallback | **Complete** | Low | Medium | Low | Alternative push via ntfy.sh with subscribe guide. Deployed 2026-01-03 |
-| PN-005 | — | Separate DM Notification Toggle | Planned | Low | Medium | Low | Add distinct checkbox for DM messages separate from group chat notifications |
+| PN-005 | — | Separate DM Notification Toggle | **Complete** | Low | Medium | Low | Add distinct checkbox for DM messages separate from group chat notifications. Deployed 2026-01-14 |
 
 ### Integrations
 
 | ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
 |----|--------|---------|--------|--------|---------|------|-------|
 | INT-001 | [LOYD-131](https://linear.app/loydmilligan/issue/LOYD-131) | Music League Email Integration | **Partial** | High | High | Low | Email parsing via n8n→Supabase done. Activity tracking working. Deployed 2026-01-04 |
-| INT-002 | [LOYD-132](https://linear.app/loydmilligan/issue/LOYD-132) | Supabase Realtime | Planned | Medium | High | High | Live updates for chat, votes, round status |
+| INT-002 | [LOYD-132](https://linear.app/loydmilligan/issue/LOYD-132) | Supabase Realtime | **Complete** | Medium | High | High | Live updates for chat, votes, round status. Deployed 2026-01-14 |
 | INT-003 | [LOYD-133](https://linear.app/loydmilligan/issue/LOYD-133) | Spotify Embeds | Planned | Medium | Medium | Low | Embedded player for in-app playback |
 | INT-004 | — | YouTube Sidebar Player | **Complete** | Medium | High | Low | In-app YouTube playback with sidebar. Deployed 2026-01-04 |
 | INT-005 | — | Activity Tracker | **Complete** | Medium | High | Low | Show who submitted/voted with urgency colors. Deployed 2026-01-04 |
@@ -61,8 +62,8 @@ Date: 2026-01-12
 
 | ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
 |----|--------|---------|--------|--------|---------|------|-------|
-| ML-001 | [LOYD-134](https://linear.app/loydmilligan/issue/LOYD-134) | Verify Spotify Links | Planned | Low | Medium | Low | Audit all Spotify song/playlist links |
-| ML-002 | [LOYD-135](https://linear.app/loydmilligan/issue/LOYD-135) | Verify YouTube Links | Planned | Low | Medium | Low | Audit all YouTube song/playlist links |
+| ML-001 | [LOYD-134](https://linear.app/loydmilligan/issue/LOYD-134) | Verify Spotify Links | **Complete** | Low | Medium | Low | Audit all Spotify song/playlist links. Deployed 2026-01-14 |
+| ML-002 | [LOYD-135](https://linear.app/loydmilligan/issue/LOYD-135) | Verify YouTube Links | **Complete** | Low | Medium | Low | Audit all YouTube song/playlist links. Deployed 2026-01-14 |
 | ML-003 | [LOYD-136](https://linear.app/loydmilligan/issue/LOYD-136) | Spotify Embed Player | Planned | Medium | Medium | Low | Look into embedded player vs external links |
 | ML-004 | [LOYD-152](https://linear.app/loydmilligan/issue/LOYD-152) | Song Link Preference Toggle (Spotify/YouTube/Both) | Planned | Low | Medium | Low | User setting to choose default song link provider |
 
@@ -95,7 +96,7 @@ Date: 2026-01-12
 
 | ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
 |----|--------|---------|--------|--------|---------|------|-------|
-| YT-001 | [LOYD-153](https://linear.app/loydmilligan/issue/LOYD-153) | YouTube Playlist Automation | Planned | High | High | Medium | Parent epic: auto-generate YouTube playlists from Spotify rounds |
+| YT-001 | [LOYD-153](https://linear.app/loydmilligan/issue/LOYD-153) | YouTube Playlist Automation | **Complete** | High | High | Medium | Parent epic: auto-generate YouTube playlists from Spotify rounds. Deployed 2026-01-14 |
 | YT-002 | [LOYD-151](https://linear.app/loydmilligan/issue/LOYD-151) | Copy AI Image URLs in Admin | Planned | Low | Medium | Low | Sub of YT-001: copy URLs for YouTube thumbnails |
 | YT-003 | [LOYD-156](https://linear.app/loydmilligan/issue/LOYD-156) | Spotify-to-YouTube Converter | Planned | Medium | High | Low | Sub of YT-001: convert Spotify tracks to YouTube links via song.link API |
 
@@ -103,13 +104,13 @@ Date: 2026-01-12
 
 | ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
 |----|--------|---------|--------|--------|---------|------|-------|
-| CHAT-001 | [LOYD-154](https://linear.app/loydmilligan/issue/LOYD-154) | Chat Quote Reply | **In Progress** | Low | Medium | Low | Add quote reply button to reaction picker |
+| CHAT-001 | [LOYD-154](https://linear.app/loydmilligan/issue/LOYD-154) | Chat Quote Reply | **Complete** | Low | Medium | Low | Add quote reply button to reaction picker. Deployed 2026-01-14 |
 
 ### History Page
 
 | ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
 |----|--------|---------|--------|--------|---------|------|-------|
-| HIST-001 | [LOYD-155](https://linear.app/loydmilligan/issue/LOYD-155) | Spotify Links on Song Cards | **In Progress** | Low | Medium | Low | Convert source_uri to clickable Spotify links |
+| HIST-001 | [LOYD-155](https://linear.app/loydmilligan/issue/LOYD-155) | Spotify Links on Song Cards | **Complete** | Low | Medium | Low | Convert source_uri to clickable Spotify links. Deployed 2026-01-14 |
 
 ### Direct Messages (Bugs)
 
@@ -186,7 +187,7 @@ Date: 2026-01-12
 |----|--------|---------|--------|--------|---------|------|-------|
 | AWD-003 | [LOYD-145](https://linear.app/loydmilligan/issue/LOYD-145) | Season Awards Schema | Planned | Medium | Medium | Low | Add tables for season-level awards |
 | AWD-004 | [LOYD-146](https://linear.app/loydmilligan/issue/LOYD-146) | Season Award Calculations | Planned | High | Medium | Medium | Implement 30 season-long awards |
-| AWD-005 | [LOYD-147](https://linear.app/loydmilligan/issue/LOYD-147) | Current Season Card | Planned | Medium | High | Low | UI component showing live season progress |
+| AWD-005 | [LOYD-147](https://linear.app/loydmilligan/issue/LOYD-147) | Current Season Card | **Complete** | Medium | High | Low | UI component showing live season progress. Deployed 2026-01-14 |
 | AWD-006 | [LOYD-148](https://linear.app/loydmilligan/issue/LOYD-148) | "Awards in Reach" Gamification | Planned | Medium | Medium | Low | Show what awards users can still win |
 
 ### AWD-001: Trophy Modal Info by Category
@@ -371,27 +372,25 @@ Display on History page showing:
 
 ---
 
-## Current Sprint (2026-01-05)
+## Current Sprint (2026-01-14)
 
 | ID | Linear | Feature | Status |
 |----|--------|---------|--------|
 | AI-001 | LOYD-150 | AI Chat Voting Phase Prompt | In Progress |
-| CHAT-001 | LOYD-154 | Chat Quote Reply | In Progress |
-| HIST-001 | LOYD-155 | Spotify Links on History Cards | In Progress |
+| TEST-001 | LOYD-185 | Automated Test Environment Enhancement | In Progress |
 
 ---
 
 ## Priority Matrix
 
 **Quick Wins (Low Effort, High/Medium Benefit):**
-- ML-001/ML-002 (LOYD-134/135): Verify media links
 - EF-003 (LOYD-138): Add payload limits
+- AI-001 (LOYD-150): AI Chat Voting Phase Prompt
 
 **High Impact (Worth the Effort):**
 - PN-002 (LOYD-130): iOS native push (APNs)
-- INT-002 (LOYD-132): Supabase Realtime
-- AWD-005 (LOYD-147): Current Season Card
-- YT-001 (LOYD-153): YouTube Playlist Automation
+- TEST-001 (LOYD-185): Automated Test Environment Enhancement
+- AWD-004 (LOYD-146): Season Award Calculations
 
 **Technical Debt:**
 - STG-001/STG-002 (LOYD-141/142): Storage buckets cleanup
@@ -402,7 +401,7 @@ Display on History page showing:
 
 ---
 
-## Recently Completed (2026-01-01 to 2026-01-04)
+## Recently Completed (2026-01-01 to 2026-01-14)
 
 | ID | Feature | Date |
 |----|---------|------|
@@ -415,3 +414,11 @@ Display on History page showing:
 | INT-001 | Email Ingestion (partial) | 2026-01-04 |
 | INT-004 | YouTube Sidebar Player | 2026-01-04 |
 | INT-005 | Activity Tracker | 2026-01-04 |
+| PN-005 | Separate DM Notification Toggle | 2026-01-14 |
+| CHAT-001 | Chat Quote Reply | 2026-01-14 |
+| HIST-001 | Spotify Links on Song Cards | 2026-01-14 |
+| ML-001 | Verify Spotify Links | 2026-01-14 |
+| ML-002 | Verify YouTube Links | 2026-01-14 |
+| INT-002 | Supabase Realtime | 2026-01-14 |
+| YT-001 | YouTube Playlist Automation | 2026-01-14 |
+| AWD-005 | Current Season Card | 2026-01-14 |
