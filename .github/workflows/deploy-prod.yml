@@ -12,26 +12,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy to Prod Pi
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.PROD_PI_HOST }}
-          username: ${{ secrets.PROD_PI_USER }}
-          key: ${{ secrets.PROD_PI_SSH_KEY }}
-          script: |
-            cd ~/ml_companion
-            git fetch origin
-            git checkout main
-            git pull origin main
+      - name: Install cloudflared
+        run: |
+          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+          chmod +x cloudflared
+          sudo mv cloudflared /usr/local/bin/
 
-            docker compose down
-            docker compose build --no-cache
-            docker compose up -d
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_PI_SSH_KEY }}
+
+      - name: Setup SSH Config
+        run: |
+          cat >> ~/.ssh/config << 'SSHEOF'
+          Host prod-pi
+            HostName ssh-pi.mattmariani.com
+            User pi
+            ProxyCommand cloudflared access ssh --hostname %h
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+          SSHEOF
+          chmod 600 ~/.ssh/config
+
+      - name: Deploy to Prod Pi
+        run: |
+          ssh prod-pi "cd ~/ml_companion && git fetch origin && git checkout main && git pull origin main"
+          ssh prod-pi "cd ~/ml_companion && docker compose down && docker compose build --no-cache && docker compose up -d"
 
       - name: Health check
         run: |
+          echo "Waiting for app to start..."
           sleep 45
-          curl -f https://talking.mattmariani.com || curl -f http://${{ secrets.PROD_PI_HOST }}:3080 || echo "Health check needs manual verification"
+          curl -f https://talking.mattmariani.com || echo "Health check needs manual verification"
 
       - name: Notify success
         run: echo "Deployed ${{ github.event.release.tag_name }} to production"
