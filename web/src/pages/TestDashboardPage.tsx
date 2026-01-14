@@ -211,6 +211,39 @@ export default function TestDashboardPage() {
   };
 
   const handleCreateRound = async () => {
+    // Check if a round with this theme already exists
+    const existingRound = state?.rounds?.find(
+      (r) => r.theme.toLowerCase() === newTheme.toLowerCase()
+    );
+
+    if (existingRound) {
+      const choice = confirm(
+        `A round with theme "${newTheme}" already exists (status: ${existingRound.status}).\n\n` +
+        `Would you like to reset it and start over?\n\n` +
+        `Click OK to reset the existing round.\n` +
+        `Click Cancel to keep it as-is.`
+      );
+
+      if (choice) {
+        // User wants to reset
+        const resetResult = await callFactory("reset-round", {
+          roundId: existingRound.id,
+          fullReset: true,
+        });
+        if (resetResult) {
+          addLog("reset-round", true, `Reset "${newTheme}" to start over`, "submission");
+        }
+        setSelectedRoundId(existingRound.id);
+        await loadState();
+      } else {
+        // User wants to keep existing - just select it
+        setSelectedRoundId(existingRound.id);
+        addLog("create-round", true, `Selected existing round "${newTheme}"`, "submission");
+      }
+      return;
+    }
+
+    // No duplicate - create new round
     const result = await callFactory("create-round", {
       leagueId: TEST_LEAGUE_S2_ID,
       theme: newTheme,
@@ -319,7 +352,23 @@ export default function TestDashboardPage() {
 
   const handleResetRound = async () => {
     if (!selectedRoundId) return;
-    await callFactory("reset-round", { roundId: selectedRoundId });
+
+    const roundTheme = selectedRound?.theme || "this round";
+    if (!confirm(`Are you sure you want to reset "${roundTheme}"?\n\nThis will delete ALL data including:\n• Submissions\n• Votes\n• Awards\n• Activity records\n• Chat messages\n• Game guesses\n\nThe round will return to "open" status.`)) {
+      return;
+    }
+
+    const result = await callFactory("reset-round", { roundId: selectedRoundId, fullReset: true });
+    if (result) {
+      const data = result as { deletedCounts?: Record<string, number> };
+      if (data.deletedCounts) {
+        const counts = Object.entries(data.deletedCounts)
+          .filter(([, v]) => v > 0)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(", ");
+        addLog("reset-round", true, `Reset complete. Deleted: ${counts || "no data"}`, "archived");
+      }
+    }
     await loadState();
   };
 

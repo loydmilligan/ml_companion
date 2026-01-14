@@ -282,11 +282,12 @@ export async function simulateUserSubmitted(
       title: song.title,
       artist: song.artist,
       link: spotifyLink,
+      source_uri: song.uri,
       artwork_url: `https://via.placeholder.com/300x300.png?text=${encodeURIComponent(song.title.slice(0, 15))}`,
       created_at: new Date().toISOString(),
     },
     {
-      onConflict: "round_id,submitter_name",
+      onConflict: "round_id,source_uri",
     }
   );
 

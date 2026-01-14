@@ -723,56 +723,121 @@ async function handleGetRounds(
 
 /**
  * Reset a specific round to a given state.
+ * Deletes all associated data: submissions, votes, activity, awards, etc.
  */
 async function handleResetRound(
   supabase: ReturnType<typeof createClient>,
   params: {
     roundId: string;
     toStatus?: string;
+    fullReset?: boolean;
   }
 ): Promise<ActionResponse> {
-  const { roundId, toStatus = "open" } = params;
+  const { roundId, toStatus = "open", fullReset = true } = params;
+  const deletedCounts: Record<string, number> = {};
 
-  // Delete activity for this round
-  await supabase
-    .from("round_user_activity")
-    .delete()
-    .eq("round_id", roundId);
+  try {
+    if (fullReset) {
+      // Get submission IDs for this round (needed for votes deletion)
+      const { data: submissions } = await supabase
+        .from("submissions")
+        .select("id")
+        .eq("round_id", roundId);
 
-  // Reset round status
-  const updates: Record<string, unknown> = {
-    status: toStatus,
-    reveal_until: null,
-    test_reveal_duration_minutes: null,
-  };
+      const submissionIds = submissions?.map(s => s.id) || [];
 
-  if (toStatus === "open") {
-    updates.pulltab_image_light_url = null;
-    updates.pulltab_image_dark_url = null;
-  }
+      // Delete votes for these submissions
+      if (submissionIds.length > 0) {
+        const { count: votesDeleted } = await supabase
+          .from("votes")
+          .delete()
+          .in("submission_id", submissionIds)
+          .select("id", { count: "exact", head: true });
+        deletedCounts.votes = votesDeleted || 0;
+      }
 
-  const { error } = await supabase
-    .from("rounds")
-    .update(updates)
-    .eq("id", roundId);
+      // Delete submissions
+      const { count: subsDeleted } = await supabase
+        .from("submissions")
+        .delete()
+        .eq("round_id", roundId)
+        .select("id", { count: "exact", head: true });
+      deletedCounts.submissions = subsDeleted || 0;
 
-  if (error) {
+      // Delete round-related data (ignore errors for tables that may not have data)
+      const tablesToClear = [
+        "round_user_activity",
+        "round_awards",
+        "round_ai_cache",
+        "round_challenges",
+        "round_challenge_v2",
+        "round_challenge_guesses",
+        "submitter_guesses",
+        "timeline_guesses",
+        "round_chats",
+      ];
+
+      for (const table of tablesToClear) {
+        const { count } = await supabase
+          .from(table)
+          .delete()
+          .eq("round_id", roundId)
+          .select("id", { count: "exact", head: true });
+        if (count && count > 0) {
+          deletedCounts[table] = count;
+        }
+      }
+    } else {
+      // Light reset - just clear activity
+      await supabase
+        .from("round_user_activity")
+        .delete()
+        .eq("round_id", roundId);
+      deletedCounts.round_user_activity = 1;
+    }
+
+    // Reset round status and metadata
+    const updates: Record<string, unknown> = {
+      status: toStatus,
+      reveal_until: null,
+      test_reveal_duration_minutes: null,
+    };
+
+    if (toStatus === "open") {
+      updates.pulltab_image_light_url = null;
+      updates.pulltab_image_dark_url = null;
+    }
+
+    const { error } = await supabase
+      .from("rounds")
+      .update(updates)
+      .eq("id", roundId);
+
+    if (error) {
+      return {
+        success: false,
+        action: "reset-round",
+        error: error.message,
+      };
+    }
+
+    return {
+      success: true,
+      action: "reset-round",
+      data: {
+        roundId,
+        newStatus: toStatus,
+        fullReset,
+        deletedCounts,
+      },
+    };
+  } catch (error) {
     return {
       success: false,
       action: "reset-round",
       error: error.message,
     };
   }
-
-  return {
-    success: true,
-    action: "reset-round",
-    data: {
-      roundId,
-      newStatus: toStatus,
-      activityCleared: true,
-    },
-  };
 }
 
 // ============================================================================
