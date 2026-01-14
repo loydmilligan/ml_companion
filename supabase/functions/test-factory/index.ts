@@ -59,6 +59,11 @@ import {
   getTestRunActions,
   exportAnalytics,
 } from "./analytics.ts";
+import {
+  importHistoricalData,
+  linkCompetitorsToProfiles,
+  type ImportOptions,
+} from "./import-handler.ts";
 
 // Test IDs (must match seed-test-data function)
 const TEST_GROUP_ID = "00000000-0000-0000-0001-000000000001";
@@ -169,11 +174,19 @@ Deno.serve(async (req) => {
         response = await handleValidateRound(supabase, params);
         break;
 
+      case "import-historical":
+        response = await handleImportHistorical(supabase, params);
+        break;
+
+      case "link-competitors":
+        response = await handleLinkCompetitors(supabase, params);
+        break;
+
       default:
         response = {
           success: false,
           action: action || "unknown",
-          error: `Unknown action: ${action}. Valid actions: create-round, simulate-email, advance-round, complete-round, generate-csvs, get-state, get-rounds, reset-round, get-analytics, get-test-runs, get-test-run-actions, export-analytics, simulate-chat, simulate-dm, simulate-reaction, generate-votes, validate-round`,
+          error: `Unknown action: ${action}. Valid actions: create-round, simulate-email, advance-round, complete-round, generate-csvs, get-state, get-rounds, reset-round, get-analytics, get-test-runs, get-test-run-actions, export-analytics, simulate-chat, simulate-dm, simulate-reaction, generate-votes, validate-round, import-historical, link-competitors`,
         };
     }
 
@@ -1116,6 +1129,75 @@ async function handleValidateRound(
     return {
       success: false,
       action: "validate-round",
+      error: error.message,
+    };
+  }
+}
+
+// ============================================================================
+// Historical Import Handlers
+// ============================================================================
+
+/**
+ * Import historical season data directly to database.
+ */
+async function handleImportHistorical(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    roundCount?: number;
+    groupId?: string;
+    leagueId?: string;
+    includeVotes?: boolean;
+  }
+): Promise<ActionResponse> {
+  try {
+    const options: ImportOptions = {
+      roundCount: params.roundCount || 5,
+      groupId: params.groupId || TEST_GROUP_ID,
+      leagueId: params.leagueId || TEST_LEAGUE_S1_ID,
+      includeVotes: params.includeVotes !== false,
+    };
+
+    const result = await importHistoricalData(supabase, options);
+
+    return {
+      success: result.success,
+      action: "import-historical",
+      data: result,
+      error: result.errors?.join("; "),
+    };
+  } catch (error) {
+    return {
+      success: false,
+      action: "import-historical",
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Auto-link competitors to profiles by name matching.
+ */
+async function handleLinkCompetitors(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    groupId?: string;
+  }
+): Promise<ActionResponse> {
+  try {
+    const groupId = params.groupId || TEST_GROUP_ID;
+    const result = await linkCompetitorsToProfiles(supabase, groupId);
+
+    return {
+      success: result.success,
+      action: "link-competitors",
+      data: { linked: result.linked },
+      error: result.error,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      action: "link-competitors",
       error: error.message,
     };
   }

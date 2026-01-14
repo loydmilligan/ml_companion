@@ -1,12 +1,12 @@
 # Issues & Roadmap
 
-Version: v1.14
+Version: v1.15
 Date: 2026-01-14
 
 **Sync Status:**
-- Last Local Change: 2026-01-12
+- Last Local Change: 2026-01-14
 - Last Linear Sync: 2026-01-09
-- Pending Sync: Yes (TEST-002, DM-001 through DM-004, PN-005 not yet in Linear)
+- Pending Sync: Yes (TEST-002, TEST-003, DM-001 through DM-004 not yet in Linear)
 
 **Legend:**
 - **Effort:** Low (< 1 day) | Medium (1-3 days) | High (1+ week)
@@ -20,6 +20,7 @@ Date: 2026-01-14
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.15 | 2026-01-14 | Added TEST-003 (Historical CSV Import in Test Dashboard) |
 | v1.14 | 2026-01-14 | Marked HIST-001, ML-001, ML-002, AWD-005, INT-002, YT-001, PN-005, CHAT-001 complete; added notification deep links |
 | v1.13 | 2026-01-12 | Added PN-005 (Separate DM notification checkbox) |
 | v1.12 | 2026-01-10 | Added DM-001 through DM-004 (DM inbox bugs and icon styling) |
@@ -305,6 +306,7 @@ Display on History page showing:
 |----|--------|---------|--------|--------|---------|------|-------|
 | TEST-001 | [LOYD-185](https://linear.app/loydmilligan/issue/LOYD-185) | Automated Test Environment & Data Factory | **In Progress** | High | High | Low | Full test harness for round lifecycle, multi-user simulation, observation dashboard |
 | TEST-002 | — | Test Dashboard Song Tracking | Planned | Low | Medium | Low | Display actual song names in submission grid; requires edge function enhancement to return song data |
+| TEST-003 | — | Historical CSV Import in Test Dashboard | Planned | Medium | High | Low | Generate and import historical CSVs directly from test dashboard; consolidate import workflow |
 
 ### TEST-001: Automated Test Environment
 
@@ -345,6 +347,38 @@ Display on History page showing:
    - CLI or UI to trigger scenarios
    - Speed controls (real-time vs accelerated)
    - Reset function to clear and restart
+
+### TEST-003: Historical CSV Import in Test Dashboard
+
+**Problem:** Currently, historical CSV generation creates downloadable files, but importing them requires navigating to the Admin > Imports tab manually. This breaks the test workflow and requires extra steps.
+
+**Requirements:**
+
+1. **Unified CSV Workflow**
+   - Generate historical CSVs (rounds, submissions, votes)
+   - Import directly to database without download
+   - Optional: download button for local backup
+
+2. **Import Actions to Support**
+   - Season competitors import
+   - Historical rounds import
+   - Submissions with song data import
+   - Vote records import
+   - Player connections import
+
+3. **Post-Import Functions**
+   - Review all functions that depend on historical data:
+     - Competitor linking (profile_id matching)
+     - Award calculations
+     - Leaderboard aggregation
+     - AI story context
+   - Ensure these can be triggered from test dashboard
+
+4. **UI Controls**
+   - "Generate & Import" combined button
+   - Progress indicator for multi-step import
+   - Validation results display
+   - "Download CSVs" separate option for debugging
 
 ---
 

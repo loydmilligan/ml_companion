@@ -38,6 +38,21 @@ interface SimulationOptions {
   useMockAI?: boolean;
 }
 
+interface ImportProgress {
+  step: string;
+  percent: number;
+}
+
+interface ImportResult {
+  success: boolean;
+  rounds: number;
+  submissions: number;
+  votes: number;
+  competitors: number;
+  roundIds: string[];
+  errors?: string[];
+}
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -57,6 +72,11 @@ export default function TestDashboardPage() {
   // Analytics state
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [analyticsDays, setAnalyticsDays] = useState(7);
+
+  // Import state
+  const [importRoundCount, setImportRoundCount] = useState(5);
+  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
   // Derived state
   const selectedRound = useMemo(
@@ -393,7 +413,7 @@ export default function TestDashboardPage() {
   };
 
   const handleGenerateCSVs = async () => {
-    const result = await callFactory("generate-csvs", { roundCount: 5 });
+    const result = await callFactory("generate-csvs", { roundCount: importRoundCount });
     if (result?.files) {
       for (const [name, content] of Object.entries(result.files)) {
         const blob = new Blob([content as string], { type: "text/csv" });
@@ -404,6 +424,59 @@ export default function TestDashboardPage() {
         a.click();
         URL.revokeObjectURL(url);
       }
+    }
+  };
+
+  const handleGenerateAndImport = async () => {
+    setImportProgress({ step: "Generating data...", percent: 10 });
+    setImportResult(null);
+
+    try {
+      setImportProgress({ step: "Importing to database...", percent: 30 });
+      const result = await callFactory("import-historical", {
+        roundCount: importRoundCount,
+        includeVotes: true,
+      });
+
+      setImportProgress({ step: "Finalizing...", percent: 90 });
+
+      if (result) {
+        const importRes = result as ImportResult;
+        setImportResult(importRes);
+        if (importRes.success) {
+          addLog(
+            "import-historical",
+            true,
+            `Imported ${importRes.rounds} rounds, ${importRes.submissions} submissions, ${importRes.votes} votes`,
+            "preseason"
+          );
+        } else {
+          addLog("import-historical", false, importRes.errors?.join(", ") || "Import failed", "preseason");
+        }
+        await loadState();
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      addLog("import-historical", false, message, "preseason");
+      setImportResult({
+        success: false,
+        rounds: 0,
+        submissions: 0,
+        votes: 0,
+        competitors: 0,
+        roundIds: [],
+        errors: [message],
+      });
+    } finally {
+      setImportProgress(null);
+    }
+  };
+
+  const handleLinkCompetitors = async () => {
+    const result = await callFactory("link-competitors", {});
+    if (result) {
+      const linked = (result as { linked?: number }).linked || 0;
+      addLog("link-competitors", true, `Linked ${linked} competitors to profiles`, "preseason");
     }
   };
 
@@ -689,8 +762,12 @@ export default function TestDashboardPage() {
           logs={logs}
           newTheme={newTheme}
           revealMinutes={revealMinutes}
+          importRoundCount={importRoundCount}
+          importProgress={importProgress}
+          importResult={importResult}
           setNewTheme={setNewTheme}
           setRevealMinutes={setRevealMinutes}
+          setImportRoundCount={setImportRoundCount}
           setSelectedRoundId={setSelectedRoundId}
           getPhaseStatusForRound={getPhaseStatusForRound}
           getSubmissions={getSubmissions}
@@ -707,6 +784,8 @@ export default function TestDashboardPage() {
           onCompleteRound={handleCompleteRound}
           onResetRound={handleResetRound}
           onGenerateCSVs={handleGenerateCSVs}
+          onGenerateAndImport={handleGenerateAndImport}
+          onLinkCompetitors={handleLinkCompetitors}
           onJumpToSubmission={handleJumpToSubmission}
           onJumpToPlaylist={handleJumpToPlaylist}
           onJumpToVoting={handleJumpToVoting}
@@ -765,8 +844,12 @@ interface ControlPanelTabProps {
   logs: LogEntry[];
   newTheme: string;
   revealMinutes: number;
+  importRoundCount: number;
+  importProgress: ImportProgress | null;
+  importResult: ImportResult | null;
   setNewTheme: (theme: string) => void;
   setRevealMinutes: (minutes: number) => void;
+  setImportRoundCount: (count: number) => void;
   setSelectedRoundId: (id: string | null) => void;
   getPhaseStatusForRound: (phase: PhaseType) => PhaseStatus;
   getSubmissions: () => Record<string, { song?: string }>;
@@ -783,6 +866,8 @@ interface ControlPanelTabProps {
   onCompleteRound: () => void;
   onResetRound: () => void;
   onGenerateCSVs: () => void;
+  onGenerateAndImport: () => void;
+  onLinkCompetitors: () => void;
   onJumpToSubmission: () => void;
   onJumpToPlaylist: () => void;
   onJumpToVoting: () => void;
@@ -852,8 +937,12 @@ function ControlPanelTab({
   logs,
   newTheme,
   revealMinutes,
+  importRoundCount,
+  importProgress,
+  importResult,
   setNewTheme,
   setRevealMinutes,
+  setImportRoundCount,
   setSelectedRoundId,
   getPhaseStatusForRound,
   getSubmissions,
@@ -870,6 +959,8 @@ function ControlPanelTab({
   onCompleteRound,
   onResetRound,
   onGenerateCSVs,
+  onGenerateAndImport,
+  onLinkCompetitors,
   onJumpToSubmission,
   onJumpToPlaylist,
   onJumpToVoting,
@@ -930,9 +1021,77 @@ function ControlPanelTab({
             <ActionBtn onClick={onSeedTestData} disabled={loading || preseasonComplete}>
               {preseasonComplete ? "✓ Generated" : "Generate Users"}
             </ActionBtn>
-            <ActionBtn onClick={onGenerateCSVs} disabled={loading} small>
-              Export S1 CSVs
-            </ActionBtn>
+
+            {/* Historical Data Import Section */}
+            <div style={{
+              marginTop: "0.5rem",
+              padding: "0.5rem",
+              backgroundColor: "var(--color-surface-hover)",
+              borderRadius: "6px",
+              border: "1px solid var(--color-border)",
+            }}>
+              <div style={{ fontSize: "0.75rem", fontWeight: "bold", marginBottom: "0.35rem" }}>
+                Historical Data
+              </div>
+              <div style={{ marginBottom: "0.35rem" }}>
+                <select
+                  value={importRoundCount}
+                  onChange={(e) => setImportRoundCount(Number(e.target.value))}
+                  style={{ width: "100%", padding: "0.25rem", fontSize: "0.75rem" }}
+                  disabled={loading}
+                >
+                  <option value={3}>3 rounds</option>
+                  <option value={5}>5 rounds</option>
+                  <option value={8}>8 rounds</option>
+                  <option value={12}>12 rounds</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: "0.25rem", marginBottom: "0.25rem" }}>
+                <ActionBtn
+                  onClick={onGenerateAndImport}
+                  disabled={loading || !!importProgress}
+                  small
+                >
+                  {importProgress ? importProgress.step : "Import"}
+                </ActionBtn>
+                <ActionBtn onClick={onGenerateCSVs} disabled={loading} small>
+                  Download
+                </ActionBtn>
+              </div>
+              {importProgress && (
+                <div style={{
+                  height: "4px",
+                  backgroundColor: "var(--color-border)",
+                  borderRadius: "2px",
+                  overflow: "hidden",
+                  marginBottom: "0.25rem",
+                }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${importProgress.percent}%`,
+                    backgroundColor: "#3b82f6",
+                    transition: "width 0.3s ease",
+                  }} />
+                </div>
+              )}
+              {importResult && (
+                <div style={{
+                  fontSize: "0.7rem",
+                  padding: "0.25rem",
+                  borderRadius: "4px",
+                  backgroundColor: importResult.success ? "#f0fdf4" : "#fef2f2",
+                  color: importResult.success ? "#166534" : "#991b1b",
+                }}>
+                  {importResult.success
+                    ? `✓ ${importResult.rounds}r/${importResult.submissions}s/${importResult.votes}v`
+                    : `✗ ${importResult.errors?.[0] || "Failed"}`
+                  }
+                </div>
+              )}
+              <ActionBtn onClick={onLinkCompetitors} disabled={loading} small>
+                Link Competitors
+              </ActionBtn>
+            </div>
           </div>
         }
       />
