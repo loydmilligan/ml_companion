@@ -18,16 +18,17 @@ jobs:
           chmod +x cloudflared
           sudo mv cloudflared /usr/local/bin/
 
-      - name: Setup SSH
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEV_PI_SSH_KEY }}
+
+      - name: Setup SSH Config
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEV_PI_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          cat > ~/.ssh/config << 'SSHEOF'
+          cat >> ~/.ssh/config << 'SSHEOF'
           Host dev-pi
             HostName dev-ssh.mattmariani.com
             User dietpi
-            IdentityFile ~/.ssh/id_rsa
             ProxyCommand cloudflared access ssh --hostname %h
             StrictHostKeyChecking no
             UserKnownHostsFile /dev/null
@@ -35,9 +36,6 @@ jobs:
           chmod 600 ~/.ssh/config
 
       - name: Deploy to Dev Pi
-        env:
-          DEV_SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
-          DEV_SUPABASE_ANON_KEY: ${{ secrets.DEV_SUPABASE_ANON_KEY }}
         run: |
           ssh dev-pi "cd ~/ml_companion && git fetch origin && git checkout develop && git pull origin develop"
           ssh dev-pi "echo 'VITE_SUPABASE_URL=${{ secrets.DEV_SUPABASE_URL }}' > ~/ml_companion/web/.env.local"
