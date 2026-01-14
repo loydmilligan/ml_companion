@@ -278,7 +278,7 @@ export async function simulateUserSubmitted(
     {
       round_id: roundId,
       submitter_name: actorName,
-      profile_id: competitor?.profile_id || null,
+      submitter_id: competitor?.profile_id || null,
       title: song.title,
       artist: song.artist,
       link: spotifyLink,
