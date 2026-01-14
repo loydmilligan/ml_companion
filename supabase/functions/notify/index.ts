@@ -44,28 +44,37 @@ Deno.serve(async (req) => {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[m] ?? m));
 
-  const htmlMessage = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(title)}</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
-  <div style="background-color: #ffffff; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-    <h2 style="color: #1e293b; margin: 0 0 16px 0; font-size: 18px;">${escapeHtml(title)}</h2>
-    <p style="color: #334155; line-height: 1.6; margin: 0 0 20px 0; white-space: pre-wrap;">${escapeHtml(message)}</p>
-    ${link ? `
-    <a href="${escapeHtml(link)}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600;">${escapeHtml(linkText)}</a>
-    ` : ''}
-  </div>
-  <p style="color: #64748b; font-size: 12px; text-align: center; margin-top: 20px;">
-    Talking Music League
-  </p>
-</body>
-</html>
-  `.trim();
+  // Format message for HTML - convert newlines and handle quote formatting
+  const formatMessageHtml = (msg: string) => {
+    const escaped = escapeHtml(msg);
+    // Check if message has quote format (↳ "quoted text")
+    const quoteMatch = escaped.match(/^(.+?) replied to (.+?):\n↳ &quot;(.+?)&quot;\n\n(.+)$/s);
+    if (quoteMatch) {
+      const [, author, quotedAuthor, quotedText, actualMessage] = quoteMatch;
+      return `<p style="color:#6366f1;margin:0 0 8px 0;font-size:14px;">${author} replied to ${quotedAuthor}:</p>` +
+        `<div style="border-left:3px solid #6366f1;padding-left:12px;margin:0 0 16px 0;color:#64748b;font-style:italic;">${quotedText}</div>` +
+        `<p style="color:#334155;line-height:1.6;margin:0;font-size:16px;">${actualMessage.replace(/\n/g, '<br>')}</p>`;
+    }
+    // Regular message - just convert newlines
+    return `<p style="color:#334155;line-height:1.6;margin:0;font-size:16px;">${escaped.replace(/\n/g, '<br>')}</p>`;
+  };
+
+  // Build HTML without indentation to avoid quoted-printable encoding issues
+  const buttonHtml = link
+    ? `<table cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;"><tr><td style="background-color:#4f46e5;border-radius:8px;"><a href="${escapeHtml(link)}" style="display:inline-block;padding:12px 24px;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;">${escapeHtml(linkText)}</a></td></tr></table>`
+    : '';
+
+  const htmlMessage = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>' +
+    '<body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;margin:0;padding:20px;background-color:#f8fafc;">' +
+    '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;">' +
+    '<tr><td style="background-color:#ffffff;border-radius:12px;padding:24px;">' +
+    `<h2 style="color:#1e293b;margin:0 0 16px 0;font-size:18px;font-weight:600;">${escapeHtml(title)}</h2>` +
+    formatMessageHtml(message) +
+    buttonHtml +
+    '</td></tr>' +
+    '<tr><td style="padding-top:20px;text-align:center;">' +
+    '<p style="color:#64748b;font-size:12px;margin:0;">Talking Music League</p>' +
+    '</td></tr></table></body></html>';
 
   const results: Record<string, string> = {};
 

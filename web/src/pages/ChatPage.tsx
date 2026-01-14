@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type TouchEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Button from "../components/Button";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
@@ -122,6 +122,7 @@ function renderMessageBody(text: string, onPeekClick?: () => void) {
 
 export default function ChatPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { group, profile } = useAuth();
   const { round } = useRound(); // Get round for AI context
   const { quotedSong, clearQuotedSong, openPanel, togglePanel } = useSidePanel();
@@ -134,6 +135,7 @@ export default function ChatPage() {
   const [aiChatEnabled, setAiChatEnabled] = useState(true);
   const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  const [highlightedMsgId, setHighlightedMsgId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const composeRef = useRef<HTMLDivElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
@@ -514,6 +516,23 @@ export default function ChatPage() {
   useEffect(() => {
     if (messages.length === 0) return;
 
+    // Check if we should scroll to a specific message
+    const targetMsgId = searchParams.get("msg");
+    if (targetMsgId && isInitialLoad.current) {
+      // Try to scroll to the target message
+      const targetEl = document.getElementById(`msg-${targetMsgId}`);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        setHighlightedMsgId(targetMsgId);
+        // Clear highlight after animation
+        setTimeout(() => setHighlightedMsgId(null), 3000);
+        // Clear URL param
+        setSearchParams({}, { replace: true });
+        isInitialLoad.current = false;
+        return;
+      }
+    }
+
     // Use instant scroll on initial load, smooth scroll for new messages
     const behavior = isInitialLoad.current ? "instant" : "smooth";
     chatEndRef.current?.scrollIntoView({ behavior });
@@ -522,7 +541,7 @@ export default function ChatPage() {
     if (isInitialLoad.current) {
       isInitialLoad.current = false;
     }
-  }, [messages]);
+  }, [messages, searchParams, setSearchParams]);
 
   // Handle quoted song from peek panel
   useEffect(() => {
@@ -754,9 +773,9 @@ export default function ChatPage() {
           notificationMessage = `${profile.display_name ?? "Someone"} replied to ${quotedAuthor}:\n↳ "${quotedText}"\n\n${trimmedMessage}`;
         }
 
-        // Include deep link to chat
+        // Include deep link to the specific message
         const appUrl = window.location.origin;
-        const deepLink = `${appUrl}/app`;
+        const deepLink = `${appUrl}/app?msg=${data.id}`;
 
         supabase.functions.invoke("notify", {
           body: {
@@ -764,7 +783,7 @@ export default function ChatPage() {
             message: notificationMessage,
             recipients: emails,
             link: deepLink,
-            linkText: "Open chat",
+            linkText: "View message",
           },
         });
       });
@@ -851,7 +870,8 @@ export default function ChatPage() {
           return (
           <div
             key={item.id}
-            className={item.author_id === profile?.id ? "chat-bubble own" : "chat-bubble"}
+            id={`msg-${item.id}`}
+            className={`chat-bubble${item.author_id === profile?.id ? " own" : ""}${highlightedMsgId === item.id ? " highlighted" : ""}`}
             style={bubbleStyle}
             onClick={() => setReactionPickerFor(reactionPickerFor === item.id ? null : item.id)}
           >

@@ -5138,6 +5138,23 @@
   filter: brightness(0.9);
 }
 
+.chat-page .chat-bubble.highlighted {
+  animation: highlight-pulse 2s ease-out;
+  outline: 2px solid var(--primary, #4f46e5);
+  outline-offset: 2px;
+}
+
+@keyframes highlight-pulse {
+  0% {
+    background-color: rgba(79, 70, 229, 0.3);
+    outline-color: rgba(79, 70, 229, 1);
+  }
+  100% {
+    background-color: var(--surface);
+    outline-color: transparent;
+  }
+}
+
 .chat-page .chat-bubble.own .chat-author,
 .chat-page .chat-bubble.own .chat-time {
   color: rgba(255, 255, 255, 0.8);
