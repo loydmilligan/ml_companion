@@ -1,12 +1,12 @@
 # Issues & Roadmap
 
-Version: v1.15
+Version: v1.16
 Date: 2026-01-14
 
 **Sync Status:**
 - Last Local Change: 2026-01-14
-- Last Linear Sync: 2026-01-09
-- Pending Sync: Yes (TEST-002, TEST-003, DM-001 through DM-004 not yet in Linear)
+- Last Linear Sync: 2026-01-14
+- Pending Sync: Yes (TEST-002, DM-001 through DM-004 not yet in Linear)
 
 **Legend:**
 - **Effort:** Low (< 1 day) | Medium (1-3 days) | High (1+ week)
@@ -20,6 +20,7 @@ Date: 2026-01-14
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.16 | 2026-01-14 | Added DEV-001, DEV-002 (DevOps/CI-CD hardening); updated TEST-003 to In Progress |
 | v1.15 | 2026-01-14 | Added TEST-003 (Historical CSV Import in Test Dashboard) |
 | v1.14 | 2026-01-14 | Marked HIST-001, ML-001, ML-002, AWD-005, INT-002, YT-001, PN-005, CHAT-001 complete; added notification deep links |
 | v1.13 | 2026-01-12 | Added PN-005 (Separate DM notification checkbox) |
@@ -306,7 +307,14 @@ Display on History page showing:
 |----|--------|---------|--------|--------|---------|------|-------|
 | TEST-001 | [LOYD-185](https://linear.app/loydmilligan/issue/LOYD-185) | Automated Test Environment & Data Factory | **In Progress** | High | High | Low | Full test harness for round lifecycle, multi-user simulation, observation dashboard |
 | TEST-002 | — | Test Dashboard Song Tracking | Planned | Low | Medium | Low | Display actual song names in submission grid; requires edge function enhancement to return song data |
-| TEST-003 | — | Historical CSV Import in Test Dashboard | Planned | Medium | High | Low | Generate and import historical CSVs directly from test dashboard; consolidate import workflow |
+| TEST-003 | — | Historical CSV Import in Test Dashboard | **In Progress** | Medium | High | Low | Generate and import historical CSVs directly from test dashboard; consolidate import workflow |
+
+### DevOps & CI/CD
+
+| ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
+|----|--------|---------|--------|--------|---------|------|-------|
+| DEV-001 | [LOYD-198](https://linear.app/loydmilligan/issue/LOYD-198) | Prevent Accidental Production Deployments | Planned | Medium | High | Low | Harden deployment workflow, remove manual SSH access, add safeguards |
+| DEV-002 | [LOYD-197](https://linear.app/loydmilligan/issue/LOYD-197) | Review CI/CD for Dependencies & Edge Functions | Planned | Medium | High | Low | Audit workflows for npm, edge functions, migrations; automate where possible |
 
 ### TEST-001: Automated Test Environment
 
