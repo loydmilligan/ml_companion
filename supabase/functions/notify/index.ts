@@ -29,6 +29,8 @@ Deno.serve(async (req) => {
   const title = body?.title ?? "Talking Music League";
   const message = body?.message ?? "";
   const recipients = body?.recipients ?? [];
+  const link = body?.link ?? null;
+  const linkText = body?.linkText ?? "Open in App";
 
   if (!message) {
     return new Response(
@@ -36,6 +38,34 @@ Deno.serve(async (req) => {
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
+
+  // Build HTML email content
+  const escapeHtml = (str: string) => str.replace(/[&<>"']/g, (m) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[m] ?? m));
+
+  const htmlMessage = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(title)}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
+  <div style="background-color: #ffffff; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <h2 style="color: #1e293b; margin: 0 0 16px 0; font-size: 18px;">${escapeHtml(title)}</h2>
+    <p style="color: #334155; line-height: 1.6; margin: 0 0 20px 0; white-space: pre-wrap;">${escapeHtml(message)}</p>
+    ${link ? `
+    <a href="${escapeHtml(link)}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600;">${escapeHtml(linkText)}</a>
+    ` : ''}
+  </div>
+  <p style="color: #64748b; font-size: 12px; text-align: center; margin-top: 20px;">
+    Talking Music League
+  </p>
+</body>
+</html>
+  `.trim();
 
   const results: Record<string, string> = {};
 
@@ -45,6 +75,10 @@ Deno.serve(async (req) => {
     if (NTFY_USERNAME && NTFY_PASSWORD) {
       const token = btoa(`${NTFY_USERNAME}:${NTFY_PASSWORD}`);
       headers.Authorization = `Basic ${token}`;
+    }
+    // Add click action if link is provided
+    if (link) {
+      headers.Click = link;
     }
 
     const url = `${NTFY_SERVER_URL.replace(/\/$/, "")}/${NTFY_TOPIC}`;
@@ -78,7 +112,7 @@ Deno.serve(async (req) => {
         to: recipients,
         subject: title,
         content: message,
-        contentType: "text/plain; charset=utf-8",
+        html: htmlMessage,
       });
       results.email = "sent";
     } catch (error) {

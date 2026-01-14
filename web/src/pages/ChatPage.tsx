@@ -746,11 +746,25 @@ export default function ChatPage() {
           .map((member) => member?.email)
           .filter(Boolean) as string[];
 
+        // Build notification message with optional quote context
+        let notificationMessage = `${profile.display_name ?? "Someone"}: ${trimmedMessage}`;
+        if (savedReplyingTo) {
+          const quotedAuthor = savedReplyingTo.profiles?.display_name ?? "User";
+          const quotedText = savedReplyingTo.body.length > 50 ? savedReplyingTo.body.slice(0, 50) + "..." : savedReplyingTo.body;
+          notificationMessage = `${profile.display_name ?? "Someone"} replied to ${quotedAuthor}:\n↳ "${quotedText}"\n\n${trimmedMessage}`;
+        }
+
+        // Include deep link to chat
+        const appUrl = window.location.origin;
+        const deepLink = `${appUrl}/app`;
+
         supabase.functions.invoke("notify", {
           body: {
             title: "Group chat message",
-            message: `${profile.display_name ?? "Someone"}: ${trimmedMessage}`,
+            message: notificationMessage,
             recipients: emails,
+            link: deepLink,
+            linkText: "Open chat",
           },
         });
       });

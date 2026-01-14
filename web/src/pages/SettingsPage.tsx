@@ -52,6 +52,7 @@ export default function SettingsPage() {
   // Notification item settings
   const [chatNotifyEnabled, setChatNotifyEnabled] = useState(profile?.chat_notify_enabled ?? true);
   const [reactionNotifyEnabled, setReactionNotifyEnabled] = useState(profile?.reaction_notify_enabled ?? true);
+  const [dmNotifyEnabled, setDmNotifyEnabled] = useState(profile?.dm_notify_enabled ?? true);
 
   // Music link preferences
   const [preferredMusicProvider, setPreferredMusicProvider] = useState<"spotify" | "apple_music" | "youtube_music">(
@@ -84,6 +85,7 @@ export default function SettingsPage() {
     setNtfyTopic(profile?.ntfy_topic ?? "");
     setChatNotifyEnabled(profile?.chat_notify_enabled ?? true);
     setReactionNotifyEnabled(profile?.reaction_notify_enabled ?? true);
+    setDmNotifyEnabled(profile?.dm_notify_enabled ?? true);
     setPreferredMusicProvider(profile?.preferred_music_provider ?? "spotify");
     setShowYoutubeVideo(profile?.show_youtube_video ?? true);
   }, [profile]);
@@ -126,6 +128,12 @@ export default function SettingsPage() {
     if (!profile) return;
     setReactionNotifyEnabled(enabled);
     await supabase.from("profiles").update({ reaction_notify_enabled: enabled }).eq("id", profile.id);
+  };
+
+  const saveDmToggle = async (enabled: boolean) => {
+    if (!profile) return;
+    setDmNotifyEnabled(enabled);
+    await supabase.from("profiles").update({ dm_notify_enabled: enabled }).eq("id", profile.id);
   };
 
   // Save music link preferences
@@ -425,6 +433,15 @@ export default function SettingsPage() {
             disabled={profile?.can_toggle_reaction_notify === false}
           />
           <span>Reactions to your messages</span>
+        </label>
+
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={dmNotifyEnabled}
+            onChange={(e) => saveDmToggle(e.target.checked)}
+          />
+          <span>Direct messages</span>
         </label>
 
         {(profile?.can_toggle_chat_notify === false || profile?.can_toggle_reaction_notify === false) && (

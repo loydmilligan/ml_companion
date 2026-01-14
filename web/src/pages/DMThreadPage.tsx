@@ -342,6 +342,50 @@ export default function DMThreadPage() {
           ? { ...data, profiles: optimisticMsg.profiles, reply_to: optimisticMsg.reply_to }
           : m
       ));
+
+      // Send notification to other participant (fire and forget)
+      supabase
+        .from("conversation_participants")
+        .select("participant_id, profiles:participant_id (email, dm_notify_enabled, email_notify_enabled)")
+        .eq("conversation_id", conversationId)
+        .neq("participant_id", profile.id)
+        .then(({ data: participantData }) => {
+          if (!participantData?.length) return;
+
+          const otherProfile = participantData[0].profiles as unknown as {
+            email: string | null;
+            dm_notify_enabled: boolean | null;
+            email_notify_enabled: boolean | null;
+          };
+
+          if (
+            otherProfile?.email &&
+            otherProfile?.dm_notify_enabled !== false &&
+            otherProfile?.email_notify_enabled !== false
+          ) {
+            // Build notification message with optional quote context
+            let notificationMessage = `${profile.display_name ?? "Someone"}: ${messageText}`;
+            if (replyingTo) {
+              const quotedAuthor = replyingTo.profiles?.display_name ?? "User";
+              const quotedText = replyingTo.body.length > 50 ? replyingTo.body.slice(0, 50) + "..." : replyingTo.body;
+              notificationMessage = `${profile.display_name ?? "Someone"} replied to ${quotedAuthor}:\n↳ "${quotedText}"\n\n${messageText}`;
+            }
+
+            // Include deep link to conversation
+            const appUrl = window.location.origin;
+            const deepLink = `${appUrl}/app/dm/${conversationId}`;
+
+            supabase.functions.invoke("notify", {
+              body: {
+                title: `DM from ${profile.display_name ?? "Someone"}`,
+                message: notificationMessage,
+                recipients: [otherProfile.email],
+                link: deepLink,
+                linkText: "Open conversation",
+              },
+            });
+          }
+        });
     } catch (err) {
       console.error("Error sending message:", err);
       // Revert optimistic update
