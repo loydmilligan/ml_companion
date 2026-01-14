@@ -1,0 +1,41 @@
+name: Deploy to Dev
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: development
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Dev Pi
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEV_PI_HOST }}
+          username: ${{ secrets.DEV_PI_USER }}
+          key: ${{ secrets.DEV_PI_SSH_KEY }}
+          script: |
+            cd ~/ml_companion
+            git fetch origin
+            git checkout develop
+            git pull origin develop
+
+            # Create env file with dev config
+            cat > web/.env.local << 'ENVEOF'
+            VITE_SUPABASE_URL=${{ secrets.DEV_SUPABASE_URL }}
+            VITE_SUPABASE_ANON_KEY=${{ secrets.DEV_SUPABASE_ANON_KEY }}
+            VITE_APP_ENV=development
+            ENVEOF
+
+            docker compose down
+            docker compose build --no-cache
+            docker compose up -d
+
+      - name: Health check
+        run: |
+          sleep 45
+          curl -f http://${{ secrets.DEV_PI_HOST }}:3080 || echo "Health check failed - dev Pi may need manual verification"
