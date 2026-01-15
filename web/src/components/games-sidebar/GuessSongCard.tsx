@@ -15,6 +15,11 @@ type GuessState = {
   isOwnSong: boolean;
 };
 
+type TopVoter = {
+  name: string;
+  points: number;
+};
+
 type GuessSongCardProps = {
   song: {
     id: string;
@@ -34,6 +39,7 @@ type GuessSongCardProps = {
   guessState?: GuessState;
   competitors?: Competitor[];
   isRevealed?: boolean;
+  topVoters?: TopVoter[];
   onGuessChange?: (competitorId: string) => void;
   onSaveGuess?: () => void;
 };
@@ -44,6 +50,7 @@ export default function GuessSongCard({
   guessState,
   competitors = [],
   isRevealed = false,
+  topVoters,
   onGuessChange,
   onSaveGuess,
 }: GuessSongCardProps) {
@@ -222,6 +229,22 @@ export default function GuessSongCard({
                 You guessed {guessedCompetitor.name}
               </span>
             )}
+          </div>
+        )}
+
+        {/* Top voters - shown after reveal */}
+        {isRevealed && topVoters && topVoters.length > 0 && (
+          <div className="guess-song-card-top-voter">
+            <span className="top-voter-label">
+              Top voter{topVoters.length > 1 ? "s" : ""}:
+            </span>
+            <span className="top-voter-names">
+              {topVoters.map((v, i) => (
+                <span key={v.name} className="top-voter-name">
+                  {v.name} ({v.points}pts){i < topVoters.length - 1 ? ", " : ""}
+                </span>
+              ))}
+            </span>
           </div>
         )}
 

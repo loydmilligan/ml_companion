@@ -95,6 +95,7 @@ export default function GamesSidebar({
     competitors: guessCompetitors,
     guessStates,
     leaderboard,
+    topVotersPerSong,
     correctCount,
     totalGuessed,
     maxPossibleGuesses,
@@ -238,6 +239,7 @@ export default function GamesSidebar({
                   guessState={guessStates[song.id]}
                   competitors={guessCompetitors}
                   isRevealed={isRevealed ?? false}
+                  topVoters={topVotersPerSong[song.id]}
                   onGuessChange={(competitorId) => handleGuessChange(song.id, competitorId)}
                   onSaveGuess={() => handleSaveGuess(song.id)}
                 />

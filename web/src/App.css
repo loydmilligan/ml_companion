@@ -8427,6 +8427,31 @@
   font-weight: 500;
 }
 
+/* Top Voter Display */
+.guess-song-card-top-voter {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.guess-song-card-top-voter .top-voter-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.guess-song-card-top-voter .top-voter-names {
+  color: var(--coral);
+  font-weight: 600;
+}
+
+.guess-song-card-top-voter .top-voter-name {
+  white-space: nowrap;
+}
+
 /* Guess Song Card - Music Links */
 .guess-song-card-actions {
   display: flex;

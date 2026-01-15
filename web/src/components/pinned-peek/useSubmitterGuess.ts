@@ -35,10 +35,16 @@ export type LeaderboardEntry = {
   total_guesses: number;
 };
 
+export type TopVoter = {
+  name: string;
+  points: number;
+};
+
 type UseSubmitterGuessReturn = {
   competitors: Competitor[];
   guessStates: Record<string, GuessState>;
   leaderboard: LeaderboardEntry[];
+  topVotersPerSong: Record<string, TopVoter[]>;
   loading: boolean;
   correctCount: number;
   totalGuessed: number;
@@ -62,6 +68,7 @@ export function useSubmitterGuess(
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [topVotersPerSong, setTopVotersPerSong] = useState<Record<string, TopVoter[]>>({});
   const [userCompetitorName, setUserCompetitorName] = useState<string | null>(null);
 
   // Load competitors and user's saved guesses
@@ -202,6 +209,51 @@ export function useSubmitterGuess(
     fetchLeaderboard();
   }, [isRevealed, roundId, groupId]);
 
+  // Fetch vote breakdown per song when revealed
+  useEffect(() => {
+    if (!isRevealed || submissions.length === 0) return;
+
+    const fetchVoteBreakdown = async () => {
+      const submissionIds = submissions.map((s) => s.id);
+
+      const { data: voteData } = await supabase
+        .from("votes")
+        .select("submission_id, voter_name, points")
+        .in("submission_id", submissionIds);
+
+      if (!voteData || voteData.length === 0) return;
+
+      // Group votes by submission and find top voter(s)
+      const votesBySubmission: Record<string, { voter_name: string; points: number }[]> = {};
+      voteData.forEach((v) => {
+        if (!votesBySubmission[v.submission_id]) {
+          votesBySubmission[v.submission_id] = [];
+        }
+        votesBySubmission[v.submission_id].push({ voter_name: v.voter_name, points: v.points });
+      });
+
+      // For each submission, find who gave the most votes
+      const topVoters: Record<string, TopVoter[]> = {};
+
+      Object.entries(votesBySubmission).forEach(([subId, votes]) => {
+        // Find max points given
+        const maxPoints = Math.max(...votes.map((v) => v.points));
+        if (maxPoints <= 0) return;
+
+        // Find all voters who gave max points (handles ties)
+        const topForSong = votes
+          .filter((v) => v.points === maxPoints)
+          .map((v) => ({ name: v.voter_name, points: v.points }));
+
+        topVoters[subId] = topForSong;
+      });
+
+      setTopVotersPerSong(topVoters);
+    };
+
+    fetchVoteBreakdown();
+  }, [isRevealed, submissions]);
+
   const handleGuessChange = useCallback((submissionId: string, competitorId: string) => {
     setGuesses((prev) => ({ ...prev, [submissionId]: competitorId }));
   }, []);
@@ -263,6 +315,7 @@ export function useSubmitterGuess(
     competitors,
     guessStates,
     leaderboard,
+    topVotersPerSong,
     loading,
     correctCount,
     totalGuessed,
