@@ -278,15 +278,16 @@ export async function simulateUserSubmitted(
     {
       round_id: roundId,
       submitter_name: actorName,
-      profile_id: competitor?.profile_id || null,
+      submitter_id: competitor?.profile_id || null,
       title: song.title,
       artist: song.artist,
       link: spotifyLink,
+      source_uri: song.uri,
       artwork_url: `https://via.placeholder.com/300x300.png?text=${encodeURIComponent(song.title.slice(0, 15))}`,
       created_at: new Date().toISOString(),
     },
     {
-      onConflict: "round_id,submitter_name",
+      onConflict: "round_id,source_uri",
     }
   );
 

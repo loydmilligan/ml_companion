@@ -1261,6 +1261,66 @@ export default function HistoryPage() {
           }))
         : undefined;
 
+      // Calculate per-round voting patterns (who gave most/least to whom)
+      const roundVotingPatterns: VotingPattern[] = [];
+      const voterToTarget = new Map<string, Map<string, number>>();
+
+      // Build map of submission ID to submitter name
+      const submissionToSubmitter = new Map<string, string>();
+      submissions.forEach((sub) => {
+        if (sub.submitter_name) {
+          submissionToSubmitter.set(sub.id, sub.submitter_name);
+        }
+      });
+
+      // Aggregate votes by voter -> target
+      submissions.forEach((sub) => {
+        const votes = allVotes.get(sub.id) ?? [];
+        const submitterName = submissionToSubmitter.get(sub.id);
+        if (!submitterName) return;
+
+        votes.forEach((vote) => {
+          if (!vote.voter_name) return;
+          const voterName = vote.voter_name;
+          const points = vote.points ?? 0;
+
+          if (!voterToTarget.has(voterName)) {
+            voterToTarget.set(voterName, new Map());
+          }
+          const targetMap = voterToTarget.get(voterName)!;
+          targetMap.set(submitterName, (targetMap.get(submitterName) ?? 0) + points);
+        });
+      });
+
+      // Find most/least for each voter
+      voterToTarget.forEach((targetMap, voterName) => {
+        // Exclude self-votes
+        const entries = Array.from(targetMap.entries())
+          .filter(([targetName]) => targetName !== voterName);
+
+        if (entries.length > 0) {
+          const sortedByPoints = [...entries].sort((a, b) => b[1] - a[1]);
+          const most = sortedByPoints[0];
+          const least = sortedByPoints[sortedByPoints.length - 1];
+
+          roundVotingPatterns.push({
+            voterName,
+            targetName: most[0],
+            pointsGiven: most[1],
+            type: "most",
+          });
+
+          if (most[0] !== least[0]) {
+            roundVotingPatterns.push({
+              voterName,
+              targetName: least[0],
+              pointsGiven: least[1],
+              type: "least",
+            });
+          }
+        }
+      });
+
       return {
         id: round.id,
         type: "round",
@@ -1284,6 +1344,7 @@ export default function HistoryPage() {
         spotifyPlaylistUrl: round.external_playlist_url,
         youtubePlaylistUrl: round.youtube_playlist_url,
         minigameResults,
+        votingPatterns: roundVotingPatterns.length > 0 ? roundVotingPatterns : undefined,
       };
     };
 

@@ -67,7 +67,36 @@
   display: flex;
   justify-content: flex-start;
   align-items: center;
+  gap: 12px;
   flex-shrink: 0;
+}
+
+/* TOC Button */
+.toc-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toc-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+.toc-btn:active {
+  transform: scale(0.95);
+}
+
+.toc-btn svg {
+  opacity: 0.9;
 }
 
 @media (min-width: 768px) {
@@ -2246,6 +2275,145 @@ details.preseason-block .preseason-text {
 }
 
 /* ========================================
+   Voting Patterns (Per-Round)
+   ======================================== */
+
+.voting-patterns {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(242, 27, 63, 0.08) 0%, rgba(255, 153, 20, 0.06) 100%);
+  border-radius: 12px;
+  margin: 8px 0;
+  border: 1px solid rgba(242, 27, 63, 0.15);
+}
+
+.voting-patterns-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.voting-icon {
+  font-size: 14px;
+}
+
+.voting-patterns-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.voting-pattern-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.voting-pattern-row .voter-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #333;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.voting-pattern-row .vote-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+}
+
+.voting-pattern-row .vote-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.voting-pattern-row .vote-target .arrow {
+  font-size: 10px;
+}
+
+.voting-pattern-row .vote-target .points {
+  font-size: 10px;
+  opacity: 0.8;
+  margin-left: 2px;
+}
+
+.voting-pattern-row .vote-target.most {
+  background: linear-gradient(135deg, rgba(30, 215, 96, 0.2) 0%, rgba(20, 180, 70, 0.15) 100%);
+  color: #0f7a3d;
+  border: 1px solid rgba(30, 215, 96, 0.3);
+}
+
+.voting-pattern-row .vote-target.least {
+  background: linear-gradient(135deg, rgba(158, 158, 158, 0.2) 0%, rgba(120, 120, 120, 0.15) 100%);
+  color: #666;
+  border: 1px solid rgba(158, 158, 158, 0.3);
+}
+
+/* Light mode */
+[data-mode="light"] .voting-patterns {
+  background: linear-gradient(135deg, rgba(242, 27, 63, 0.08) 0%, rgba(255, 153, 20, 0.06) 100%);
+  border-color: rgba(242, 27, 63, 0.15);
+}
+
+[data-mode="light"] .voting-patterns-title {
+  color: #333;
+}
+
+[data-mode="light"] .voting-pattern-row {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+[data-mode="light"] .voting-pattern-row .voter-name {
+  color: #333;
+}
+
+/* Dark mode */
+[data-mode="dark"] .voting-patterns {
+  background: linear-gradient(135deg, rgba(242, 27, 63, 0.12) 0%, rgba(255, 153, 20, 0.1) 100%);
+  border-color: rgba(242, 27, 63, 0.2);
+}
+
+[data-mode="dark"] .voting-patterns-title {
+  color: #f4f4f5;
+}
+
+[data-mode="dark"] .voting-pattern-row {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-mode="dark"] .voting-pattern-row .voter-name {
+  color: #f4f4f5;
+}
+
+[data-mode="dark"] .voting-pattern-row .vote-target.most {
+  background: rgba(30, 215, 96, 0.2);
+  border-color: rgba(30, 215, 96, 0.35);
+  color: #4ade80;
+}
+
+[data-mode="dark"] .voting-pattern-row .vote-target.least {
+  background: rgba(158, 158, 158, 0.2);
+  border-color: rgba(158, 158, 158, 0.35);
+  color: #a1a1aa;
+}
+
+/* ========================================
    Dark Mode Support
    ======================================== */
 
@@ -2335,4 +2503,209 @@ details.preseason-block .preseason-text {
   .recap-narrative-text {
     color: #d4d4d8;
   }
+}
+
+/* ========================================
+   TOC Modal
+   ======================================== */
+
+.toc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+  backdrop-filter: blur(4px);
+}
+
+.toc-modal {
+  background: white;
+  border-radius: 20px;
+  max-width: 380px;
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.3s ease-out;
+  overflow: hidden;
+}
+
+.toc-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.toc-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  color: #1a1a1a;
+}
+
+.toc-modal-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.toc-modal-close:hover {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.toc-modal-content {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.toc-season-group {
+  margin-bottom: 20px;
+}
+
+.toc-season-group:last-child {
+  margin-bottom: 0;
+}
+
+.toc-season-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+  margin: 0 0 10px;
+  padding: 0 4px;
+}
+
+.toc-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.toc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #f5f5f7;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a1a;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.toc-item:hover {
+  background: #eaeaec;
+  transform: translateX(2px);
+}
+
+.toc-item.active {
+  background: linear-gradient(135deg, var(--cs-green) 0%, #15a34a 100%);
+  color: white;
+  border-color: transparent;
+}
+
+.toc-item.active:hover {
+  background: linear-gradient(135deg, #15a34a 0%, var(--cs-green) 100%);
+}
+
+.toc-item-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toc-item-current {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+/* Card type indicators */
+.toc-item-round {
+  border-left: 3px solid var(--cs-blue);
+}
+
+.toc-item-season-recap {
+  border-left: 3px solid var(--cs-red);
+}
+
+.toc-item-current-season {
+  border-left: 3px solid var(--cs-green);
+}
+
+.toc-item-preseason-special {
+  border-left: 3px solid var(--cs-saffron);
+}
+
+/* Active state overrides border */
+.toc-item.active.toc-item-round,
+.toc-item.active.toc-item-season-recap,
+.toc-item.active.toc-item-current-season,
+.toc-item.active.toc-item-preseason-special {
+  border-left-color: transparent;
+}
+
+/* Dark mode support for TOC */
+[data-mode="dark"] .toc-modal {
+  background: #1a1a1a;
+}
+
+[data-mode="dark"] .toc-modal-header {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-mode="dark"] .toc-modal-title {
+  color: #f4f4f5;
+}
+
+[data-mode="dark"] .toc-modal-close {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+[data-mode="dark"] .toc-modal-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-mode="dark"] .toc-season-title {
+  color: #a1a1aa;
+}
+
+[data-mode="dark"] .toc-item {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f4f4f5;
+}
+
+[data-mode="dark"] .toc-item:hover {
+  background: rgba(255, 255, 255, 0.12);
 }

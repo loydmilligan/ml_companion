@@ -31,11 +31,26 @@ import {
 // Types
 // ============================================================================
 
-type MainTab = "control" | "summary" | "analytics" | "preview";
+type MainTab = "control" | "summary" | "analytics" | "social" | "preview";
 
 interface SimulationOptions {
   revealDurationMinutes?: number;
   useMockAI?: boolean;
+}
+
+interface ImportProgress {
+  step: string;
+  percent: number;
+}
+
+interface ImportResult {
+  success: boolean;
+  rounds: number;
+  submissions: number;
+  votes: number;
+  competitors: number;
+  roundIds: string[];
+  errors?: string[];
 }
 
 // ============================================================================
@@ -57,6 +72,11 @@ export default function TestDashboardPage() {
   // Analytics state
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [analyticsDays, setAnalyticsDays] = useState(7);
+
+  // Import state
+  const [importRoundCount, setImportRoundCount] = useState(5);
+  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
   // Derived state
   const selectedRound = useMemo(
@@ -81,8 +101,12 @@ export default function TestDashboardPage() {
 
   const addLog = useCallback(
     (action: string, success: boolean, details?: string, phase?: PhaseType) => {
+      // Use crypto.randomUUID if available, otherwise fallback for non-secure contexts
+      const id = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
       const entry: LogEntry = {
-        id: crypto.randomUUID(),
+        id,
         timestamp: new Date().toISOString(),
         action,
         success,
@@ -191,6 +215,39 @@ export default function TestDashboardPage() {
   };
 
   const handleCreateRound = async () => {
+    // Check if a round with this theme already exists
+    const existingRound = state?.rounds?.find(
+      (r) => r.theme.toLowerCase() === newTheme.toLowerCase()
+    );
+
+    if (existingRound) {
+      const choice = confirm(
+        `A round with theme "${newTheme}" already exists (status: ${existingRound.status}).\n\n` +
+        `Would you like to reset it and start over?\n\n` +
+        `Click OK to reset the existing round.\n` +
+        `Click Cancel to keep it as-is.`
+      );
+
+      if (choice) {
+        // User wants to reset
+        const resetResult = await callFactory("reset-round", {
+          roundId: existingRound.id,
+          fullReset: true,
+        });
+        if (resetResult) {
+          addLog("reset-round", true, `Reset "${newTheme}" to start over`, "submission");
+        }
+        setSelectedRoundId(existingRound.id);
+        await loadState();
+      } else {
+        // User wants to keep existing - just select it
+        setSelectedRoundId(existingRound.id);
+        addLog("create-round", true, `Selected existing round "${newTheme}"`, "submission");
+      }
+      return;
+    }
+
+    // No duplicate - create new round
     const result = await callFactory("create-round", {
       leagueId: TEST_LEAGUE_S2_ID,
       theme: newTheme,
@@ -299,7 +356,23 @@ export default function TestDashboardPage() {
 
   const handleResetRound = async () => {
     if (!selectedRoundId) return;
-    await callFactory("reset-round", { roundId: selectedRoundId });
+
+    const roundTheme = selectedRound?.theme || "this round";
+    if (!confirm(`Are you sure you want to reset "${roundTheme}"?\n\nThis will delete ALL data including:\n• Submissions\n• Votes\n• Awards\n• Activity records\n• Chat messages\n• Game guesses\n\nThe round will return to "open" status.`)) {
+      return;
+    }
+
+    const result = await callFactory("reset-round", { roundId: selectedRoundId, fullReset: true });
+    if (result) {
+      const data = result as { deletedCounts?: Record<string, number> };
+      if (data.deletedCounts) {
+        const counts = Object.entries(data.deletedCounts)
+          .filter(([, v]) => v > 0)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(", ");
+        addLog("reset-round", true, `Reset complete. Deleted: ${counts || "no data"}`, "archived");
+      }
+    }
     await loadState();
   };
 
@@ -393,7 +466,7 @@ export default function TestDashboardPage() {
   };
 
   const handleGenerateCSVs = async () => {
-    const result = await callFactory("generate-csvs", { roundCount: 5 });
+    const result = await callFactory("generate-csvs", { roundCount: importRoundCount });
     if (result?.files) {
       for (const [name, content] of Object.entries(result.files)) {
         const blob = new Blob([content as string], { type: "text/csv" });
@@ -404,6 +477,59 @@ export default function TestDashboardPage() {
         a.click();
         URL.revokeObjectURL(url);
       }
+    }
+  };
+
+  const handleGenerateAndImport = async () => {
+    setImportProgress({ step: "Generating data...", percent: 10 });
+    setImportResult(null);
+
+    try {
+      setImportProgress({ step: "Importing to database...", percent: 30 });
+      const result = await callFactory("import-historical", {
+        roundCount: importRoundCount,
+        includeVotes: true,
+      });
+
+      setImportProgress({ step: "Finalizing...", percent: 90 });
+
+      if (result) {
+        const importRes = result as ImportResult;
+        setImportResult(importRes);
+        if (importRes.success) {
+          addLog(
+            "import-historical",
+            true,
+            `Imported ${importRes.rounds} rounds, ${importRes.submissions} submissions, ${importRes.votes} votes`,
+            "preseason"
+          );
+        } else {
+          addLog("import-historical", false, importRes.errors?.join(", ") || "Import failed", "preseason");
+        }
+        await loadState();
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      addLog("import-historical", false, message, "preseason");
+      setImportResult({
+        success: false,
+        rounds: 0,
+        submissions: 0,
+        votes: 0,
+        competitors: 0,
+        roundIds: [],
+        errors: [message],
+      });
+    } finally {
+      setImportProgress(null);
+    }
+  };
+
+  const handleLinkCompetitors = async () => {
+    const result = await callFactory("link-competitors", {});
+    if (result) {
+      const linked = (result as { linked?: number }).linked || 0;
+      addLog("link-competitors", true, `Linked ${linked} competitors to profiles`, "preseason");
     }
   };
 
@@ -669,6 +795,9 @@ export default function TestDashboardPage() {
         <TabButton active={activeTab === "analytics"} onClick={() => setActiveTab("analytics")}>
           Analytics
         </TabButton>
+        <TabButton active={activeTab === "social"} onClick={() => setActiveTab("social")}>
+          Social Simulation
+        </TabButton>
         <TabButton active={activeTab === "preview"} onClick={() => setActiveTab("preview")} disabled>
           App Preview (Soon)
         </TabButton>
@@ -686,8 +815,12 @@ export default function TestDashboardPage() {
           logs={logs}
           newTheme={newTheme}
           revealMinutes={revealMinutes}
+          importRoundCount={importRoundCount}
+          importProgress={importProgress}
+          importResult={importResult}
           setNewTheme={setNewTheme}
           setRevealMinutes={setRevealMinutes}
+          setImportRoundCount={setImportRoundCount}
           setSelectedRoundId={setSelectedRoundId}
           getPhaseStatusForRound={getPhaseStatusForRound}
           getSubmissions={getSubmissions}
@@ -704,6 +837,8 @@ export default function TestDashboardPage() {
           onCompleteRound={handleCompleteRound}
           onResetRound={handleResetRound}
           onGenerateCSVs={handleGenerateCSVs}
+          onGenerateAndImport={handleGenerateAndImport}
+          onLinkCompetitors={handleLinkCompetitors}
           onJumpToSubmission={handleJumpToSubmission}
           onJumpToPlaylist={handleJumpToPlaylist}
           onJumpToVoting={handleJumpToVoting}
@@ -724,6 +859,15 @@ export default function TestDashboardPage() {
           loading={loading}
           onRefresh={loadAnalytics}
           onExport={handleExportAnalytics}
+        />
+      )}
+
+      {activeTab === "social" && (
+        <SocialSimulationTab
+          loading={loading}
+          selectedRoundId={selectedRoundId}
+          callFactory={callFactory}
+          addLog={addLog}
         />
       )}
 
@@ -753,8 +897,12 @@ interface ControlPanelTabProps {
   logs: LogEntry[];
   newTheme: string;
   revealMinutes: number;
+  importRoundCount: number;
+  importProgress: ImportProgress | null;
+  importResult: ImportResult | null;
   setNewTheme: (theme: string) => void;
   setRevealMinutes: (minutes: number) => void;
+  setImportRoundCount: (count: number) => void;
   setSelectedRoundId: (id: string | null) => void;
   getPhaseStatusForRound: (phase: PhaseType) => PhaseStatus;
   getSubmissions: () => Record<string, { song?: string }>;
@@ -771,6 +919,8 @@ interface ControlPanelTabProps {
   onCompleteRound: () => void;
   onResetRound: () => void;
   onGenerateCSVs: () => void;
+  onGenerateAndImport: () => void;
+  onLinkCompetitors: () => void;
   onJumpToSubmission: () => void;
   onJumpToPlaylist: () => void;
   onJumpToVoting: () => void;
@@ -840,8 +990,12 @@ function ControlPanelTab({
   logs,
   newTheme,
   revealMinutes,
+  importRoundCount,
+  importProgress,
+  importResult,
   setNewTheme,
   setRevealMinutes,
+  setImportRoundCount,
   setSelectedRoundId,
   getPhaseStatusForRound,
   getSubmissions,
@@ -858,6 +1012,8 @@ function ControlPanelTab({
   onCompleteRound,
   onResetRound,
   onGenerateCSVs,
+  onGenerateAndImport,
+  onLinkCompetitors,
   onJumpToSubmission,
   onJumpToPlaylist,
   onJumpToVoting,
@@ -918,9 +1074,77 @@ function ControlPanelTab({
             <ActionBtn onClick={onSeedTestData} disabled={loading || preseasonComplete}>
               {preseasonComplete ? "✓ Generated" : "Generate Users"}
             </ActionBtn>
-            <ActionBtn onClick={onGenerateCSVs} disabled={loading} small>
-              Export S1 CSVs
-            </ActionBtn>
+
+            {/* Historical Data Import Section */}
+            <div style={{
+              marginTop: "0.5rem",
+              padding: "0.5rem",
+              backgroundColor: "var(--color-surface-hover)",
+              borderRadius: "6px",
+              border: "1px solid var(--color-border)",
+            }}>
+              <div style={{ fontSize: "0.75rem", fontWeight: "bold", marginBottom: "0.35rem" }}>
+                Historical Data
+              </div>
+              <div style={{ marginBottom: "0.35rem" }}>
+                <select
+                  value={importRoundCount}
+                  onChange={(e) => setImportRoundCount(Number(e.target.value))}
+                  style={{ width: "100%", padding: "0.25rem", fontSize: "0.75rem" }}
+                  disabled={loading}
+                >
+                  <option value={3}>3 rounds</option>
+                  <option value={5}>5 rounds</option>
+                  <option value={8}>8 rounds</option>
+                  <option value={12}>12 rounds</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: "0.25rem", marginBottom: "0.25rem" }}>
+                <ActionBtn
+                  onClick={onGenerateAndImport}
+                  disabled={loading || !!importProgress}
+                  small
+                >
+                  {importProgress ? importProgress.step : "Import"}
+                </ActionBtn>
+                <ActionBtn onClick={onGenerateCSVs} disabled={loading} small>
+                  Download
+                </ActionBtn>
+              </div>
+              {importProgress && (
+                <div style={{
+                  height: "4px",
+                  backgroundColor: "var(--color-border)",
+                  borderRadius: "2px",
+                  overflow: "hidden",
+                  marginBottom: "0.25rem",
+                }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${importProgress.percent}%`,
+                    backgroundColor: "#3b82f6",
+                    transition: "width 0.3s ease",
+                  }} />
+                </div>
+              )}
+              {importResult && (
+                <div style={{
+                  fontSize: "0.7rem",
+                  padding: "0.25rem",
+                  borderRadius: "4px",
+                  backgroundColor: importResult.success ? "#f0fdf4" : "#fef2f2",
+                  color: importResult.success ? "#166534" : "#991b1b",
+                }}>
+                  {importResult.success
+                    ? `✓ ${importResult.rounds}r/${importResult.submissions}s/${importResult.votes}v`
+                    : `✗ ${importResult.errors?.[0] || "Failed"}`
+                  }
+                </div>
+              )}
+              <ActionBtn onClick={onLinkCompetitors} disabled={loading} small>
+                Link Competitors
+              </ActionBtn>
+            </div>
           </div>
         }
       />
@@ -1756,6 +1980,262 @@ function RoundTabs({
         ▶ = Generate/Automate entire round (fills phases top to bottom)
       </div>
     </Card>
+  );
+}
+
+// ============================================================================
+// Social Simulation Tab
+// ============================================================================
+
+interface SocialSimulationTabProps {
+  loading: boolean;
+  selectedRoundId: string | null;
+  callFactory: (action: string, params?: Record<string, unknown>) => Promise<unknown>;
+  addLog: (action: string, success: boolean, details?: string, phase?: PhaseType) => void;
+}
+
+function SocialSimulationTab({
+  loading,
+  selectedRoundId,
+  callFactory,
+  addLog,
+}: SocialSimulationTabProps) {
+  const [chatCount, setChatCount] = useState(5);
+  const [dmCount, setDmCount] = useState(3);
+  const [reactionCount, setReactionCount] = useState(10);
+  const [chatType, setChatType] = useState<"normal" | "song_mention" | "youtube_link" | "quote_reply">("normal");
+  const [validationResult, setValidationResult] = useState<{
+    valid: boolean;
+    submissionCount: number;
+    voteCount: number;
+    issues: string[];
+  } | null>(null);
+
+  const handleSimulateChat = async () => {
+    const result = await callFactory("simulate-chat", {
+      count: chatCount,
+      options: chatCount === 1 ? { messageType: chatType } : undefined,
+    });
+    if (result) {
+      addLog("simulate-chat", true, `Created ${(result as { created?: number }).created || chatCount} chat messages`);
+    }
+  };
+
+  const handleSimulateDM = async () => {
+    const result = await callFactory("simulate-dm", {
+      threadCount: dmCount,
+    });
+    if (result) {
+      addLog("simulate-dm", true, `Created ${(result as { created?: number }).created || dmCount} DM threads`);
+    }
+  };
+
+  const handleSimulateReactions = async () => {
+    const result = await callFactory("simulate-reaction", {
+      count: reactionCount,
+    });
+    if (result) {
+      addLog("simulate-reaction", true, `Created ${(result as { created?: number }).created || reactionCount} reactions`);
+    }
+  };
+
+  const handleGenerateVotes = async () => {
+    if (!selectedRoundId) {
+      addLog("generate-votes", false, "No round selected");
+      return;
+    }
+    const result = await callFactory("generate-votes", {
+      roundId: selectedRoundId,
+    });
+    if (result) {
+      const r = result as { votesGenerated?: number };
+      addLog("generate-votes", true, `Generated ${r.votesGenerated || 0} votes for round`);
+    }
+  };
+
+  const handleValidateRound = async () => {
+    if (!selectedRoundId) {
+      addLog("validate-round", false, "No round selected");
+      return;
+    }
+    const result = await callFactory("validate-round", {
+      roundId: selectedRoundId,
+    });
+    if (result) {
+      setValidationResult(result as typeof validationResult);
+    }
+  };
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+      {/* Chat Simulation */}
+      <Card style={{ padding: "1rem" }}>
+        <h3 style={{ marginBottom: "1rem", borderBottom: "1px solid var(--color-border)", paddingBottom: "0.5rem" }}>
+          Chat Messages
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div>
+            <label style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" }}>
+              Message Count
+            </label>
+            <input
+              type="number"
+              value={chatCount}
+              onChange={(e) => setChatCount(Number(e.target.value))}
+              min={1}
+              max={50}
+              style={{ width: "100px", padding: "0.35rem" }}
+            />
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" }}>
+              Message Type (for single messages)
+            </label>
+            <select
+              value={chatType}
+              onChange={(e) => setChatType(e.target.value as typeof chatType)}
+              style={{ width: "100%", padding: "0.35rem" }}
+            >
+              <option value="normal">Normal Chat</option>
+              <option value="song_mention">Song Mention (Spotify link)</option>
+              <option value="youtube_link">YouTube Link</option>
+              <option value="quote_reply">Quote Reply</option>
+            </select>
+          </div>
+          <ActionBtn onClick={handleSimulateChat} disabled={loading}>
+            Generate Chat Messages
+          </ActionBtn>
+          <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", margin: 0 }}>
+            Creates group chat messages with random content. When count is 1, uses the selected message type.
+          </p>
+        </div>
+      </Card>
+
+      {/* DM Simulation */}
+      <Card style={{ padding: "1rem" }}>
+        <h3 style={{ marginBottom: "1rem", borderBottom: "1px solid var(--color-border)", paddingBottom: "0.5rem" }}>
+          Direct Messages
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div>
+            <label style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" }}>
+              Thread Count
+            </label>
+            <input
+              type="number"
+              value={dmCount}
+              onChange={(e) => setDmCount(Number(e.target.value))}
+              min={1}
+              max={20}
+              style={{ width: "100px", padding: "0.35rem" }}
+            />
+          </div>
+          <ActionBtn onClick={handleSimulateDM} disabled={loading}>
+            Generate DM Threads
+          </ActionBtn>
+          <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", margin: 0 }}>
+            Creates DM conversation threads between random pairs of test users with 2-5 messages each.
+          </p>
+        </div>
+      </Card>
+
+      {/* Reaction Simulation */}
+      <Card style={{ padding: "1rem" }}>
+        <h3 style={{ marginBottom: "1rem", borderBottom: "1px solid var(--color-border)", paddingBottom: "0.5rem" }}>
+          Reactions
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div>
+            <label style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" }}>
+              Reaction Count
+            </label>
+            <input
+              type="number"
+              value={reactionCount}
+              onChange={(e) => setReactionCount(Number(e.target.value))}
+              min={1}
+              max={100}
+              style={{ width: "100px", padding: "0.35rem" }}
+            />
+          </div>
+          <ActionBtn onClick={handleSimulateReactions} disabled={loading}>
+            Generate Reactions
+          </ActionBtn>
+          <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", margin: 0 }}>
+            Adds emoji reactions to random existing chat messages from random test users.
+          </p>
+        </div>
+      </Card>
+
+      {/* Vote Data Generation */}
+      <Card style={{ padding: "1rem" }}>
+        <h3 style={{ marginBottom: "1rem", borderBottom: "1px solid var(--color-border)", paddingBottom: "0.5rem" }}>
+          Vote Data
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+            Selected Round: {selectedRoundId ? selectedRoundId.slice(0, 8) + "..." : "None"}
+          </div>
+          <ActionBtn onClick={handleGenerateVotes} disabled={loading || !selectedRoundId}>
+            Generate Vote Records
+          </ActionBtn>
+          <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", margin: 0 }}>
+            Creates actual vote records with point distributions for the selected round. Each voter allocates points to all other submissions.
+          </p>
+        </div>
+      </Card>
+
+      {/* Data Validation */}
+      <Card style={{ padding: "1rem", gridColumn: "1 / -1" }}>
+        <h3 style={{ marginBottom: "1rem", borderBottom: "1px solid var(--color-border)", paddingBottom: "0.5rem" }}>
+          Data Validation
+        </h3>
+        <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", minWidth: "200px" }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+              Selected Round: {selectedRoundId ? selectedRoundId.slice(0, 8) + "..." : "None"}
+            </div>
+            <ActionBtn onClick={handleValidateRound} disabled={loading || !selectedRoundId}>
+              Validate Round Data
+            </ActionBtn>
+          </div>
+          {validationResult && (
+            <div
+              style={{
+                flex: 1,
+                padding: "0.75rem",
+                borderRadius: "6px",
+                backgroundColor: validationResult.valid ? "#f0fdf4" : "#fef2f2",
+                border: `1px solid ${validationResult.valid ? "#22c55e" : "#ef4444"}`,
+              }}
+            >
+              <div style={{ fontWeight: "bold", marginBottom: "0.5rem", color: validationResult.valid ? "#22c55e" : "#ef4444" }}>
+                {validationResult.valid ? "✓ Valid" : "✗ Invalid"}
+              </div>
+              <div style={{ fontSize: "0.85rem", marginBottom: "0.25rem" }}>
+                Submissions: {validationResult.submissionCount}
+              </div>
+              <div style={{ fontSize: "0.85rem", marginBottom: "0.25rem" }}>
+                Vote Records: {validationResult.voteCount}
+              </div>
+              {validationResult.issues.length > 0 && (
+                <div style={{ marginTop: "0.5rem" }}>
+                  <div style={{ fontWeight: "bold", fontSize: "0.85rem" }}>Issues:</div>
+                  <ul style={{ margin: "0.25rem 0 0 1rem", padding: 0, fontSize: "0.8rem" }}>
+                    {validationResult.issues.map((issue, idx) => (
+                      <li key={idx} style={{ color: "#ef4444" }}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", margin: "0.75rem 0 0 0" }}>
+          Validates round data integrity including submission counts, vote coverage, and required fields.
+        </p>
+      </Card>
+    </div>
   );
 }
 

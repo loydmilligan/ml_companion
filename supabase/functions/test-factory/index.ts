@@ -38,6 +38,19 @@ import {
 } from "./csv-generators.ts";
 import { getMockAIResponse } from "./mock-ai-responses.ts";
 import {
+  simulateChatMessage,
+  simulateChatBurst,
+  simulateChatReaction,
+  simulateReactionBurst,
+  simulateDMThread,
+  simulateMultipleDMThreads,
+  generateVoteData,
+  validateRoundData,
+  type ChatSimulationOptions,
+  type DMSimulationOptions,
+  type VoteGenerationOptions,
+} from "./chat-simulator.ts";
+import {
   startTestRun,
   recordAction,
   completeTestRun,
@@ -46,6 +59,11 @@ import {
   getTestRunActions,
   exportAnalytics,
 } from "./analytics.ts";
+import {
+  importHistoricalData,
+  linkCompetitorsToProfiles,
+  type ImportOptions,
+} from "./import-handler.ts";
 
 // Test IDs (must match seed-test-data function)
 const TEST_GROUP_ID = "00000000-0000-0000-0001-000000000001";
@@ -136,11 +154,39 @@ Deno.serve(async (req) => {
         response = await handleExportAnalytics(supabase, params);
         break;
 
+      case "simulate-chat":
+        response = await handleSimulateChat(supabase, params);
+        break;
+
+      case "simulate-dm":
+        response = await handleSimulateDM(supabase, params);
+        break;
+
+      case "simulate-reaction":
+        response = await handleSimulateReaction(supabase, params);
+        break;
+
+      case "generate-votes":
+        response = await handleGenerateVotes(supabase, params);
+        break;
+
+      case "validate-round":
+        response = await handleValidateRound(supabase, params);
+        break;
+
+      case "import-historical":
+        response = await handleImportHistorical(supabase, params);
+        break;
+
+      case "link-competitors":
+        response = await handleLinkCompetitors(supabase, params);
+        break;
+
       default:
         response = {
           success: false,
           action: action || "unknown",
-          error: `Unknown action: ${action}. Valid actions: create-round, simulate-email, advance-round, complete-round, generate-csvs, get-state, get-rounds, reset-round, get-analytics, get-test-runs, get-test-run-actions, export-analytics`,
+          error: `Unknown action: ${action}. Valid actions: create-round, simulate-email, advance-round, complete-round, generate-csvs, get-state, get-rounds, reset-round, get-analytics, get-test-runs, get-test-run-actions, export-analytics, simulate-chat, simulate-dm, simulate-reaction, generate-votes, validate-round, import-historical, link-competitors`,
         };
     }
 
@@ -677,56 +723,121 @@ async function handleGetRounds(
 
 /**
  * Reset a specific round to a given state.
+ * Deletes all associated data: submissions, votes, activity, awards, etc.
  */
 async function handleResetRound(
   supabase: ReturnType<typeof createClient>,
   params: {
     roundId: string;
     toStatus?: string;
+    fullReset?: boolean;
   }
 ): Promise<ActionResponse> {
-  const { roundId, toStatus = "open" } = params;
+  const { roundId, toStatus = "open", fullReset = true } = params;
+  const deletedCounts: Record<string, number> = {};
 
-  // Delete activity for this round
-  await supabase
-    .from("round_user_activity")
-    .delete()
-    .eq("round_id", roundId);
+  try {
+    if (fullReset) {
+      // Get submission IDs for this round (needed for votes deletion)
+      const { data: submissions } = await supabase
+        .from("submissions")
+        .select("id")
+        .eq("round_id", roundId);
 
-  // Reset round status
-  const updates: Record<string, unknown> = {
-    status: toStatus,
-    reveal_until: null,
-    test_reveal_duration_minutes: null,
-  };
+      const submissionIds = submissions?.map(s => s.id) || [];
 
-  if (toStatus === "open") {
-    updates.pulltab_image_light_url = null;
-    updates.pulltab_image_dark_url = null;
-  }
+      // Delete votes for these submissions
+      if (submissionIds.length > 0) {
+        const { count: votesDeleted } = await supabase
+          .from("votes")
+          .delete()
+          .in("submission_id", submissionIds)
+          .select("id", { count: "exact", head: true });
+        deletedCounts.votes = votesDeleted || 0;
+      }
 
-  const { error } = await supabase
-    .from("rounds")
-    .update(updates)
-    .eq("id", roundId);
+      // Delete submissions
+      const { count: subsDeleted } = await supabase
+        .from("submissions")
+        .delete()
+        .eq("round_id", roundId)
+        .select("id", { count: "exact", head: true });
+      deletedCounts.submissions = subsDeleted || 0;
 
-  if (error) {
+      // Delete round-related data (ignore errors for tables that may not have data)
+      const tablesToClear = [
+        "round_user_activity",
+        "round_awards",
+        "round_ai_cache",
+        "round_challenges",
+        "round_challenge_v2",
+        "round_challenge_guesses",
+        "submitter_guesses",
+        "timeline_guesses",
+        "round_chats",
+      ];
+
+      for (const table of tablesToClear) {
+        const { count } = await supabase
+          .from(table)
+          .delete()
+          .eq("round_id", roundId)
+          .select("id", { count: "exact", head: true });
+        if (count && count > 0) {
+          deletedCounts[table] = count;
+        }
+      }
+    } else {
+      // Light reset - just clear activity
+      await supabase
+        .from("round_user_activity")
+        .delete()
+        .eq("round_id", roundId);
+      deletedCounts.round_user_activity = 1;
+    }
+
+    // Reset round status and metadata
+    const updates: Record<string, unknown> = {
+      status: toStatus,
+      reveal_until: null,
+      test_reveal_duration_minutes: null,
+    };
+
+    if (toStatus === "open") {
+      updates.pulltab_image_light_url = null;
+      updates.pulltab_image_dark_url = null;
+    }
+
+    const { error } = await supabase
+      .from("rounds")
+      .update(updates)
+      .eq("id", roundId);
+
+    if (error) {
+      return {
+        success: false,
+        action: "reset-round",
+        error: error.message,
+      };
+    }
+
+    return {
+      success: true,
+      action: "reset-round",
+      data: {
+        roundId,
+        newStatus: toStatus,
+        fullReset,
+        deletedCounts,
+      },
+    };
+  } catch (error) {
     return {
       success: false,
       action: "reset-round",
       error: error.message,
     };
   }
-
-  return {
-    success: true,
-    action: "reset-round",
-    data: {
-      roundId,
-      newStatus: toStatus,
-      activityCleared: true,
-    },
-  };
 }
 
 // ============================================================================
@@ -857,6 +968,301 @@ async function handleExportAnalytics(
     return {
       success: false,
       action: "export-analytics",
+      error: error.message,
+    };
+  }
+}
+
+// ============================================================================
+// Chat/DM/Reaction Simulation Handlers
+// ============================================================================
+
+/**
+ * Simulate chat messages in a group.
+ */
+async function handleSimulateChat(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    groupId?: string;
+    count?: number;
+    options?: ChatSimulationOptions;
+  }
+): Promise<ActionResponse> {
+  const groupId = params.groupId || TEST_GROUP_ID;
+  const count = params.count || 5;
+
+  try {
+    if (count === 1 && params.options) {
+      // Single message with specific options
+      const result = await simulateChatMessage(supabase, groupId, params.options);
+      return {
+        success: result.success,
+        action: "simulate-chat",
+        data: result,
+        error: result.error,
+      };
+    } else {
+      // Burst of random messages
+      const results = await simulateChatBurst(supabase, groupId, count);
+      const successCount = results.filter(r => r.success).length;
+      return {
+        success: successCount > 0,
+        action: "simulate-chat",
+        data: {
+          requested: count,
+          created: successCount,
+          results,
+        },
+        error: successCount === 0 ? "All messages failed" : undefined,
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      action: "simulate-chat",
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Simulate DM threads and messages.
+ */
+async function handleSimulateDM(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    groupId?: string;
+    threadCount?: number;
+    options?: DMSimulationOptions;
+  }
+): Promise<ActionResponse> {
+  const groupId = params.groupId || TEST_GROUP_ID;
+  const threadCount = params.threadCount || 3;
+
+  try {
+    if (params.options) {
+      // Single thread with specific options
+      const result = await simulateDMThread(supabase, groupId, params.options);
+      return {
+        success: result.success,
+        action: "simulate-dm",
+        data: result,
+        error: result.error,
+      };
+    } else {
+      // Multiple random threads
+      const results = await simulateMultipleDMThreads(supabase, groupId, threadCount);
+      const successCount = results.filter(r => r.success).length;
+      return {
+        success: successCount > 0,
+        action: "simulate-dm",
+        data: {
+          requested: threadCount,
+          created: successCount,
+          results,
+        },
+        error: successCount === 0 ? "All DM threads failed" : undefined,
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      action: "simulate-dm",
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Simulate reactions on chat messages.
+ */
+async function handleSimulateReaction(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    groupId?: string;
+    messageId?: string;
+    count?: number;
+    emoji?: string;
+    actorName?: string;
+  }
+): Promise<ActionResponse> {
+  const groupId = params.groupId || TEST_GROUP_ID;
+  const count = params.count || 10;
+
+  try {
+    if (params.messageId) {
+      // React to a specific message
+      const result = await simulateChatReaction(supabase, params.messageId, {
+        emoji: params.emoji,
+        actorName: params.actorName,
+        groupId,
+      });
+      return {
+        success: result.success,
+        action: "simulate-reaction",
+        data: result,
+        error: result.error,
+      };
+    } else {
+      // Burst of random reactions
+      const results = await simulateReactionBurst(supabase, groupId, count);
+      const successCount = results.filter(r => r.success).length;
+      return {
+        success: successCount > 0,
+        action: "simulate-reaction",
+        data: {
+          requested: count,
+          created: successCount,
+          results,
+        },
+        error: successCount === 0 ? "All reactions failed" : undefined,
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      action: "simulate-reaction",
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Generate vote data for a round.
+ */
+async function handleGenerateVotes(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    roundId: string;
+    options?: VoteGenerationOptions;
+  }
+): Promise<ActionResponse> {
+  if (!params.roundId) {
+    return {
+      success: false,
+      action: "generate-votes",
+      error: "roundId is required",
+    };
+  }
+
+  try {
+    const result = await generateVoteData(supabase, params.roundId, params.options || {});
+    return {
+      success: result.success,
+      action: "generate-votes",
+      data: result,
+      error: result.error,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      action: "generate-votes",
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Validate round data integrity.
+ */
+async function handleValidateRound(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    roundId: string;
+    groupId?: string;
+  }
+): Promise<ActionResponse> {
+  if (!params.roundId) {
+    return {
+      success: false,
+      action: "validate-round",
+      error: "roundId is required",
+    };
+  }
+
+  const groupId = params.groupId || TEST_GROUP_ID;
+
+  try {
+    const result = await validateRoundData(supabase, params.roundId, groupId);
+    return {
+      success: result.valid,
+      action: "validate-round",
+      data: result,
+      error: result.valid ? undefined : "Validation failed - see issues in data",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      action: "validate-round",
+      error: error.message,
+    };
+  }
+}
+
+// ============================================================================
+// Historical Import Handlers
+// ============================================================================
+
+/**
+ * Import historical season data directly to database.
+ */
+async function handleImportHistorical(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    roundCount?: number;
+    groupId?: string;
+    leagueId?: string;
+    includeVotes?: boolean;
+  }
+): Promise<ActionResponse> {
+  try {
+    const options: ImportOptions = {
+      roundCount: params.roundCount || 5,
+      groupId: params.groupId || TEST_GROUP_ID,
+      leagueId: params.leagueId || TEST_LEAGUE_S1_ID,
+      includeVotes: params.includeVotes !== false,
+    };
+
+    const result = await importHistoricalData(supabase, options);
+
+    return {
+      success: result.success,
+      action: "import-historical",
+      data: result,
+      error: result.errors?.join("; "),
+    };
+  } catch (error) {
+    return {
+      success: false,
+      action: "import-historical",
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Auto-link competitors to profiles by name matching.
+ */
+async function handleLinkCompetitors(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    groupId?: string;
+  }
+): Promise<ActionResponse> {
+  try {
+    const groupId = params.groupId || TEST_GROUP_ID;
+    const result = await linkCompetitorsToProfiles(supabase, groupId);
+
+    return {
+      success: result.success,
+      action: "link-competitors",
+      data: { linked: result.linked },
+      error: result.error,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      action: "link-competitors",
       error: error.message,
     };
   }

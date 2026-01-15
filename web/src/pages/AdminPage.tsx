@@ -75,7 +75,7 @@ type InviteRow = {
   email_sent_at: string | null;
 };
 
-type TabId = "users" | "invites" | "leagues" | "rounds" | "competitors" | "imports" | "ai-settings" | "bonus";
+type TabId = "users" | "invites" | "leagues" | "rounds" | "competitors" | "imports" | "ai-settings" | "bonus" | "testing";
 
 type BonusPointEntry = {
   id: string;
@@ -2701,6 +2701,7 @@ export default function AdminPage() {
           { id: "imports", label: "Imports" },
           { id: "ai-settings", label: "AI settings" },
           { id: "bonus", label: "Minigames" },
+          { id: "testing", label: "Testing" },
         ] as const).map((tab) => (
           <button
             key={tab.id}
@@ -4831,9 +4832,117 @@ python scripts/build_track_metadata.py`}
           </div>
         </Card>
       ) : null}
+
+      {activeTab === "testing" ? (
+        <TestingTab groupId={group?.id} />
+      ) : null}
     </div>
   );
 }
+
+// ============================================================================
+// Testing Tab Component
+// ============================================================================
+
+function TestingTab({ groupId: _groupId }: { groupId?: string }) {
+  const [seedStatus, setSeedStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [seedMessage, setSeedMessage] = useState<string>("");
+
+  const handleSeedTestData = async () => {
+    setSeedStatus("loading");
+    setSeedMessage("Seeding test data...");
+    try {
+      const { data, error } = await supabase.functions.invoke("seed-test-data", {
+        body: { reset: true },
+      });
+      if (error) {
+        setSeedStatus("error");
+        setSeedMessage(`Error: ${error.message}`);
+      } else if (data?.success) {
+        setSeedStatus("success");
+        setSeedMessage(`Success! Created ${data.testUsers?.length || 0} test users and test group.`);
+      } else {
+        setSeedStatus("error");
+        setSeedMessage(`Failed: ${data?.errors?.join(", ") || "Unknown error"}`);
+      }
+    } catch (err) {
+      setSeedStatus("error");
+      setSeedMessage(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
+  };
+
+  return (
+    <Card className="dashboard-card">
+      <h2>Testing Environment</h2>
+      <p className="muted">Access the test dashboard and manage test data.</p>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginTop: "1rem" }}>
+        {/* Test Dashboard Link */}
+        <div style={{ padding: "1rem", background: "var(--bg-tertiary)", borderRadius: "8px" }}>
+          <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1rem" }}>Test Dashboard</h3>
+          <p className="muted" style={{ margin: "0 0 1rem 0" }}>
+            Full testing environment with round simulation, chat/DM generation, and analytics.
+          </p>
+          <Button
+            onClick={() => window.location.href = "/app/test-dashboard"}
+          >
+            Open Test Dashboard
+          </Button>
+        </div>
+
+        {/* Seed Test Data */}
+        <div style={{ padding: "1rem", background: "var(--bg-tertiary)", borderRadius: "8px" }}>
+          <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1rem" }}>Seed Test Data</h3>
+          <p className="muted" style={{ margin: "0 0 1rem 0" }}>
+            Create test users (testadmin@test.local, alice@test.local, etc.) and test family group.
+            Password for all test users: <code>testpassword123</code>
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <Button
+              onClick={handleSeedTestData}
+              disabled={seedStatus === "loading"}
+            >
+              {seedStatus === "loading" ? "Seeding..." : "Seed Test Data"}
+            </Button>
+            {seedStatus !== "idle" && (
+              <span style={{
+                color: seedStatus === "success" ? "var(--success)" : seedStatus === "error" ? "var(--error)" : "inherit",
+                fontSize: "0.9rem"
+              }}>
+                {seedMessage}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Test Credentials Info */}
+        <div style={{ padding: "1rem", background: "var(--bg-tertiary)", borderRadius: "8px" }}>
+          <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1rem" }}>Test Credentials</h3>
+          <table style={{ width: "100%", fontSize: "0.9rem" }}>
+            <thead>
+              <tr style={{ textAlign: "left" }}>
+                <th style={{ padding: "0.25rem 0.5rem" }}>Email</th>
+                <th style={{ padding: "0.25rem 0.5rem" }}>Name</th>
+                <th style={{ padding: "0.25rem 0.5rem" }}>Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style={{ padding: "0.25rem 0.5rem" }}>testadmin@test.local</td><td style={{ padding: "0.25rem 0.5rem" }}>Test Admin</td><td style={{ padding: "0.25rem 0.5rem" }}>Admin</td></tr>
+              <tr><td style={{ padding: "0.25rem 0.5rem" }}>alice@test.local</td><td style={{ padding: "0.25rem 0.5rem" }}>Alice</td><td style={{ padding: "0.25rem 0.5rem" }}>Member</td></tr>
+              <tr><td style={{ padding: "0.25rem 0.5rem" }}>bob@test.local</td><td style={{ padding: "0.25rem 0.5rem" }}>Bob</td><td style={{ padding: "0.25rem 0.5rem" }}>Member</td></tr>
+              <tr><td style={{ padding: "0.25rem 0.5rem" }}>carol@test.local</td><td style={{ padding: "0.25rem 0.5rem" }}>Carol</td><td style={{ padding: "0.25rem 0.5rem" }}>Member</td></tr>
+              <tr><td style={{ padding: "0.25rem 0.5rem" }}>dave@test.local</td><td style={{ padding: "0.25rem 0.5rem" }}>Uncle Dave</td><td style={{ padding: "0.25rem 0.5rem" }}>Member</td></tr>
+            </tbody>
+          </table>
+          <p className="muted" style={{ margin: "0.5rem 0 0 0", fontSize: "0.85rem" }}>
+            All test users use password: <code>testpassword123</code>
+          </p>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 type GroupSettings = {
   id: string;
   group_id: string;
