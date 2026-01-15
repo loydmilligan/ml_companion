@@ -152,7 +152,7 @@ export function useSubmitterGuess(
       .from("group_members")
       .select("role")
       .eq("group_id", groupId)
-      .eq("profile_id", userId)
+      .eq("member_id", userId)
       .single();
 
     setIsAdmin(memberData?.role === "lead" || memberData?.role === "admin");
