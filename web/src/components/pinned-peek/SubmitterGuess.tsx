@@ -29,6 +29,17 @@ type LeaderboardEntry = {
   total_guesses: number;
 };
 
+type VoteData = {
+  submission_id: string;
+  voter_name: string;
+  points: number;
+};
+
+type TopVoter = {
+  name: string;
+  points: number;
+};
+
 type SubmitterGuessProps = {
   roundId: string;
   groupId: string;
@@ -51,6 +62,7 @@ export default function SubmitterGuess({
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [topVotersPerSong, setTopVotersPerSong] = useState<Record<string, TopVoter[]>>({});
 
   // Load competitors and user's saved guesses
   const loadData = useCallback(async () => {
@@ -185,6 +197,51 @@ export default function SubmitterGuess({
     fetchLeaderboard();
   }, [isRevealed, roundId, groupId]);
 
+  // Fetch vote breakdown per song when revealed
+  useEffect(() => {
+    if (!isRevealed || submissions.length === 0) return;
+
+    const fetchVoteBreakdown = async () => {
+      const submissionIds = submissions.map((s) => s.id);
+
+      const { data: voteData } = await supabase
+        .from("votes")
+        .select("submission_id, voter_name, points")
+        .in("submission_id", submissionIds);
+
+      if (!voteData || voteData.length === 0) return;
+
+      // Group votes by submission and find top voter(s)
+      const votesBySubmission: Record<string, VoteData[]> = {};
+      (voteData as VoteData[]).forEach((v) => {
+        if (!votesBySubmission[v.submission_id]) {
+          votesBySubmission[v.submission_id] = [];
+        }
+        votesBySubmission[v.submission_id].push(v);
+      });
+
+      // For each submission, find who gave the most votes
+      const topVoters: Record<string, TopVoter[]> = {};
+
+      Object.entries(votesBySubmission).forEach(([subId, votes]) => {
+        // Find max points given
+        const maxPoints = Math.max(...votes.map((v) => v.points));
+        if (maxPoints <= 0) return;
+
+        // Find all voters who gave max points (handles ties)
+        const topForSong = votes
+          .filter((v) => v.points === maxPoints)
+          .map((v) => ({ name: v.voter_name, points: v.points }));
+
+        topVoters[subId] = topForSong;
+      });
+
+      setTopVotersPerSong(topVoters);
+    };
+
+    fetchVoteBreakdown();
+  }, [isRevealed, submissions]);
+
   const handleGuessChange = (submissionId: string, competitorId: string) => {
     setGuesses((prev) => ({ ...prev, [submissionId]: competitorId }));
   };
@@ -290,35 +347,49 @@ export default function SubmitterGuess({
               </div>
 
               {isRevealed ? (
-                <div
-                  className={`submitter-guess-result ${
-                    result === true ? "correct" : result === false ? "incorrect" : ""
-                  }`}
-                >
-                  {result === true && (
-                    <>
-                      <span className="result-icon">✓</span>
-                      <span>Correct! It was {sub.submitter_name}</span>
-                    </>
-                  )}
-                  {result === false && (
-                    <>
-                      <span className="result-icon">✗</span>
-                      <span>
-                        Wrong! It was {sub.submitter_name}
-                        {guessedCompetitor && ` (you guessed ${guessedCompetitor.name})`}
+                <div className="submitter-guess-revealed">
+                  <div
+                    className={`submitter-guess-result ${
+                      result === true ? "correct" : result === false ? "incorrect" : ""
+                    }`}
+                  >
+                    {result === true && (
+                      <>
+                        <span className="result-icon">✓</span>
+                        <span>Correct! It was {sub.submitter_name}</span>
+                      </>
+                    )}
+                    {result === false && (
+                      <>
+                        <span className="result-icon">✗</span>
+                        <span>
+                          Wrong! It was {sub.submitter_name}
+                          {guessedCompetitor && ` (you guessed ${guessedCompetitor.name})`}
+                        </span>
+                      </>
+                    )}
+                    {result === null && guessedId && (
+                      <span style={{ color: "var(--text-muted)" }}>
+                        You guessed {guessedCompetitor?.name ?? "Unknown"}
                       </span>
-                    </>
-                  )}
-                  {result === null && guessedId && (
-                    <span style={{ color: "var(--text-muted)" }}>
-                      You guessed {guessedCompetitor?.name ?? "Unknown"}
-                    </span>
-                  )}
-                  {result === null && !guessedId && (
-                    <span style={{ color: "var(--text-muted)" }}>
-                      Submitted by {sub.submitter_name ?? "Unknown"}
-                    </span>
+                    )}
+                    {result === null && !guessedId && (
+                      <span style={{ color: "var(--text-muted)" }}>
+                        Submitted by {sub.submitter_name ?? "Unknown"}
+                      </span>
+                    )}
+                  </div>
+                  {topVotersPerSong[sub.id] && topVotersPerSong[sub.id].length > 0 && (
+                    <div className="submitter-guess-top-voter">
+                      <span className="top-voter-label">Top voter{topVotersPerSong[sub.id].length > 1 ? "s" : ""}:</span>
+                      <span className="top-voter-names">
+                        {topVotersPerSong[sub.id].map((v, i) => (
+                          <span key={v.name} className="top-voter-name">
+                            {v.name} ({v.points}pts){i < topVotersPerSong[sub.id].length - 1 ? ", " : ""}
+                          </span>
+                        ))}
+                      </span>
+                    </div>
                   )}
                 </div>
               ) : (

@@ -65,10 +65,30 @@ function extractYouTubeInfo(text: string): { videoId: string; startTime: number 
   return null;
 }
 
-function renderMessageBody(text: string, onPeekClick?: () => void) {
-  const parts: Array<{ text: string; href?: string; isPeekBtn?: boolean }> = [];
-  // Match both @[label](url) links and <peek_btn> tags
-  const regex = /(@\[(.+?)\]\((https?:\/\/[^)]+)\)|<peek_btn>)/g;
+type TagHandlers = {
+  onPeekClick?: () => void;
+  onHistoryClick?: (season: number, round: number) => void;
+  onGameTabClick?: () => void;
+  onGameNumClick?: (gameNum: number) => void;
+  onProgressClick?: () => void;
+  youtubePlaylistUrl?: string | null;
+  spotifyPlaylistUrl?: string | null;
+};
+
+type MessagePart = {
+  text: string;
+  href?: string;
+  tagType?: "peek_btn" | "hist" | "game_tab" | "game_num" | "prog_tab" | "yt_list" | "spt_list";
+  season?: number;
+  round?: number;
+  gameNum?: number;
+};
+
+function renderMessageBody(text: string, handlers?: TagHandlers) {
+  const parts: MessagePart[] = [];
+  // Match @[label](url) links and all custom tags
+  // Tags: <peek_btn>, <hist_y.z>, <game_tab>, <game_1-3>, <prog_tab>, <yt_list>, <spt_list>
+  const regex = /(@\[(.+?)\]\((https?:\/\/[^)]+)\)|<peek_btn>|<hist_(\d+)\.(\d+)>|<game_tab>|<game_([1-3])>|<prog_tab>|<yt_list>|<spt_list>)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = regex.exec(text)) !== null) {
@@ -77,7 +97,22 @@ function renderMessageBody(text: string, onPeekClick?: () => void) {
       parts.push({ text: text.slice(lastIndex, match.index) });
     }
     if (fullMatch === "<peek_btn>") {
-      parts.push({ text: "", isPeekBtn: true });
+      parts.push({ text: "", tagType: "peek_btn" });
+    } else if (fullMatch.startsWith("<hist_")) {
+      const season = parseInt(match[4], 10);
+      const round = parseInt(match[5], 10);
+      parts.push({ text: "", tagType: "hist", season, round });
+    } else if (fullMatch === "<game_tab>") {
+      parts.push({ text: "", tagType: "game_tab" });
+    } else if (fullMatch.startsWith("<game_")) {
+      const gameNum = parseInt(match[6], 10);
+      parts.push({ text: "", tagType: "game_num", gameNum });
+    } else if (fullMatch === "<prog_tab>") {
+      parts.push({ text: "", tagType: "prog_tab" });
+    } else if (fullMatch === "<yt_list>") {
+      parts.push({ text: "", tagType: "yt_list" });
+    } else if (fullMatch === "<spt_list>") {
+      parts.push({ text: "", tagType: "spt_list" });
     } else {
       // It's a link match: @[label](url)
       const label = match[2];
@@ -90,23 +125,131 @@ function renderMessageBody(text: string, onPeekClick?: () => void) {
     parts.push({ text: text.slice(lastIndex) });
   }
   return parts.map((part, index) => {
-    if (part.isPeekBtn) {
+    if (part.tagType === "peek_btn") {
       return (
         <button
           key={`peek-btn-${index}`}
           type="button"
-          className="inline-peek-btn"
+          className="inline-tag-btn"
           onClick={(e) => {
             e.stopPropagation();
-            onPeekClick?.();
+            handlers?.onPeekClick?.();
           }}
-          title="Open round details"
+          title="Open playlist panel"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="3" y="3" width="18" height="18" rx="2" />
             <path d="M9 9h6M9 12h6M9 15h4" />
           </svg>
         </button>
+      );
+    }
+    if (part.tagType === "hist") {
+      const label = part.season === 0 && part.round === 0
+        ? "Current Season"
+        : part.round === 0
+          ? `Season ${part.season}`
+          : `S${part.season} R${part.round}`;
+      return (
+        <button
+          key={`hist-${index}`}
+          type="button"
+          className="inline-tag-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            handlers?.onHistoryClick?.(part.season ?? 0, part.round ?? 0);
+          }}
+          title={`View ${label} in History`}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span>{label}</span>
+        </button>
+      );
+    }
+    if (part.tagType === "game_tab" || part.tagType === "game_num") {
+      const gameLabels = ["", "Submitter Guess", "Timeline", "Round Challenge"];
+      const label = part.tagType === "game_num" ? gameLabels[part.gameNum ?? 1] : "Games";
+      return (
+        <button
+          key={`game-${index}`}
+          type="button"
+          className="inline-tag-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (part.tagType === "game_num" && part.gameNum) {
+              handlers?.onGameNumClick?.(part.gameNum);
+            } else {
+              handlers?.onGameTabClick?.();
+            }
+          }}
+          title={`Open ${label}`}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M6 12h4M14 12h4" />
+            <rect x="2" y="6" width="20" height="12" rx="2" />
+            <circle cx="8" cy="12" r="2" />
+            <circle cx="16" cy="12" r="2" />
+          </svg>
+          <span>{label}</span>
+        </button>
+      );
+    }
+    if (part.tagType === "prog_tab") {
+      return (
+        <button
+          key={`prog-${index}`}
+          type="button"
+          className="inline-tag-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            handlers?.onProgressClick?.();
+          }}
+          title="Open Progress panel"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+          </svg>
+          <span>Progress</span>
+        </button>
+      );
+    }
+    if (part.tagType === "yt_list") {
+      if (!handlers?.youtubePlaylistUrl) return null;
+      return (
+        <a
+          key={`yt-${index}`}
+          className="inline-tag-btn inline-tag-link"
+          href={handlers.youtubePlaylistUrl}
+          target="_blank"
+          rel="noreferrer"
+          title="Open YouTube Playlist"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M23.498 6.186a2.994 2.994 0 0 0-2.112-2.12C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.386.566a2.994 2.994 0 0 0-2.112 2.12C0 8.07 0 12 0 12s0 3.93.502 5.814a2.994 2.994 0 0 0 2.112 2.12c1.881.566 9.386.566 9.386.566s7.505 0 9.386-.566a2.994 2.994 0 0 0 2.112-2.12C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
+          <span>YouTube Playlist</span>
+        </a>
+      );
+    }
+    if (part.tagType === "spt_list") {
+      if (!handlers?.spotifyPlaylistUrl) return null;
+      return (
+        <a
+          key={`spt-${index}`}
+          className="inline-tag-btn inline-tag-link"
+          href={handlers.spotifyPlaylistUrl}
+          target="_blank"
+          rel="noreferrer"
+          title="Open Spotify Playlist"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+          </svg>
+          <span>Spotify Playlist</span>
+        </a>
       );
     }
     if (part.href) {
@@ -125,7 +268,7 @@ export default function ChatPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { group, profile } = useAuth();
   const { round } = useRound(); // Get round for AI context
-  const { quotedSong, clearQuotedSong, openPanel, togglePanel } = useSidePanel();
+  const { quotedSong, clearQuotedSong, openPanel, togglePanel, setGamesActiveTab } = useSidePanel();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [reactions, setReactions] = useState<Map<string, ReactionCount[]>>(new Map());
   const [message, setMessage] = useState("");
@@ -920,7 +1063,27 @@ export default function ChatPage() {
                 <span className="reply-text">{item.reply_to.body.length > 80 ? item.reply_to.body.slice(0, 80) + "..." : item.reply_to.body}</span>
               </div>
             )}
-            <p>{renderMessageBody(item.body, () => openPanel("playlist"))}</p>
+            <p>{renderMessageBody(item.body, {
+                  onPeekClick: () => openPanel("playlist"),
+                  onHistoryClick: (season, roundNum) => {
+                    // Navigate to history with card index param
+                    // Format: season_round where 0_0 = current season card
+                    navigate(`/history?card=${season}_${roundNum}`);
+                  },
+                  onGameTabClick: () => openPanel("games"),
+                  onGameNumClick: (gameNum) => {
+                    const tabMap: Record<number, "submitter-guess" | "timeline" | "round-challenge"> = {
+                      1: "submitter-guess",
+                      2: "timeline",
+                      3: "round-challenge",
+                    };
+                    setGamesActiveTab(tabMap[gameNum] ?? "submitter-guess");
+                    openPanel("games");
+                  },
+                  onProgressClick: () => openPanel("progress"),
+                  youtubePlaylistUrl: round?.youtube_playlist_url,
+                  spotifyPlaylistUrl: round?.playlist_url || round?.external_playlist_url,
+                })}</p>
             {(() => {
               const ytInfo = extractYouTubeInfo(item.body);
               if (!ytInfo) return null;

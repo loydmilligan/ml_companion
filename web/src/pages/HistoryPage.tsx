@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useSidePanel, SidePanelTab } from "../components/side-panels";
@@ -146,6 +147,7 @@ export default function HistoryPage() {
   const { group } = useAuth();
   const isLead = group?.role === "lead";
   const { togglePanel } = useSidePanel();
+  const [searchParams] = useSearchParams();
 
   // Data state
   const [leagues, setLeagues] = useState<LeagueRow[]>([]);
@@ -1485,6 +1487,37 @@ export default function HistoryPage() {
     return index >= 0 ? index : null;
   };
 
+  // Calculate initial card index from URL params (format: ?card=season_round)
+  const initialCardIndex = useMemo(() => {
+    const cardParam = searchParams.get("card");
+    if (!cardParam || cardData.length === 0) return 0;
+
+    const [seasonStr, roundStr] = cardParam.split("_");
+    const targetSeason = parseInt(seasonStr, 10);
+    const targetRound = parseInt(roundStr, 10);
+
+    if (isNaN(targetSeason)) return 0;
+
+    // Find matching card
+    const index = cardData.findIndex((card) => {
+      // Special case: 0_0 = current season card
+      if (targetSeason === 0 && targetRound === 0) {
+        return card.type === "currentSeason" || card.type === "preseasonSpecial";
+      }
+      // Season recap (round = 0)
+      if (targetRound === 0) {
+        return card.type === "seasonRecap" && card.seasonNumber === targetSeason;
+      }
+      // Regular round card
+      if (card.type === "round") {
+        return card.seasonNumber === targetSeason && card.roundNumber === targetRound;
+      }
+      return false;
+    });
+
+    return index >= 0 ? index : 0;
+  }, [cardData, searchParams]);
+
   /* ========================================
      Render
      ======================================== */
@@ -1521,6 +1554,7 @@ export default function HistoryPage() {
       <SidePanelTab panel="games" onClick={() => togglePanel("games")} />
       <CardStack
         cards={cardData}
+        initialIndex={initialCardIndex}
         onCardChange={handleCardChange}
         onCardTap={handleCardTap}
         onThemeClick={handleThemeClick}

@@ -5249,6 +5249,53 @@
   transform: scale(0.95);
 }
 
+/* Inline Tag Buttons in chat messages */
+.inline-tag-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  margin: 0 2px;
+  vertical-align: middle;
+  background: linear-gradient(135deg, var(--navy) 0%, #4a5568 100%);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: white;
+  text-decoration: none;
+}
+
+.inline-tag-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.inline-tag-btn span {
+  white-space: nowrap;
+}
+
+.inline-tag-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.inline-tag-btn:active {
+  transform: scale(0.95);
+}
+
+/* Link variant (for playlist links) */
+.inline-tag-link {
+  background: linear-gradient(135deg, #1ed760 0%, #1db954 100%);
+}
+
+.inline-tag-link.inline-tag-btn[href*="youtube"] {
+  background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+}
+
 /* Message reactions */
 .chat-bubble-reactions {
   display: flex;
@@ -6358,6 +6405,51 @@
 .submitter-guess-result.incorrect {
   background: rgba(231, 76, 60, 0.15);
   color: #c0392b;
+}
+
+/* Revealed state container */
+.submitter-guess-revealed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Top voter breakdown */
+.submitter-guess-top-voter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(79, 70, 229, 0.08);
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+.top-voter-label {
+  color: #666;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.top-voter-names {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.top-voter-name {
+  color: #4f46e5;
+}
+
+[data-mode="dark"] .submitter-guess-top-voter {
+  background: rgba(139, 92, 246, 0.15);
+}
+
+[data-mode="dark"] .top-voter-label {
+  color: #a1a1aa;
+}
+
+[data-mode="dark"] .top-voter-name {
+  color: #a78bfa;
 }
 
 /* Dark mode for Submitter Guess */
