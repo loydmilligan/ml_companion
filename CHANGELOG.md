@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-01-15
+
+### Added
+
+#### Submitter Guess Enhancements
+- **Poll-style Results**: After submitting a guess, see aggregate guesses from all users
+  - Shows percentage bars for each competitor guessed
+  - Displays count and percentage (e.g., "Alice 3 (60%)")
+- **Locked Guesses**: Guesses are locked after submission - no changing allowed
+- **Admin Override**: Admins see ✏️ button to unlock and change their guesses
+- **Button renamed**: "Save" → "Submit" to indicate finality
+- **Vote Breakdown**: Shows top voter(s) per song after reveal (e.g., "Top voter: Bob (5pts)")
+
+#### History Page
+- **TOC Modal**: Table of contents for navigating round history
+- **Per-round Voting Patterns**: Display voting breakdown per round
+- **Chat Tags**: Round reference tags in chat messages
+
+#### Test Dashboard
+- **Historical Data Import**: Generate and import historical season data directly
+- **Testing Tab**: New admin tab with test dashboard link and seed button
+
+### Fixed
+- Use correct column name `member_id` for admin check in games
+- Use correct kebab-case card type strings in HistoryPage
+- Deduplicate votes when calculating voting patterns
+- Test dashboard submission and round management issues
+- Add fallback for crypto.randomUUID in non-secure contexts
+
+## [1.0.1] - 2026-01-14
+
+### Fixed
+- CI/CD workflow for production deployment via Cloudflare tunnel
+
+## [1.0.0] - 2026-01-14
+
 ### Added
 
 #### Push Notifications (FCM)
