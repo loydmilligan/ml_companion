@@ -678,6 +678,19 @@ export async function generateVoteData(
         votesCreated++;
       }
     }
+
+    // Create activity record for this voter
+    await supabase.from("round_user_activity").upsert(
+      {
+        round_id: roundId,
+        profile_id: voter.profile_id,
+        actor_name: voter.name,
+        activity_type: "voted",
+      },
+      {
+        onConflict: "round_id,actor_name,activity_type",
+      }
+    );
   }
 
   return {
