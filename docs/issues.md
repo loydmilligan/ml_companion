@@ -1,7 +1,7 @@
 # Issues & Roadmap
 
-Version: v1.16
-Date: 2026-01-14
+Version: v1.17
+Date: 2026-01-15
 
 **Sync Status:**
 - Last Local Change: 2026-01-14
@@ -20,6 +20,7 @@ Date: 2026-01-14
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.17 | 2026-01-15 | Added TEST-004 (Test Dashboard Data Sync Issues) with detailed debugging notes |
 | v1.16 | 2026-01-14 | Added DEV-001, DEV-002 (DevOps/CI-CD hardening); updated TEST-003 to In Progress |
 | v1.15 | 2026-01-14 | Added TEST-003 (Historical CSV Import in Test Dashboard) |
 | v1.14 | 2026-01-14 | Marked HIST-001, ML-001, ML-002, AWD-005, INT-002, YT-001, PN-005, CHAT-001 complete; added notification deep links |
@@ -308,6 +309,7 @@ Display on History page showing:
 | TEST-001 | [LOYD-185](https://linear.app/loydmilligan/issue/LOYD-185) | Automated Test Environment & Data Factory | **In Progress** | High | High | Low | Full test harness for round lifecycle, multi-user simulation, observation dashboard |
 | TEST-002 | — | Test Dashboard Song Tracking | Planned | Low | Medium | Low | Display actual song names in submission grid; requires edge function enhancement to return song data |
 | TEST-003 | — | Historical CSV Import in Test Dashboard | **In Progress** | Medium | High | Low | Generate and import historical CSVs directly from test dashboard; consolidate import workflow |
+| TEST-004 | — | Test Dashboard Data Sync Issues | Planned | Medium | High | Medium | Fix inconsistencies between test-factory edge function and UI state; investigate CSV import failures |
 
 ### DevOps & CI/CD
 
@@ -355,6 +357,47 @@ Display on History page showing:
    - CLI or UI to trigger scenarios
    - Speed controls (real-time vs accelerated)
    - Reset function to clear and restart
+
+### TEST-004: Test Dashboard Data Sync Issues
+
+**Problem:** Multiple data synchronization issues between the test-factory edge function and the test dashboard UI. Actions appear to work but data doesn't persist or display correctly.
+
+**Known Issues (2026-01-15):**
+
+1. **CSV Import Fails Halfway**
+   - Import progress bar reaches ~50% then shows "Import Failed"
+   - No detailed error message in UI
+   - Unclear which step is failing
+
+2. **Individual Submission Buttons Don't Work**
+   - UI flashes then nothing happens
+   - No error messages displayed
+   - Edge function returns success when called directly via curl
+   - Console shows fetch requests completing but HEAD request to submissions fails
+
+3. **Progress Panel Shows Wrong Counts**
+   - Shows 0/5 songs and 1/5 votes when data exists
+   - `round_user_activity` table not populated by test-factory actions
+   - Fixed: Added activity record creation to `generateVoteData` function
+   - Still need to verify fix works after deployment
+
+4. **Vote Deduplication Issue (Fixed)**
+   - Duplicate vote records in database caused inflated point totals
+   - Fixed by deduplicating votes by (voter_name, submission_id) in voting pattern calculation
+
+**Debugging Notes:**
+- Edge function works when called directly: `curl -X POST .../test-factory` returns success
+- Dev Supabase project: `rqtimlhqasmeymxhmkiz`
+- Supabase MCP connects to prod only - cannot query dev database
+- Auto-refresh on test dashboard makes debugging difficult (consider adding pause toggle)
+
+**Next Steps:**
+1. Add better error logging to test-factory edge function
+2. Surface detailed errors in test dashboard UI
+3. Investigate HEAD request failure on submissions table (RLS issue?)
+4. Test activity record creation after latest deployment
+
+---
 
 ### TEST-003: Historical CSV Import in Test Dashboard
 
