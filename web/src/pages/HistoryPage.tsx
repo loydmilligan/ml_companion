@@ -1273,15 +1273,22 @@ export default function HistoryPage() {
         }
       });
 
-      // Aggregate votes by voter -> target
+      // Aggregate votes by voter -> target (deduplicate by voter+submission)
       submissions.forEach((sub) => {
         const votes = allVotes.get(sub.id) ?? [];
         const submitterName = submissionToSubmitter.get(sub.id);
         if (!submitterName) return;
 
+        // Deduplicate votes: keep only one vote per voter for this submission
+        const seenVoters = new Set<string>();
         votes.forEach((vote) => {
           if (!vote.voter_name) return;
           const voterName = vote.voter_name;
+
+          // Skip if we've already counted this voter's vote for this submission
+          if (seenVoters.has(voterName)) return;
+          seenVoters.add(voterName);
+
           const points = vote.points ?? 0;
 
           if (!voterToTarget.has(voterName)) {
