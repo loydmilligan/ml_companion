@@ -96,11 +96,14 @@ export default function GamesSidebar({
     guessStates,
     leaderboard,
     topVotersPerSong,
+    guessAggregatesPerSong,
     correctCount,
     totalGuessed,
     maxPossibleGuesses,
     handleGuessChange,
-    handleSaveGuess,
+    handleSubmitGuess,
+    handleAdminUnlock,
+    isAdmin,
   } = useSubmitterGuess(
     round?.id ?? null,
     groupId,
@@ -240,8 +243,11 @@ export default function GamesSidebar({
                   competitors={guessCompetitors}
                   isRevealed={isRevealed ?? false}
                   topVoters={topVotersPerSong[song.id]}
+                  guessAggregates={guessAggregatesPerSong[song.id]}
+                  isAdmin={isAdmin}
                   onGuessChange={(competitorId) => handleGuessChange(song.id, competitorId)}
-                  onSaveGuess={() => handleSaveGuess(song.id)}
+                  onSubmitGuess={() => handleSubmitGuess(song.id)}
+                  onAdminUnlock={() => handleAdminUnlock(song.id)}
                 />
               ))}
               {submissions.length === 0 && (

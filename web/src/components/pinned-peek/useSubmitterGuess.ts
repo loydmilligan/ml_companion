@@ -26,6 +26,7 @@ export type GuessState = {
   result: boolean | null;
   isSaving: boolean;
   isOwnSong: boolean;
+  isLocked: boolean; // True after user has submitted their guess
 };
 
 export type LeaderboardEntry = {
@@ -40,17 +41,26 @@ export type TopVoter = {
   points: number;
 };
 
+export type GuessAggregate = {
+  competitorId: string;
+  competitorName: string;
+  count: number;
+};
+
 type UseSubmitterGuessReturn = {
   competitors: Competitor[];
   guessStates: Record<string, GuessState>;
   leaderboard: LeaderboardEntry[];
   topVotersPerSong: Record<string, TopVoter[]>;
+  guessAggregatesPerSong: Record<string, GuessAggregate[]>;
   loading: boolean;
   correctCount: number;
   totalGuessed: number;
   maxPossibleGuesses: number;
   handleGuessChange: (submissionId: string, competitorId: string) => void;
-  handleSaveGuess: (submissionId: string) => Promise<void>;
+  handleSubmitGuess: (submissionId: string) => Promise<void>;
+  handleAdminUnlock: (submissionId: string) => void;
+  isAdmin: boolean;
 };
 
 export function useSubmitterGuess(
@@ -70,6 +80,63 @@ export function useSubmitterGuess(
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [topVotersPerSong, setTopVotersPerSong] = useState<Record<string, TopVoter[]>>({});
   const [userCompetitorName, setUserCompetitorName] = useState<string | null>(null);
+  const [guessAggregatesPerSong, setGuessAggregatesPerSong] = useState<Record<string, GuessAggregate[]>>({});
+  const [lockedSubmissions, setLockedSubmissions] = useState<Record<string, boolean>>({});
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Fetch guess aggregates for given submissions (poll-style results)
+  const fetchGuessAggregates = useCallback(async (
+    submissionIds: string[],
+    competitorsList: Competitor[]
+  ) => {
+    if (!roundId || submissionIds.length === 0) return;
+
+    // Fetch all guesses for these submissions
+    const { data: allGuesses } = await supabase
+      .from("submitter_guesses")
+      .select("submission_id, guessed_competitor_id")
+      .eq("round_id", roundId)
+      .in("submission_id", submissionIds);
+
+    if (!allGuesses || allGuesses.length === 0) return;
+
+    // Aggregate guesses by submission and competitor
+    const aggregates: Record<string, Record<string, number>> = {};
+
+    allGuesses.forEach((g) => {
+      if (!g.guessed_competitor_id) return;
+
+      if (!aggregates[g.submission_id]) {
+        aggregates[g.submission_id] = {};
+      }
+
+      if (!aggregates[g.submission_id][g.guessed_competitor_id]) {
+        aggregates[g.submission_id][g.guessed_competitor_id] = 0;
+      }
+
+      aggregates[g.submission_id][g.guessed_competitor_id]++;
+    });
+
+    // Convert to sorted arrays with competitor names
+    const result: Record<string, GuessAggregate[]> = {};
+
+    Object.entries(aggregates).forEach(([subId, competitorCounts]) => {
+      const sorted = Object.entries(competitorCounts)
+        .map(([competitorId, count]) => {
+          const competitor = competitorsList.find((c) => c.id === competitorId);
+          return {
+            competitorId,
+            competitorName: competitor?.name ?? "Unknown",
+            count,
+          };
+        })
+        .sort((a, b) => b.count - a.count); // Sort by count descending
+
+      result[subId] = sorted;
+    });
+
+    setGuessAggregatesPerSong((prev) => ({ ...prev, ...result }));
+  }, [roundId]);
 
   // Load competitors and user's saved guesses
   const loadData = useCallback(async () => {
@@ -79,6 +146,16 @@ export function useSubmitterGuess(
     }
 
     setLoading(true);
+
+    // Check if user is admin (member of group with role 'lead' or 'admin')
+    const { data: memberData } = await supabase
+      .from("group_members")
+      .select("role")
+      .eq("group_id", groupId)
+      .eq("profile_id", userId)
+      .single();
+
+    setIsAdmin(memberData?.role === "lead" || memberData?.role === "admin");
 
     // Fetch competitors for this group
     const { data: competitorData } = await supabase
@@ -104,16 +181,25 @@ export function useSubmitterGuess(
     if (guessData && guessData.length > 0) {
       const savedGuesses: Record<string, string> = {};
       const savedResults: Record<string, boolean | null> = {};
+      const locked: Record<string, boolean> = {};
 
       (guessData as SavedGuess[]).forEach((g) => {
         if (g.guessed_competitor_id) {
           savedGuesses[g.submission_id] = g.guessed_competitor_id;
+          locked[g.submission_id] = true; // Previously saved guesses are locked
         }
         savedResults[g.submission_id] = g.is_correct;
       });
 
       setGuesses(savedGuesses);
       setResults(savedResults);
+      setLockedSubmissions(locked);
+
+      // Fetch guess aggregates for songs the user has already guessed
+      const submissionIds = Object.keys(savedGuesses);
+      if (submissionIds.length > 0) {
+        await fetchGuessAggregates(submissionIds, competitorsList);
+      }
     }
 
     setLoading(false);
@@ -255,14 +341,19 @@ export function useSubmitterGuess(
   }, [isRevealed, submissions]);
 
   const handleGuessChange = useCallback((submissionId: string, competitorId: string) => {
+    // Only allow changes if not locked (or admin override)
+    if (lockedSubmissions[submissionId] && !isAdmin) return;
     setGuesses((prev) => ({ ...prev, [submissionId]: competitorId }));
-  }, []);
+  }, [lockedSubmissions, isAdmin]);
 
-  const handleSaveGuess = useCallback(async (submissionId: string) => {
+  const handleSubmitGuess = useCallback(async (submissionId: string) => {
     if (!userId || !roundId) return;
 
     const competitorId = guesses[submissionId];
     if (!competitorId) return;
+
+    // Prevent re-submission if locked (unless admin)
+    if (lockedSubmissions[submissionId] && !isAdmin) return;
 
     setSaving((prev) => ({ ...prev, [submissionId]: true }));
 
@@ -280,13 +371,25 @@ export function useSubmitterGuess(
 
       if (error) {
         console.error("Error saving guess:", error);
+      } else {
+        // Lock this submission after successful save
+        setLockedSubmissions((prev) => ({ ...prev, [submissionId]: true }));
+
+        // Fetch updated aggregates for this submission
+        await fetchGuessAggregates([submissionId], competitors);
       }
     } catch (err) {
       console.error("Error saving guess:", err);
     } finally {
       setSaving((prev) => ({ ...prev, [submissionId]: false }));
     }
-  }, [userId, roundId, guesses]);
+  }, [userId, roundId, guesses, lockedSubmissions, isAdmin, fetchGuessAggregates, competitors]);
+
+  // Admin function to unlock a submission for re-guessing
+  const handleAdminUnlock = useCallback((submissionId: string) => {
+    if (!isAdmin) return;
+    setLockedSubmissions((prev) => ({ ...prev, [submissionId]: false }));
+  }, [isAdmin]);
 
   // Build guess states object for each submission
   const guessStates: Record<string, GuessState> = {};
@@ -303,6 +406,7 @@ export function useSubmitterGuess(
       result: results[sub.id] ?? null,
       isSaving: saving[sub.id] || false,
       isOwnSong,
+      isLocked: lockedSubmissions[sub.id] || false,
     };
   });
 
@@ -316,11 +420,14 @@ export function useSubmitterGuess(
     guessStates,
     leaderboard,
     topVotersPerSong,
+    guessAggregatesPerSong,
     loading,
     correctCount,
     totalGuessed,
     maxPossibleGuesses,
     handleGuessChange,
-    handleSaveGuess,
+    handleSubmitGuess,
+    handleAdminUnlock,
+    isAdmin,
   };
 }

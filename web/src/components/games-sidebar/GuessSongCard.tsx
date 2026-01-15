@@ -13,11 +13,18 @@ type GuessState = {
   result: boolean | null; // true = correct, false = incorrect, null = not revealed
   isSaving: boolean;
   isOwnSong: boolean;
+  isLocked: boolean; // True after user has submitted their guess
 };
 
 type TopVoter = {
   name: string;
   points: number;
+};
+
+type GuessAggregate = {
+  competitorId: string;
+  competitorName: string;
+  count: number;
 };
 
 type GuessSongCardProps = {
@@ -40,8 +47,11 @@ type GuessSongCardProps = {
   competitors?: Competitor[];
   isRevealed?: boolean;
   topVoters?: TopVoter[];
+  guessAggregates?: GuessAggregate[];
+  isAdmin?: boolean;
   onGuessChange?: (competitorId: string) => void;
-  onSaveGuess?: () => void;
+  onSubmitGuess?: () => void;
+  onAdminUnlock?: () => void;
 };
 
 export default function GuessSongCard({
@@ -51,8 +61,11 @@ export default function GuessSongCard({
   competitors = [],
   isRevealed = false,
   topVoters,
+  guessAggregates,
+  isAdmin = false,
   onGuessChange,
-  onSaveGuess,
+  onSubmitGuess,
+  onAdminUnlock,
 }: GuessSongCardProps) {
   const { openSidebar } = useYouTubeSidebar();
   const { profile } = useAuth();
@@ -180,10 +193,54 @@ export default function GuessSongCard({
         )}
 
         {/* Submitter guess UI - only during voting phase when enabled */}
-        {guessEnabled && !isRevealed && onGuessChange && onSaveGuess && (
+        {guessEnabled && !isRevealed && onGuessChange && onSubmitGuess && (
           guessState?.isOwnSong ? (
             <div className="guess-song-card-own">Your song</div>
+          ) : guessState?.isLocked ? (
+            /* Locked state - show submitted guess and poll results */
+            <div className="guess-song-card-locked">
+              <div className="guess-song-card-submitted">
+                <span className="guess-song-card-submitted-label">You guessed:</span>
+                <span className="guess-song-card-submitted-name">
+                  {guessedCompetitor?.name ?? "Unknown"}
+                </span>
+                {isAdmin && onAdminUnlock && (
+                  <button
+                    type="button"
+                    onClick={onAdminUnlock}
+                    className="guess-song-card-admin-unlock"
+                    title="Admin: Change guess"
+                  >
+                    ✏️
+                  </button>
+                )}
+              </div>
+              {/* Poll results - show aggregate guesses from all users */}
+              {guessAggregates && guessAggregates.length > 0 && (
+                <div className="guess-song-card-poll-results">
+                  <span className="guess-song-card-poll-label">Others guessed:</span>
+                  <div className="guess-song-card-poll-bars">
+                    {guessAggregates.map((agg) => {
+                      const totalGuesses = guessAggregates.reduce((sum, a) => sum + a.count, 0);
+                      const percentage = totalGuesses > 0 ? Math.round((agg.count / totalGuesses) * 100) : 0;
+                      return (
+                        <div key={agg.competitorId} className="guess-song-card-poll-bar">
+                          <div className="guess-song-card-poll-bar-fill" style={{ width: `${percentage}%` }} />
+                          <span className="guess-song-card-poll-bar-label">
+                            {agg.competitorName}
+                          </span>
+                          <span className="guess-song-card-poll-bar-count">
+                            {agg.count} ({percentage}%)
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
+            /* Unlocked state - show dropdown and submit button */
             <div className="guess-song-card-guess">
               <span className="guess-song-card-guess-label">Your guess:</span>
               <select
@@ -201,11 +258,11 @@ export default function GuessSongCard({
               </select>
               <button
                 type="button"
-                onClick={onSaveGuess}
+                onClick={onSubmitGuess}
                 disabled={!guessState?.guessedCompetitorId || guessState?.isSaving}
-                className="guess-song-card-guess-save"
+                className="guess-song-card-guess-submit"
               >
-                {guessState?.isSaving ? "..." : "Save"}
+                {guessState?.isSaving ? "..." : "Submit"}
               </button>
             </div>
           )

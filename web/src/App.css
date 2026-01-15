@@ -8401,6 +8401,132 @@
   cursor: not-allowed;
 }
 
+/* Guess Song Card - Submit button (renamed from save) */
+.guess-song-card-guess-submit {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  background: var(--coral);
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  align-self: flex-start;
+}
+
+.guess-song-card-guess-submit:hover:not(:disabled) {
+  background: #e87662;
+}
+
+.guess-song-card-guess-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Guess Song Card - Locked State */
+.guess-song-card-locked {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.guess-song-card-submitted {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.guess-song-card-submitted-label {
+  color: var(--text-muted);
+}
+
+.guess-song-card-submitted-name {
+  font-weight: 600;
+  color: var(--coral);
+}
+
+.guess-song-card-admin-unlock {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 0.75rem;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.guess-song-card-admin-unlock:hover {
+  opacity: 1;
+}
+
+/* Guess Song Card - Poll Results */
+.guess-song-card-poll-results {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+[data-mode="dark"] .guess-song-card-poll-results {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.guess-song-card-poll-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.guess-song-card-poll-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.guess-song-card-poll-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+[data-mode="dark"] .guess-song-card-poll-bar {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.guess-song-card-poll-bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--coral);
+  opacity: 0.25;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.guess-song-card-poll-bar-label {
+  position: relative;
+  z-index: 1;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.guess-song-card-poll-bar-count {
+  position: relative;
+  z-index: 1;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
 /* Guess Song Card - Result */
 .guess-song-card-result {
   font-size: 0.8rem;
