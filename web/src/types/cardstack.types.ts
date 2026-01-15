@@ -79,6 +79,8 @@ export interface RoundCardData {
   youtubePlaylistUrl?: string | null;
   /** Submitter guess minigame results (top guessers) */
   minigameResults?: MinigameGuesser[];
+  /** Per-round voting patterns (who gave most/least to whom) */
+  votingPatterns?: VotingPattern[];
 }
 
 /**
@@ -340,6 +342,8 @@ export interface CardStackProps {
   onThemeClick?: (theme: string, seasonNumber: number) => number | null;
   /** Enable/disable swipe gestures */
   swipeEnabled?: boolean;
+  /** Expose navigation function to parent */
+  onGoToCard?: (callback: (index: number) => void) => void;
   /** Is the current user an admin (lead) */
   isLead?: boolean;
   /** Admin generation callbacks */

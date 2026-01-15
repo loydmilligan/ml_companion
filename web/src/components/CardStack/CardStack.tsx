@@ -5,7 +5,7 @@
  * with swipe gestures for navigation between cards.
  */
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import type {
   CardData,
   CardStackProps,
@@ -21,6 +21,13 @@ import SwipeIndicator from "./SwipeIndicator";
 import "./CardStack.css";
 
 const SWIPE_THRESHOLD_PX = 80;
+
+// Simple TOC icon
+const TocIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+    <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+  </svg>
+);
 
 export default function CardStack({
   cards,
@@ -43,8 +50,48 @@ export default function CardStack({
     offsetX: 0,
     direction: "none",
   });
+  const [isTocOpen, setIsTocOpen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Build TOC data - group cards by season
+  const tocData = useMemo(() => {
+    const seasonMap = new Map<number, { cards: Array<{ index: number; title: string; type: string }>; name: string }>();
+
+    cards.forEach((card, index) => {
+      let seasonNum = 0;
+      let title = "";
+      let seasonName = "";
+
+      if (isRoundCard(card)) {
+        seasonNum = card.seasonNumber ?? 0;
+        title = `Round ${card.roundNumber}: ${card.theme}`;
+        seasonName = `Season ${seasonNum}`;
+      } else if (isSeasonRecapCard(card)) {
+        seasonNum = card.seasonNumber;
+        title = `Season ${seasonNum} Recap`;
+        seasonName = card.leagueName || `Season ${seasonNum}`;
+      } else if (isCurrentSeasonCard(card)) {
+        seasonNum = card.seasonNumber;
+        title = "Current Season Story";
+        seasonName = card.leagueName || `Season ${seasonNum}`;
+      } else if (isPreseasonSpecialCard(card)) {
+        seasonNum = card.seasonNumber;
+        title = "Pre-Season Special";
+        seasonName = card.leagueName || `Season ${seasonNum}`;
+      }
+
+      if (!seasonMap.has(seasonNum)) {
+        seasonMap.set(seasonNum, { cards: [], name: seasonName });
+      }
+      seasonMap.get(seasonNum)!.cards.push({ index, title, type: card.type });
+    });
+
+    // Sort by season number descending
+    return Array.from(seasonMap.entries())
+      .sort((a, b) => b[0] - a[0])
+      .map(([seasonNum, data]) => ({ seasonNumber: seasonNum, name: data.name, cards: data.cards }));
+  }, [cards]);
 
   // Clamp index to valid range
   const clampIndex = useCallback(
@@ -72,6 +119,12 @@ export default function CardStack({
   const goPrev = useCallback(() => {
     goToCard(currentIndex - 1);
   }, [currentIndex, goToCard]);
+
+  // Navigate from TOC
+  const handleTocItemClick = useCallback((index: number) => {
+    goToCard(index);
+    setIsTocOpen(false);
+  }, [goToCard]);
 
   // Handle gesture start (touch or mouse)
   const handleGestureStart = useCallback(
@@ -223,8 +276,16 @@ export default function CardStack({
 
   return (
     <div className="card-stack-container">
-      {/* Top bar with navigation hint */}
+      {/* Top bar with TOC and navigation hint */}
       <div className="card-stack-header">
+        <button
+          type="button"
+          className="toc-btn"
+          onClick={() => setIsTocOpen(true)}
+          aria-label="Open table of contents"
+        >
+          <TocIcon />
+        </button>
         <span className="card-count">
           {currentIndex + 1} / {cards.length}
         </span>
@@ -352,6 +413,47 @@ export default function CardStack({
           <span aria-hidden="true">&rarr;</span>
         </button>
       </div>
+
+      {/* TOC Modal */}
+      {isTocOpen && (
+        <div className="toc-modal-overlay" onClick={() => setIsTocOpen(false)}>
+          <div className="toc-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="toc-modal-header">
+              <h2 className="toc-modal-title">Jump to Card</h2>
+              <button
+                type="button"
+                className="toc-modal-close"
+                onClick={() => setIsTocOpen(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="toc-modal-content">
+              {tocData.map((season) => (
+                <div key={season.seasonNumber} className="toc-season-group">
+                  <h3 className="toc-season-title">{season.name}</h3>
+                  <div className="toc-items">
+                    {season.cards.map((item) => (
+                      <button
+                        key={item.index}
+                        type="button"
+                        className={`toc-item ${item.index === currentIndex ? "active" : ""} toc-item-${item.type}`}
+                        onClick={() => handleTocItemClick(item.index)}
+                      >
+                        <span className="toc-item-title">{item.title}</span>
+                        {item.index === currentIndex && (
+                          <span className="toc-item-current">Current</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -281,6 +281,53 @@ export default function RoundCard({
           </div>
         )}
 
+        {/* Voting Patterns - who gave most/least to whom */}
+        {data.votingPatterns && data.votingPatterns.length > 0 && (
+          <div className="voting-patterns">
+            <h4 className="voting-patterns-title">
+              <span className="voting-icon" aria-hidden="true">💌</span>
+              Who Voted for Whom
+            </h4>
+            <div className="voting-patterns-list">
+              {/* Group by voter */}
+              {Array.from(
+                data.votingPatterns.reduce((acc, pattern) => {
+                  if (!acc.has(pattern.voterName)) {
+                    acc.set(pattern.voterName, { most: null, least: null });
+                  }
+                  const entry = acc.get(pattern.voterName)!;
+                  if (pattern.type === "most") {
+                    entry.most = pattern;
+                  } else {
+                    entry.least = pattern;
+                  }
+                  return acc;
+                }, new Map<string, { most: typeof data.votingPatterns[0] | null; least: typeof data.votingPatterns[0] | null }>())
+              ).map(([voterName, { most, least }]) => (
+                <div key={voterName} className="voting-pattern-row">
+                  <span className="voter-name">{voterName}</span>
+                  <div className="vote-targets">
+                    {most && (
+                      <span className="vote-target most">
+                        <span className="arrow" aria-hidden="true">❤️</span>
+                        {most.targetName}
+                        <span className="points">({most.pointsGiven}pts)</span>
+                      </span>
+                    )}
+                    {least && (
+                      <span className="vote-target least">
+                        <span className="arrow" aria-hidden="true">💔</span>
+                        {least.targetName}
+                        <span className="points">({least.pointsGiven}pts)</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Admin generation controls */}
         {isLead && adminCallbacks && (
           <div className="admin-generation-controls">
