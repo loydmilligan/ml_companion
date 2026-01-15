@@ -1502,11 +1502,11 @@ export default function HistoryPage() {
     const index = cardData.findIndex((card) => {
       // Special case: 0_0 = current season card
       if (targetSeason === 0 && targetRound === 0) {
-        return card.type === "currentSeason" || card.type === "preseasonSpecial";
+        return card.type === "current-season" || card.type === "preseason-special";
       }
       // Season recap (round = 0)
-      if (targetRound === 0) {
-        return card.type === "seasonRecap" && card.seasonNumber === targetSeason;
+      if (targetRound === 0 && card.type === "season-recap") {
+        return card.seasonNumber === targetSeason;
       }
       // Regular round card
       if (card.type === "round") {
