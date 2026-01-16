@@ -26,6 +26,7 @@ export default function RoundChallengeGame({
     results,
     correctAnswers,
     score,
+    leaderboard,
     assignSongToTheme,
     removeSongFromTheme,
     submitGuesses,
@@ -127,6 +128,33 @@ export default function RoundChallengeGame({
         themes={themes}
       />
 
+      {/* Score display */}
+      {isRevealed && score !== null && (
+        <div className="rc-game-score">
+          Your Score: <span className="rc-game-score-value">{score}/{songs.length}</span>
+        </div>
+      )}
+
+      {/* Leaderboard (when revealed) */}
+      {isRevealed && leaderboard.length > 0 && (
+        <div className="rc-game-leaderboard">
+          <h4>Top Scores</h4>
+          <div className="leaderboard-list">
+            {leaderboard.map((entry, index) => (
+              <div key={entry.player_id} className="leaderboard-entry">
+                <span className="leaderboard-rank">
+                  {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
+                </span>
+                <span className="leaderboard-name">{entry.player_name}</span>
+                <span className="leaderboard-score">
+                  {entry.correct_count}/{entry.total_songs}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Song cards with dropdowns */}
       <div className="rc-game-songs">
         {songs.map((song) => {
@@ -221,13 +249,6 @@ export default function RoundChallengeGame({
               Assign all {songs.length} songs to submit
             </p>
           )}
-        </div>
-      )}
-
-      {/* Score display */}
-      {isRevealed && score !== null && (
-        <div className="rc-game-score">
-          Your Score: <span className="rc-game-score-value">{score}/{songs.length}</span>
         </div>
       )}
 

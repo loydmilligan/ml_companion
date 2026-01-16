@@ -51,6 +51,13 @@ type SavedGuess = {
   is_correct: boolean | null;
 };
 
+export type ChallengeLeaderboardEntry = {
+  player_id: string;
+  player_name: string;
+  correct_count: number;
+  total_songs: number;
+};
+
 export type UseRoundChallengeReturn = {
   // Data
   songs: ChallengeSong[];
@@ -68,6 +75,7 @@ export type UseRoundChallengeReturn = {
   results: Record<string, boolean> | null; // song_id -> is_correct
   correctAnswers: Record<string, string> | null; // song_id -> correct_theme_id
   score: number | null;
+  leaderboard: ChallengeLeaderboardEntry[];
 
   // Actions
   assignSongToTheme: (songId: string, themeId: string) => void;
@@ -136,6 +144,7 @@ export function useRoundChallenge(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<ChallengeLeaderboardEntry[]>([]);
 
   // Load the song list JSON
   const loadSongList = useCallback(async () => {
@@ -317,6 +326,63 @@ export function useRoundChallenge(
     }));
   }, [songListData]);
 
+  // Fetch leaderboard when round is revealed
+  useEffect(() => {
+    if (!isRevealed || !roundId || !groupId) return;
+
+    const fetchLeaderboard = async () => {
+      // Get all guesses for this round/group with player info
+      const { data: allGuesses } = await supabase
+        .from("round_challenge_guesses")
+        .select(`
+          user_id,
+          is_correct,
+          profiles!user_id(display_name)
+        `)
+        .eq("round_id", roundId)
+        .eq("group_id", groupId);
+
+      if (!allGuesses || allGuesses.length === 0) return;
+
+      // Aggregate scores by player
+      const playerScores: Record<string, { name: string; correct: number; total: number }> = {};
+
+      allGuesses.forEach((g) => {
+        const playerId = g.user_id;
+        // profiles can be object or array depending on Supabase version
+        const profileData = g.profiles as unknown;
+        const profile = Array.isArray(profileData)
+          ? (profileData[0] as { display_name: string } | undefined)
+          : (profileData as { display_name: string } | null);
+        const name = profile?.display_name ?? "Unknown";
+
+        if (!playerScores[playerId]) {
+          playerScores[playerId] = { name, correct: 0, total: 0 };
+        }
+
+        playerScores[playerId].total += 1;
+        if (g.is_correct === true) {
+          playerScores[playerId].correct += 1;
+        }
+      });
+
+      // Convert to array and sort by correct count (descending)
+      const leaderboardData: ChallengeLeaderboardEntry[] = Object.entries(playerScores)
+        .map(([id, { name, correct, total }]) => ({
+          player_id: id,
+          player_name: name,
+          correct_count: correct,
+          total_songs: total,
+        }))
+        .sort((a, b) => b.correct_count - a.correct_count)
+        .slice(0, 3); // Top 3 only
+
+      setLeaderboard(leaderboardData);
+    };
+
+    fetchLeaderboard();
+  }, [isRevealed, roundId, groupId]);
+
   // Check if user has already submitted
   const isSubmitted = savedGuesses.length === challengeSongs.length && challengeSongs.length > 0;
   const isLocked = isSubmitted;
@@ -420,6 +486,7 @@ export function useRoundChallenge(
     results,
     correctAnswers: isRevealed ? correctAnswers : null,
     score,
+    leaderboard,
     assignSongToTheme,
     removeSongFromTheme,
     submitGuesses,
