@@ -7948,6 +7948,55 @@
   font-size: 1.3rem;
 }
 
+.rc-game-leaderboard {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 8px;
+}
+
+.rc-game-leaderboard h4 {
+  margin: 0 0 12px 0;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.rc-game-leaderboard .leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rc-game-leaderboard .leaderboard-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(128, 128, 128, 0.1);
+  border-radius: 8px;
+}
+
+.rc-game-leaderboard .leaderboard-rank {
+  font-size: 1.1rem;
+}
+
+.rc-game-leaderboard .leaderboard-name {
+  flex: 1;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.rc-game-leaderboard .leaderboard-score {
+  font-weight: 600;
+  color: var(--coral);
+  font-size: 0.9rem;
+}
+
+[data-mode="dark"] .rc-game-leaderboard .leaderboard-entry {
+  background: rgba(255, 255, 255, 0.05);
+}
+
 .rc-game-locked {
   text-align: center;
   padding: 16px;

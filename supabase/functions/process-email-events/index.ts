@@ -532,8 +532,15 @@ async function processVotesIn(
     return { event_id: event.id, event_type: event.event_type, success: false, action: "skip", error: "Round not found" };
   }
 
-  // Update round status and set reveal_until (2 hours from now)
-  const revealUntil = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+  // Fetch reveal timer setting from group_settings (default 8 hours)
+  const { data: groupSettings } = await supabase
+    .from("group_settings")
+    .select("reveal_timer_hours")
+    .eq("group_id", league.group_id)
+    .single();
+
+  const timerHours = groupSettings?.reveal_timer_hours ?? 8;
+  const revealUntil = new Date(Date.now() + timerHours * 60 * 60 * 1000).toISOString();
 
   await supabase
     .from("rounds")

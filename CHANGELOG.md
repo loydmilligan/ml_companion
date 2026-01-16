@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-01-16
+
+### Added
+
+#### Configurable Reveal Timer
+- **Reveal Timer Settings**: Configurable timer for when submitter guesses are revealed (1-24 hours, default 8)
+  - Added `reveal_timer_hours` setting to `group_settings` table
+  - Per-tab timer respect checkboxes for Guess, Timeline, and Challenge tabs
+  - Admin UI in group settings panel for reveal timer configuration
+  - Updated `process-email-events` edge function to use configurable timer instead of hardcoded 2 hours
+
+#### Enhanced Guess Results
+- **GuessResultsSection Component**: Comprehensive results display for Submitter Guess game
+  - Personal results showing score and correct guesses
+  - Best and worst targets (who was easiest/hardest to guess)
+  - Full leaderboard with all participants ranked
+  - Accuracy matrix showing who guessed whom correctly
+  - Created `guess_accuracy_stats` materialized view for cross-round tracking
+- **Challenge Game Leaderboard**: Top 3 players displayed when round is revealed
+  - Added `ChallengeLeaderboardEntry` type and leaderboard state
+  - Dark mode compatible styling
+
 ## [1.1.0] - 2026-01-15
 
 ### Added

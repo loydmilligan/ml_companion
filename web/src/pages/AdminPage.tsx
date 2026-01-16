@@ -583,7 +583,7 @@ export default function AdminPage() {
       const { data: settingsData } = await supabase
         .from("group_settings")
         .select(
-          "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled,round_challenge_phase,submitter_guess_enabled,timeline_game_enabled,timeline_game_phase"
+          "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled,round_challenge_phase,submitter_guess_enabled,timeline_game_enabled,timeline_game_phase,reveal_timer_hours,guess_tab_respect_timer,timeline_tab_respect_timer,challenge_tab_respect_timer"
         )
         .eq("group_id", group.id)
         .maybeSingle();
@@ -607,6 +607,10 @@ export default function AdminPage() {
         submitter_guess_enabled: settingsData?.submitter_guess_enabled ?? true,
         timeline_game_enabled: settingsData?.timeline_game_enabled ?? false,
         timeline_game_phase: settingsData?.timeline_game_phase ?? "voting",
+        reveal_timer_hours: settingsData?.reveal_timer_hours ?? 8,
+        guess_tab_respect_timer: settingsData?.guess_tab_respect_timer ?? true,
+        timeline_tab_respect_timer: settingsData?.timeline_tab_respect_timer ?? true,
+        challenge_tab_respect_timer: settingsData?.challenge_tab_respect_timer ?? true,
       };
       setGroupSettings(fallback);
       setSettingsDraft(fallback);
@@ -1580,12 +1584,16 @@ export default function AdminPage() {
       submitter_guess_enabled: settingsDraft.submitter_guess_enabled,
       timeline_game_enabled: settingsDraft.timeline_game_enabled,
       timeline_game_phase: settingsDraft.timeline_game_phase,
+      reveal_timer_hours: settingsDraft.reveal_timer_hours,
+      guess_tab_respect_timer: settingsDraft.guess_tab_respect_timer,
+      timeline_tab_respect_timer: settingsDraft.timeline_tab_respect_timer,
+      challenge_tab_respect_timer: settingsDraft.challenge_tab_respect_timer,
     };
     const { data, error } = await supabase
       .from("group_settings")
       .upsert(payload, { onConflict: "group_id" })
       .select(
-        "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled,round_challenge_phase,submitter_guess_enabled,timeline_game_enabled,timeline_game_phase"
+        "id,group_id,round_summary_model_key,round_story_image_model_key,round_theme_image_model_key,awards_model_key,trophy_image_model_key,logo_palette,ai_assistant_enabled,ai_explain_enabled,ai_validate_enabled,ai_hint_enabled,ai_validate_daily_limit,ai_chat_enabled,round_challenge_enabled,round_challenge_phase,submitter_guess_enabled,timeline_game_enabled,timeline_game_phase,reveal_timer_hours,guess_tab_respect_timer,timeline_tab_respect_timer,challenge_tab_respect_timer"
       )
       .maybeSingle();
     if (!error && data) {
@@ -4050,6 +4058,93 @@ python scripts/build_track_metadata.py`}
             </label>
           </div>
 
+          <h3 style={{ margin: "24px 0 12px 0", fontSize: "1rem" }}>Reveal Timer Settings</h3>
+          <p className="muted" style={{ marginBottom: 12 }}>
+            Control how long results remain visible after the votes_in email.
+          </p>
+          <div className="admin-form">
+            <label className="field">
+              <span className="field-label">Results visible for:</span>
+              <select
+                className="field-input"
+                value={settingsDraft?.reveal_timer_hours ?? 8}
+                onChange={(e) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, reveal_timer_hours: parseInt(e.target.value) } : prev
+                  )
+                }
+              >
+                <option value="1">1 hour</option>
+                <option value="2">2 hours</option>
+                <option value="4">4 hours</option>
+                <option value="8">8 hours (default)</option>
+                <option value="12">12 hours</option>
+                <option value="24">24 hours</option>
+              </select>
+            </label>
+
+            <p className="muted" style={{ margin: "16px 0 8px 0", fontSize: "0.85rem" }}>
+              <strong>Tab behavior when next round starts:</strong>
+            </p>
+
+            <label className="field" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <input
+                type="checkbox"
+                checked={settingsDraft?.guess_tab_respect_timer ?? true}
+                onChange={(e) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, guess_tab_respect_timer: e.target.checked } : prev
+                  )
+                }
+                style={{ width: 18, height: 18 }}
+              />
+              <div>
+                <span className="field-label" style={{ margin: 0 }}>Guess tab respects timer</span>
+                <span className="field-helper" style={{ display: "block", marginTop: 2 }}>
+                  When unchecked, switches to next round immediately
+                </span>
+              </div>
+            </label>
+
+            <label className="field" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <input
+                type="checkbox"
+                checked={settingsDraft?.timeline_tab_respect_timer ?? true}
+                onChange={(e) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, timeline_tab_respect_timer: e.target.checked } : prev
+                  )
+                }
+                style={{ width: 18, height: 18 }}
+              />
+              <div>
+                <span className="field-label" style={{ margin: 0 }}>Timeline tab respects timer</span>
+                <span className="field-helper" style={{ display: "block", marginTop: 2 }}>
+                  When unchecked, switches to next round immediately
+                </span>
+              </div>
+            </label>
+
+            <label className="field" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <input
+                type="checkbox"
+                checked={settingsDraft?.challenge_tab_respect_timer ?? true}
+                onChange={(e) =>
+                  setSettingsDraft((prev) =>
+                    prev ? { ...prev, challenge_tab_respect_timer: e.target.checked } : prev
+                  )
+                }
+                style={{ width: 18, height: 18 }}
+              />
+              <div>
+                <span className="field-label" style={{ margin: 0 }}>Challenge tab respects timer</span>
+                <span className="field-helper" style={{ display: "block", marginTop: 2 }}>
+                  When unchecked, switches to next round immediately
+                </span>
+              </div>
+            </label>
+          </div>
+
           <h3 style={{ margin: "24px 0 12px 0", fontSize: "1rem" }}>Model Settings</h3>
           <p className="muted" style={{ marginBottom: 12 }}>Choose which model variable to use for each AI call.</p>
           <div className="admin-form">
@@ -4966,6 +5061,11 @@ type GroupSettings = {
   // Timeline Game settings
   timeline_game_enabled: boolean;
   timeline_game_phase: "voting" | "revealed" | "both";
+  // Reveal timer settings
+  reveal_timer_hours: number;
+  guess_tab_respect_timer: boolean;
+  timeline_tab_respect_timer: boolean;
+  challenge_tab_respect_timer: boolean;
 };
 
 const MODEL_OPTIONS = [

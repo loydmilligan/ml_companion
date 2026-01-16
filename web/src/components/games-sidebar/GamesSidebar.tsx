@@ -8,6 +8,7 @@ import GuessSongCard from "./GuessSongCard";
 import RoundChallengeGame from "./RoundChallengeGame";
 import TimelineGame from "./TimelineGame";
 import RotatedCassetteBanner from "../side-panels/RotatedCassetteBanner";
+import GuessResultsSection from "./GuessResultsSection";
 
 type GamesSidebarProps = {
   roundChallengeEnabled?: boolean;
@@ -28,8 +29,9 @@ export default function GamesSidebar({
 }: GamesSidebarProps) {
   const { isOpen, activeTab, setActiveTab, closeSidebar } = useGamesSidebar();
   const { round, submissions } = useRound();
-  const { group } = useAuth();
+  const { group, session } = useAuth();
   const groupId = group?.id ?? null;
+  const userDisplayName = session?.user?.user_metadata?.display_name ?? session?.user?.email ?? "You";
 
   // Swipe-to-close state
   const panelRef = useRef<HTMLElement>(null);
@@ -212,24 +214,16 @@ export default function GamesSidebar({
               )}
             </div>
 
-            {/* Leaderboard (when revealed) */}
-            {isRevealed && leaderboard.length > 0 && (
-              <div className="games-sidebar-leaderboard">
-                <h4>Top Guessers</h4>
-                <div className="leaderboard-list">
-                  {leaderboard.map((entry, index) => (
-                    <div key={entry.guesser_id} className="leaderboard-entry">
-                      <span className="leaderboard-rank">
-                        {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
-                      </span>
-                      <span className="leaderboard-name">{entry.guesser_name}</span>
-                      <span className="leaderboard-score">
-                        {entry.correct_count}/{entry.total_guesses}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* Enhanced Results Section (when revealed) */}
+            {isRevealed && (
+              <GuessResultsSection
+                groupId={groupId}
+                leaderboard={leaderboard}
+                correctCount={correctCount}
+                maxPossibleGuesses={maxPossibleGuesses}
+                userDisplayName={userDisplayName}
+                isRevealed={isRevealed}
+              />
             )}
 
             {/* Song list for guessing */}
