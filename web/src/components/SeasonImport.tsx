@@ -210,6 +210,16 @@ export default function SeasonImport({ leagueId, groupId, onImportComplete }: Pr
 
       await upsertInChunks("votes", voteRows as Record<string, unknown>[], "submission_id,voter_external_id");
 
+      // Recalculate guess correctness for all imported rounds
+      // This ensures submitter guesses are evaluated now that submitter_name is populated
+      const importedRoundIds = Array.from(roundIdMap.values());
+      if (importedRoundIds.length > 0) {
+        setStatus("Recalculating guess correctness...");
+        for (const roundId of importedRoundIds) {
+          await supabase.rpc("recalculate_guess_correctness", { target_round_id: roundId });
+        }
+      }
+
       setStatus("Import complete.");
       onImportComplete?.();
     } catch (err) {
