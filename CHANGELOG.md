@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-01-16
+
+### Fixed
+- **Guess Correctness Timing**: Fixed issue where submitter guess correctness couldn't be calculated at reveal time because `submitter_name` was not yet populated from CSV import
+  - Added `recalculate_guess_correctness()` database function for per-round recalculation
+  - Added `recalculate_all_guess_correctness()` for bulk recalculation across all rounds
+  - SeasonImport now automatically recalculates guess correctness after importing votes
+  - Added manual "Recalculate Guess Correctness" button in Admin Imports section
+
 ## [1.2.0] - 2026-01-16
 
 ### Added

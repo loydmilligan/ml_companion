@@ -180,6 +180,9 @@ export default function AdminPage() {
   const [importingCompetitors, setImportingCompetitors] = useState(false);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [roundImports, setRoundImports] = useState<RoundImportRow[]>([]);
+  const [recalcRoundId, setRecalcRoundId] = useState<string | null>(null);
+  const [recalcLoading, setRecalcLoading] = useState(false);
+  const [recalcStatus, setRecalcStatus] = useState<string | null>(null);
   const [competitorTraitsDrafts, setCompetitorTraitsDrafts] = useState<Record<string, string>>({});
   const [playerConnections, setPlayerConnections] = useState<PlayerConnectionRow[]>([]);
   const [connectionDrafts, setConnectionDrafts] = useState<Record<string, ConnectionDraft>>({});
@@ -2582,6 +2585,39 @@ export default function AdminPage() {
     }
   };
 
+  const recalculateGuessCorrectness = async () => {
+    if (!recalcRoundId && !selectedLeagueId) return;
+
+    setRecalcLoading(true);
+    setRecalcStatus(null);
+
+    try {
+      if (recalcRoundId) {
+        // Recalculate for a specific round
+        const { data, error } = await supabase.rpc("recalculate_guess_correctness", {
+          target_round_id: recalcRoundId,
+        });
+        if (error) throw error;
+        setRecalcStatus(`Updated ${data ?? 0} guess(es) for selected round.`);
+      } else if (selectedLeagueId) {
+        // Recalculate for all rounds in the league
+        const { data, error } = await supabase.rpc("recalculate_all_guess_correctness", {
+          target_league_id: selectedLeagueId,
+        });
+        if (error) throw error;
+        setRecalcStatus(`Updated ${data ?? 0} guess(es) across all rounds.`);
+      }
+    } catch (err) {
+      const message =
+        typeof err === "object" && err !== null && "message" in err
+          ? String((err as { message: string }).message)
+          : "Recalculation failed.";
+      setRecalcStatus(`Error: ${message}`);
+    } finally {
+      setRecalcLoading(false);
+    }
+  };
+
   const copyMetadataCommand = async () => {
     const cmd = [
       'SEARXNG_URL="http://192.168.6.11:8888" \\',
@@ -3633,6 +3669,43 @@ python scripts/build_track_metadata.py`}
             <Button type="button" variant="secondary" onClick={createRoundsFromImports} disabled={!roundImports.length}>
               Create rounds from unmatched
             </Button>
+          </Card>
+          <Card className="dashboard-card">
+            <h2>Recalculate Guess Correctness</h2>
+            <p className="muted">
+              Recalculate submitter guess correctness after CSV import populates submitter names.
+              This is automatically done during import, but you can manually trigger it here if needed.
+            </p>
+            <div className="admin-form" style={{ marginBottom: 12 }}>
+              <label className="field">
+                <span className="field-label">Round (optional)</span>
+                <select
+                  className="field-input"
+                  value={recalcRoundId ?? ""}
+                  onChange={(e) => setRecalcRoundId(e.target.value || null)}
+                >
+                  <option value="">All rounds in league</option>
+                  {rounds.map((round) => (
+                    <option key={round.id} value={round.id}>
+                      S{round.season_number ?? "?"} R{round.round_number ?? "?"}: {round.theme}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={recalculateGuessCorrectness}
+              disabled={recalcLoading || !selectedLeagueId}
+            >
+              {recalcLoading ? "Recalculating..." : "Recalculate"}
+            </Button>
+            {recalcStatus && (
+              <p className={recalcStatus.startsWith("Error") ? "auth-error" : "muted"} style={{ marginTop: 8 }}>
+                {recalcStatus}
+              </p>
+            )}
           </Card>
           <Card className="dashboard-card">
             <h2>User Action Tracking</h2>
