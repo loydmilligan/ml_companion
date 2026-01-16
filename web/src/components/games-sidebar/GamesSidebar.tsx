@@ -85,7 +85,9 @@ export default function GamesSidebar({
     (
       (roundChallengePhase === "open" && round.status === "open") ||
       (roundChallengePhase === "voting" && round.status === "voting") ||
-      (roundChallengePhase === "both" && (round.status === "open" || round.status === "voting"))
+      (roundChallengePhase === "both" && (round.status === "open" || round.status === "voting")) ||
+      // Always show during revealed phase so users can view results
+      round.status === "revealed"
     )
   );
 
@@ -167,6 +169,8 @@ export default function GamesSidebar({
   const getChallengeDisabledReason = (): string | null => {
     if (!roundChallengeEnabled) return "Disabled by admin";
     if (!round) return "No active round";
+    // Always available during revealed phase for viewing results
+    if (round.status === "revealed") return null;
     const inPhase =
       (roundChallengePhase === "open" && round.status === "open") ||
       (roundChallengePhase === "voting" && round.status === "voting") ||
