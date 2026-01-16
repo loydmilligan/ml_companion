@@ -75,7 +75,9 @@ export default function GamesSidebar({
     (
       (timelineGamePhase === "voting" && round.status === "voting") ||
       (timelineGamePhase === "revealed" && round.status === "revealed") ||
-      (timelineGamePhase === "both" && (round.status === "voting" || round.status === "revealed"))
+      (timelineGamePhase === "both" && (round.status === "voting" || round.status === "revealed")) ||
+      // Always show during revealed phase so users can view results
+      round.status === "revealed"
     )
   );
 
@@ -154,6 +156,8 @@ export default function GamesSidebar({
     if (!timelineGameEnabled) return "Disabled by admin";
     if (!isTimelineTester) return "Beta testers only";
     if (!round) return "No active round";
+    // Always available during revealed phase for viewing results
+    if (round.status === "revealed") return null;
     const inPhase =
       (timelineGamePhase === "voting" && round.status === "voting") ||
       (timelineGamePhase === "revealed" && round.status === "revealed") ||
