@@ -4,6 +4,7 @@
 
 -- Function to recalculate guess correctness for a specific round
 -- This mirrors the logic from update_guess_correctness trigger
+-- Fixed: Added group_id filter to prevent matching competitors from other groups
 CREATE OR REPLACE FUNCTION recalculate_guess_correctness(target_round_id UUID)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -12,15 +13,25 @@ SET search_path = public
 AS $$
 DECLARE
   updated_count INTEGER;
+  target_group_id UUID;
 BEGIN
+  -- Get the group_id for this round via the league
+  SELECT l.group_id INTO target_group_id
+  FROM rounds r
+  JOIN leagues l ON r.league_id = l.id
+  WHERE r.id = target_round_id;
+
   UPDATE submitter_guesses sg
   SET is_correct = (
     sg.guessed_competitor_id = (
       SELECT sc.id
       FROM submissions s
       JOIN season_competitors sc ON (
-        (s.submitter_id IS NOT NULL AND sc.profile_id = s.submitter_id)
-        OR (s.submitter_name IS NOT NULL AND LOWER(sc.name) = LOWER(s.submitter_name))
+        sc.group_id = target_group_id  -- Filter by group!
+        AND (
+          (s.submitter_id IS NOT NULL AND sc.profile_id = s.submitter_id)
+          OR (s.submitter_name IS NOT NULL AND LOWER(sc.name) = LOWER(s.submitter_name))
+        )
       )
       WHERE s.id = sg.submission_id
       LIMIT 1

@@ -246,23 +246,52 @@ export function useSubmitterGuess(
     if (!isRevealed || !roundId || !groupId) return;
 
     const fetchLeaderboard = async () => {
-      // Get all guesses for this round with profile info
+      // Get all guesses for this round with profile and submission info
       const { data: allGuesses } = await supabase
         .from("submitter_guesses")
         .select(`
           guesser_id,
           is_correct,
-          profiles!guesser_id(display_name)
+          submission_id,
+          profiles!guesser_id(display_name),
+          submissions!submission_id(submitter_name)
         `)
         .eq("round_id", roundId);
 
       if (!allGuesses || allGuesses.length === 0) return;
 
-      // Aggregate scores by guesser
+      // Get guesser's competitor names to identify their own songs
+      const { data: competitorData } = await supabase
+        .from("season_competitors")
+        .select("profile_id, name")
+        .eq("group_id", groupId);
+
+      // Map profile_id to competitor name
+      const profileToCompetitorName: Record<string, string> = {};
+      competitorData?.forEach((c) => {
+        if (c.profile_id) {
+          profileToCompetitorName[c.profile_id] = c.name.toLowerCase().trim();
+        }
+      });
+
+      // Aggregate scores by guesser, excluding their own song guesses
       const scores: Record<string, { name: string; correct: number; total: number }> = {};
 
       allGuesses.forEach((g) => {
         const guesserId = g.guesser_id;
+
+        // Get submitter name for this submission
+        const subData = g.submissions as unknown;
+        const submission = Array.isArray(subData) ? subData[0] : subData;
+        const submitterName = (submission as { submitter_name?: string } | null)?.submitter_name?.toLowerCase().trim() ?? "";
+
+        // Check if this is the guesser's own song
+        const guesserCompetitorName = profileToCompetitorName[guesserId] ?? "";
+        const isOwnSong = guesserCompetitorName && submitterName === guesserCompetitorName;
+
+        // Skip own song guesses
+        if (isOwnSong) return;
+
         // profiles can be object or array depending on Supabase version
         const profileData = g.profiles as unknown;
         const profile = Array.isArray(profileData)
@@ -395,13 +424,13 @@ export function useSubmitterGuess(
 
   // Build guess states object for each submission
   const guessStates: Record<string, GuessState> = {};
-  let ownSongCount = 0;
+  const ownSongIds: Set<string> = new Set();
   submissions.forEach((sub) => {
     // Check if this is the user's own song (case-insensitive match)
     const isOwnSong = userCompetitorName
       ? sub.submitter_name?.toLowerCase().trim() === userCompetitorName.toLowerCase().trim()
       : false;
-    if (isOwnSong) ownSongCount++;
+    if (isOwnSong) ownSongIds.add(sub.id);
 
     guessStates[sub.id] = {
       guessedCompetitorId: guesses[sub.id] || null,
@@ -412,10 +441,13 @@ export function useSubmitterGuess(
     };
   });
 
-  const correctCount = Object.values(results).filter((r) => r === true).length;
-  const totalGuessed = Object.values(guesses).filter(Boolean).length;
+  // Exclude user's own song(s) from counts - you can't really "guess" your own song
+  const correctCount = Object.entries(results)
+    .filter(([subId, r]) => r === true && !ownSongIds.has(subId)).length;
+  const totalGuessed = Object.entries(guesses)
+    .filter(([subId, val]) => Boolean(val) && !ownSongIds.has(subId)).length;
   // Max possible guesses is total submissions minus user's own song(s)
-  const maxPossibleGuesses = submissions.length - ownSongCount;
+  const maxPossibleGuesses = submissions.length - ownSongIds.size;
 
   return {
     competitors,
