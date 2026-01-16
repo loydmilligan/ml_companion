@@ -53,6 +53,79 @@ After CI/CD completes, verify deployment at the appropriate URL:
 
 ---
 
+## Hotfix Workflow
+
+Use hotfixes for **urgent bug fixes** that need to go to production immediately, bypassing the normal develop → main flow.
+
+### When to Use Hotfix vs Regular Release
+
+| Situation | Use |
+|-----------|-----|
+| Critical bug in production | **Hotfix** |
+| Security vulnerability | **Hotfix** |
+| Small, isolated fix needed urgently | **Hotfix** |
+| New feature development | Regular release |
+| Non-urgent improvements | Regular release |
+
+### Hotfix Process
+
+```bash
+# 1. Start from main (production code)
+git checkout main
+git pull origin main
+
+# 2. Create hotfix branch with patch version
+git checkout -b hotfix/v1.X.Y   # e.g., hotfix/v1.1.1
+
+# 3. Make the fix (code changes, migrations, etc.)
+# ... edit files ...
+
+# 4. Commit with descriptive message
+git add -A
+git commit -m "fix(scope): description of the fix"
+
+# 5. Merge to main
+git checkout main
+git merge hotfix/v1.X.Y
+
+# 6. Tag the release
+git tag v1.X.Y
+
+# 7. Push to trigger production deployment
+git push origin main --tags
+
+# 8. Sync back to develop (IMPORTANT!)
+git checkout develop
+git merge main
+git push origin develop
+
+# 9. Clean up hotfix branch (optional)
+git branch -d hotfix/v1.X.Y
+```
+
+### Versioning Convention
+
+Follow [Semantic Versioning](https://semver.org/):
+- **MAJOR.MINOR.PATCH** (e.g., v1.1.1)
+- Hotfixes increment the PATCH version
+- Example: v1.1.0 → v1.1.1 → v1.1.2
+
+### Database Migrations in Hotfixes
+
+If a hotfix includes database changes:
+1. Apply migration to Supabase immediately using MCP or CLI
+2. Include migration file in the commit for version control
+3. Database changes take effect immediately (no deployment needed)
+
+### Example: v1.1.1 Hotfix (RLS Recursion Fix)
+
+This hotfix fixed infinite recursion in RLS policy for `submitter_guesses`:
+- **Migration**: Created `get_guess_aggregates` SECURITY DEFINER function
+- **Code**: Updated `useSubmitterGuess.ts` to use RPC instead of direct query
+- **Root cause**: Self-referential RLS policies cause infinite recursion in PostgreSQL
+
+---
+
 This repo is a documentation-first product spec for the Music League Family Companion App. Use the docs as the source of truth before proposing or implementing changes.
 
 ## Primary References

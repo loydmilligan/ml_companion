@@ -85,44 +85,46 @@ export function useSubmitterGuess(
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Fetch guess aggregates for given submissions (poll-style results)
+  // Uses RPC function to bypass RLS safely (avoids infinite recursion)
   const fetchGuessAggregates = useCallback(async (
     submissionIds: string[],
     competitorsList: Competitor[]
   ) => {
     if (!roundId || submissionIds.length === 0) return;
 
-    // Fetch all guesses for these submissions
-    const { data: allGuesses } = await supabase
-      .from("submitter_guesses")
-      .select("submission_id, guessed_competitor_id")
-      .eq("round_id", roundId)
-      .in("submission_id", submissionIds);
+    // Call RPC function that uses SECURITY DEFINER to bypass RLS
+    // The function enforces security by only returning aggregates for
+    // submissions the current user has already guessed on
+    const { data: aggregateData, error } = await supabase
+      .rpc("get_guess_aggregates", {
+        p_round_id: roundId,
+        p_submission_ids: submissionIds,
+      });
 
-    if (!allGuesses || allGuesses.length === 0) return;
+    if (error || !aggregateData || aggregateData.length === 0) return;
 
-    // Aggregate guesses by submission and competitor
-    const aggregates: Record<string, Record<string, number>> = {};
+    // Group by submission and convert to sorted arrays with competitor names
+    const bySubmission: Record<string, { competitorId: string; count: number }[]> = {};
 
-    allGuesses.forEach((g) => {
-      if (!g.guessed_competitor_id) return;
+    aggregateData.forEach((row: { submission_id: string; guessed_competitor_id: string; guess_count: number }) => {
+      if (!row.guessed_competitor_id) return;
 
-      if (!aggregates[g.submission_id]) {
-        aggregates[g.submission_id] = {};
+      if (!bySubmission[row.submission_id]) {
+        bySubmission[row.submission_id] = [];
       }
 
-      if (!aggregates[g.submission_id][g.guessed_competitor_id]) {
-        aggregates[g.submission_id][g.guessed_competitor_id] = 0;
-      }
-
-      aggregates[g.submission_id][g.guessed_competitor_id]++;
+      bySubmission[row.submission_id].push({
+        competitorId: row.guessed_competitor_id,
+        count: Number(row.guess_count),
+      });
     });
 
-    // Convert to sorted arrays with competitor names
+    // Convert to GuessAggregate format with competitor names
     const result: Record<string, GuessAggregate[]> = {};
 
-    Object.entries(aggregates).forEach(([subId, competitorCounts]) => {
-      const sorted = Object.entries(competitorCounts)
-        .map(([competitorId, count]) => {
+    Object.entries(bySubmission).forEach(([subId, guesses]) => {
+      const sorted = guesses
+        .map(({ competitorId, count }) => {
           const competitor = competitorsList.find((c) => c.id === competitorId);
           return {
             competitorId,
