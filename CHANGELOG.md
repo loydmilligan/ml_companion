@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-01-16
+
+### Fixed
+- **Guess Game Scoring**: User's own song is now correctly excluded from score calculations
+  - Personal score no longer counts own song guess
+  - Leaderboard excludes each user's own song from their score
+  - Database function now filters by group_id to prevent cross-group competitor matches
+
 ## [1.2.3] - 2026-01-16
 
 ### Fixed
