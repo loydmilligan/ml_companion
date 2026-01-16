@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-01-16
+
+### Fixed
+- **Reveal Timer Settings**: Corrected timer respect options to control main sidebar tabs (Playlist, Progress, Games) instead of sub-tabs within Games
+- **Save Button**: Added dedicated "Save Timer Settings" button for clarity
+- Migration now properly drops old incorrectly-named columns
+
 ## [1.2.1] - 2026-01-16
 
 ### Fixed
