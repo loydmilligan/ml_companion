@@ -566,7 +566,7 @@ describe("ContentTab", () => {
 
       // Verify function was called
       await waitFor(() => {
-        expect(mockInvoke).toHaveBeenCalledWith("process-emails");
+        expect(mockInvoke).toHaveBeenCalledWith("process-email-events");
       });
 
       // Verify status message appears

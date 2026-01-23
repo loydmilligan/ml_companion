@@ -100,7 +100,7 @@ export default function ContentTab() {
     setProcessEmailsLoading(true);
     setProcessEmailsStatus("Processing...");
     try {
-      const { data, error } = await supabase.functions.invoke("process-emails");
+      const { data, error } = await supabase.functions.invoke("process-email-events");
       if (error) {
         setProcessEmailsStatus(`Error: ${error.message}`);
       } else {
