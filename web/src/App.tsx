@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { RoundProvider } from "./contexts/RoundContext";
@@ -6,6 +6,7 @@ import { SidePanelProvider } from "./components/side-panels";
 import { YouTubeSidebarProvider, YouTubeSidebar } from "./components/youtube-sidebar";
 import TopBar from "./components/TopBar";
 import BottomNav from "./components/BottomNav";
+import { supabase } from "./lib/supabase";
 import "./App.css";
 
 // Lazy load pages for better initial load performance
@@ -15,6 +16,7 @@ const ChatPage = lazy(() => import("./pages/ChatPage"));
 const ChatPrototype = lazy(() => import("./pages/ChatPrototype"));
 const HistoryPage = lazy(() => import("./pages/HistoryPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
+const AdminPageV2 = lazy(() => import("./pages/admin/AdminPageV2"));
 const RoundDetailPage = lazy(() => import("./pages/RoundDetailPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
@@ -31,6 +33,36 @@ function PageLoader() {
       <div className="loading-card">Loading...</div>
     </div>
   );
+}
+
+// Admin route wrapper to handle version switching
+function AdminRouteWrapper() {
+  const { group } = useAuth();
+  const [adminV2Enabled, setAdminV2Enabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!group?.id) return;
+    const checkFlag = async () => {
+      const { data } = await supabase
+        .from("group_settings")
+        .select("admin_v2_enabled")
+        .eq("group_id", group.id)
+        .single();
+      setAdminV2Enabled(data?.admin_v2_enabled ?? false);
+    };
+    checkFlag();
+  }, [group?.id]);
+
+  if (adminV2Enabled === null) {
+    return <div className="admin-loading">Loading...</div>;
+  }
+
+  // If v2 enabled, redirect to v2
+  if (adminV2Enabled) {
+    return <Navigate to="/app/admin-v2" replace />;
+  }
+
+  return <AdminPage />;
 }
 
 function AppShell() {
@@ -69,7 +101,8 @@ function AppShell() {
                       <Route path="rounds/:id" element={<RoundDetailPage />} />
                       <Route path="leaderboard" element={<Navigate to="/app/history" replace />} />
                       <Route path="history" element={<HistoryPage />} />
-                      <Route path="admin" element={<AdminPage />} />
+                      <Route path="admin" element={<AdminRouteWrapper />} />
+                      <Route path="admin-v2" element={<AdminPageV2 />} />
                       <Route path="profile" element={<ProfilePage />} />
                       <Route path="settings" element={<SettingsPage />} />
                       <Route path="dm" element={<DMInboxPage />} />
