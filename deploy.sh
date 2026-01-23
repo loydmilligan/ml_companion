@@ -13,7 +13,7 @@ echo -e "${YELLOW}=== ML Companion Deploy ===${NC}"
 
 # Step 1: Commit changes
 echo -e "${GREEN}[1/4] Committing changes...${NC}"
-cd /home/mmariani/Projects/ml_companion
+cd /home/dietpi/ml_companion
 
 # Add all changes
 git add -A
