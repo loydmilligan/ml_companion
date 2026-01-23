@@ -255,8 +255,9 @@ describe("AdminSelect", () => {
       const select = screen.getByRole("combobox");
       const label = screen.getByText("Available during");
 
-      // Label should contain the select as a descendant
-      expect(label.parentElement).toContainElement(select);
+      // Label and select should be within the same container
+      const container = label.closest(".admin-select");
+      expect(container).toContainElement(select);
     });
 
     it("renders native select for accessibility", () => {

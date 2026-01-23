@@ -1,0 +1,1012 @@
+{
+  "meta": {
+    "project": "Admin & Settings Overhaul",
+    "linear_issue": "LOYD-202",
+    "created": "2026-01-23",
+    "plan_files": [
+      "docs/planning/admin-page-refactor-plan.md",
+      "docs/planning/settings-inventory.md"
+    ],
+    "status": "completed_except_cleanup",
+    "orchestration_doc": "docs/planning/admin-refactor-jtbd.md",
+    "context_bundles_dir": "docs/planning/context-bundles/"
+  },
+  "task_schema": {
+    "execution_fields": {
+      "testing_passed": "boolean - set true when all tests pass",
+      "remediation_required": "boolean - set true if agent had to fix issues",
+      "extra_context_read": "array of files agent read beyond context bundle",
+      "agent_queries": "array of questions/assumptions agent had to make",
+      "agent_notes": "string - any feedback from agent about context bundle quality",
+      "completed_at": "ISO timestamp when task completed",
+      "completed_by": "agent identifier"
+    }
+  },
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "Create admin directory structure",
+      "description": "Create folder structure: web/src/pages/admin/ with subdirectories components/, tabs/, hooks/. Create index.ts barrel exports in each.",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": [],
+      "status": "completed",
+      "plan_reference": "admin-page-refactor-plan.md#phase-0-design-foundation",
+      "context_bundle": "docs/planning/context-bundles/T001-context.md",
+      "files_to_create": [
+        "web/src/pages/admin/index.ts",
+        "web/src/pages/admin/components/index.ts",
+        "web/src/pages/admin/tabs/index.ts",
+        "web/src/pages/admin/hooks/index.ts"
+      ],
+      "files_to_edit": [],
+      "tests": {
+        "type": "manual",
+        "description": "Verify directories exist and barrel exports are valid TypeScript"
+      },
+      "queries": [],
+      "notes": "Foundation task - no dependencies, can start immediately",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": true,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was complete. Suggestion: mention TypeScript requires at least one export statement (even `export {};`) for a file to be considered a module.",
+        "completed_at": "2026-01-22T23:15:00Z",
+        "completed_by": "frontend-developer-agent"
+      }
+    },
+    {
+      "id": "T002",
+      "title": "Create admin.css base styles",
+      "description": "Create shared CSS file with variables for admin color scheme (blue=people, green=content, purple=games, gray=system), base card styles, section styles, and mobile-first media queries. Max-width 600px for form containers.",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": ["T001"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": true,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was excellent. Minor remediation: auto-fixed stylelint formatting.",
+        "completed_at": "2026-01-22T23:18:00Z",
+        "completed_by": "frontend-developer-agent"
+      },
+      "plan_reference": "admin-page-refactor-plan.md#phase-0-design-foundation",
+      "context_bundle": "docs/planning/context-bundles/T002-context.md",
+      "files_to_create": [
+        "web/src/pages/admin/admin.css"
+      ],
+      "files_to_edit": [],
+      "tests": {
+        "type": "manual",
+        "description": "Verify CSS variables defined, no syntax errors, imports successfully"
+      },
+      "queries": [],
+      "notes": "Reference existing index.css for variable naming conventions"
+    },
+    {
+      "id": "T003",
+      "title": "Create AdminCard component",
+      "description": "Create AdminCard.tsx: accepts children, title (optional string), icon (optional string emoji), color (optional: 'blue'|'green'|'purple'|'gray'), className (optional). Renders Card with optional colored left border (4px), icon+title header if provided. Mobile-first with max-width: 600px.",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": ["T001", "T002"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": ["web/src/components/RoundCardGrid.test.tsx", "web/package.json", "web/vite.config.ts", "web/src/pages/admin/admin.css"],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was excellent and complete. Added header CSS styles that were missing from admin.css.",
+        "completed_at": "2026-01-22T23:45:00Z",
+        "completed_by": "frontend-developer-agent"
+      },
+      "plan_reference": "admin-page-refactor-plan.md#phase-0-design-foundation",
+      "context_bundle": "docs/planning/context-bundles/T003-context.md",
+      "files_to_create": [
+        "web/src/pages/admin/components/AdminCard.tsx"
+      ],
+      "files_to_edit": [
+        "web/src/pages/admin/components/index.ts"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/components/AdminCard.test.tsx",
+        "cases": [
+          "renders children",
+          "renders title and icon when provided",
+          "applies color class for left border",
+          "applies custom className"
+        ]
+      },
+      "queries": [],
+      "notes": "Reuse existing Card component as base wrapper"
+    },
+    {
+      "id": "T004",
+      "title": "Create AdminSection component",
+      "description": "Create AdminSection.tsx: accepts title (string), icon (string emoji), color (optional), defaultOpen (boolean, default true), children. Renders collapsible section with clickable header (icon + title + chevron), smooth height animation on collapse/expand. Uses useState for open state.",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": ["T001", "T002"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was complete. Component created with smooth CSS transitions.",
+        "completed_at": "2026-01-22T23:46:00Z",
+        "completed_by": "frontend-developer-agent"
+      },
+      "plan_reference": "admin-page-refactor-plan.md#phase-0-design-foundation",
+      "context_bundle": "docs/planning/context-bundles/T004-context.md",
+      "files_to_create": [
+        "web/src/pages/admin/components/AdminSection.tsx"
+      ],
+      "files_to_edit": [
+        "web/src/pages/admin/components/index.ts",
+        "web/src/pages/admin/admin.css"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/components/AdminSection.test.tsx",
+        "cases": [
+          "renders header with icon and title",
+          "starts open when defaultOpen=true",
+          "starts closed when defaultOpen=false",
+          "toggles open/closed on header click",
+          "renders children when open",
+          "hides children when closed"
+        ]
+      },
+      "queries": [],
+      "notes": "Use CSS transition for smooth animation, avoid JS height calculation"
+    },
+    {
+      "id": "T005",
+      "title": "Create AdminToggle component",
+      "description": "Create AdminToggle.tsx: accepts icon (string emoji), label (string), helper (optional string), checked (boolean), onChange (function), disabled (optional boolean). Renders horizontal flex: checkbox (18x18), icon, vertical stack of label (bold) and helper (muted smaller text). 44px min-height for touch targets.",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": ["T001", "T002"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Context bundle complete. 44px touch target implemented.",
+        "completed_at": "2026-01-22T23:47:00Z",
+        "completed_by": "frontend-developer-agent"
+      },
+      "plan_reference": "admin-page-refactor-plan.md#phase-0-design-foundation",
+      "context_bundle": "docs/planning/context-bundles/T005-context.md",
+      "files_to_create": [
+        "web/src/pages/admin/components/AdminToggle.tsx"
+      ],
+      "files_to_edit": [
+        "web/src/pages/admin/components/index.ts",
+        "web/src/pages/admin/admin.css"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/components/AdminToggle.test.tsx",
+        "cases": [
+          "renders icon, label, and helper",
+          "checkbox reflects checked prop",
+          "calls onChange when clicked",
+          "checkbox is disabled when disabled=true",
+          "applies reduced opacity when disabled"
+        ]
+      },
+      "queries": [],
+      "notes": "Replace the repeated inline-styled checkbox pattern from AdminPage"
+    },
+    {
+      "id": "T006",
+      "title": "Create AdminSelect component",
+      "description": "Create AdminSelect.tsx: accepts icon (optional string emoji), label (string), helper (optional string), value (string), onChange (function), options (array of {value, label}), disabled (optional boolean). Renders label above styled select dropdown with icon prefix if provided.",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": ["T001", "T002"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Context bundle complete. Native select for accessibility.",
+        "completed_at": "2026-01-22T23:48:00Z",
+        "completed_by": "frontend-developer-agent"
+      },
+      "plan_reference": "admin-page-refactor-plan.md#phase-0-design-foundation",
+      "context_bundle": "docs/planning/context-bundles/T006-context.md",
+      "files_to_create": [
+        "web/src/pages/admin/components/AdminSelect.tsx"
+      ],
+      "files_to_edit": [
+        "web/src/pages/admin/components/index.ts",
+        "web/src/pages/admin/admin.css"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/components/AdminSelect.test.tsx",
+        "cases": [
+          "renders label and options",
+          "shows selected value",
+          "calls onChange when selection changes",
+          "renders icon when provided",
+          "is disabled when disabled=true"
+        ]
+      },
+      "queries": [],
+      "notes": "Use native select for accessibility, style consistently with field-input class"
+    },
+    {
+      "id": "T007",
+      "title": "Create AdminFieldGroup component",
+      "description": "Create AdminFieldGroup.tsx: accepts title (optional string), children. Renders a visual grouping container with subtle background, border-radius, padding. Used to group related toggles/fields within a section.",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": ["T001", "T002"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Context bundle complete. Simple wrapper component.",
+        "completed_at": "2026-01-22T23:49:00Z",
+        "completed_by": "frontend-developer-agent"
+      },
+      "plan_reference": "admin-page-refactor-plan.md#phase-0-design-foundation",
+      "context_bundle": "docs/planning/context-bundles/T007-context.md",
+      "files_to_create": [
+        "web/src/pages/admin/components/AdminFieldGroup.tsx"
+      ],
+      "files_to_edit": [
+        "web/src/pages/admin/components/index.ts",
+        "web/src/pages/admin/admin.css"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/components/AdminFieldGroup.test.tsx",
+        "cases": [
+          "renders children",
+          "renders title when provided",
+          "applies grouping styles"
+        ]
+      },
+      "queries": [],
+      "notes": "Simple wrapper component for visual hierarchy"
+    },
+    {
+      "id": "T008",
+      "title": "Create AdminTabBar component",
+      "description": "Create AdminTabBar.tsx: accepts tabs (array of {id, label, shortLabel, icon}), activeTab (string), onTabChange (function). Renders horizontal scrollable tab bar. Mobile: icon + shortLabel. Desktop: icon + full label. Active tab has accent underline. Uses horizontal scroll with hidden scrollbar on mobile.",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": ["T001", "T002"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": true,
+        "extra_context_read": ["web/src/pages/admin/components/index.ts", "web/src/pages/admin/admin.css", "web/src/index.css", "web/vite.config.ts"],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was excellent. Had to set up vitest test infrastructure (setup.ts, jsdom env). Replaced existing tab bar CSS.",
+        "completed_at": "2026-01-22T23:55:00Z",
+        "completed_by": "frontend-developer-agent"
+      },
+      "plan_reference": "admin-page-refactor-plan.md#phase-1-tab-bar-redesign",
+      "context_bundle": "docs/planning/context-bundles/T008-context.md",
+      "files_to_create": [
+        "web/src/pages/admin/components/AdminTabBar.tsx"
+      ],
+      "files_to_edit": [
+        "web/src/pages/admin/components/index.ts",
+        "web/src/pages/admin/admin.css"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/components/AdminTabBar.test.tsx",
+        "cases": [
+          "renders all tabs",
+          "shows active state on current tab",
+          "calls onTabChange when tab clicked",
+          "renders icons for all tabs"
+        ]
+      },
+      "queries": [],
+      "notes": "Critical for mobile UX - test horizontal scroll behavior manually"
+    },
+    {
+      "id": "T009",
+      "title": "Create AdminContext for shared state",
+      "description": "Create AdminContext.tsx: React context providing group (current group), groupSettings (settings object), users (member list), refreshUsers (function), updateSettings (function), loading (boolean). Wrap admin routes with this provider.",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": ["T001"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": true,
+        "extra_context_read": ["web/src/pages/AdminPage.tsx"],
+        "agent_queries": [],
+        "agent_notes": "Context bundle complete. Had to fix TypeScript casting for Supabase joined query results.",
+        "completed_at": "2026-01-22T23:52:00Z",
+        "completed_by": "frontend-developer-agent"
+      },
+      "plan_reference": "admin-page-refactor-plan.md#phase-2-tab-extraction",
+      "context_bundle": "docs/planning/context-bundles/T009-context.md",
+      "files_to_create": [
+        "web/src/pages/admin/AdminContext.tsx"
+      ],
+      "files_to_edit": [
+        "web/src/pages/admin/index.ts"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/AdminContext.test.tsx",
+        "cases": [
+          "provides group from AuthContext",
+          "fetches and provides groupSettings",
+          "provides users list",
+          "updateSettings updates state and database"
+        ]
+      },
+      "queries": [],
+      "notes": "Extract shared state logic from AdminPage.tsx lines ~160-400"
+    },
+    {
+      "id": "T010",
+      "title": "Create useGroupSettings hook",
+      "description": "Create useGroupSettings.ts: Custom hook that fetches group_settings for given groupId, returns {settings, loading, error, updateSetting}. updateSetting takes key and value, updates DB and local state.",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": ["T001"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": ["web/package.json", "web/vite.config.ts"],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was excellent and complete. Implemented with optimistic updates and default settings.",
+        "completed_at": "2026-01-22T23:53:00Z",
+        "completed_by": "frontend-developer-agent"
+      },
+      "plan_reference": "admin-page-refactor-plan.md#phase-2-tab-extraction",
+      "context_bundle": "docs/planning/context-bundles/T010-context.md",
+      "files_to_create": [
+        "web/src/pages/admin/hooks/useGroupSettings.ts"
+      ],
+      "files_to_edit": [
+        "web/src/pages/admin/hooks/index.ts"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/hooks/useGroupSettings.test.ts",
+        "cases": [
+          "fetches settings on mount",
+          "returns loading state while fetching",
+          "updateSetting updates local state optimistically",
+          "updateSetting calls supabase update"
+        ]
+      },
+      "queries": [],
+      "notes": "Extract from AdminPage settings fetch/update logic"
+    },
+    {
+      "id": "T011",
+      "title": "Create AdminPageV2 shell with routing",
+      "description": "Create AdminPageV2.tsx: Main admin page component with AdminContext.Provider wrapper, AdminTabBar, and conditional tab content rendering. Add /app/admin-v2 route to router. Define ADMIN_TABS constant with 4 tabs: People, Content, Games, System.",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": ["T008", "T009"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": true,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was excellent. Fixed CSS linting error for shorthand properties. All 12 tests passed.",
+        "completed_at": "2026-01-23T00:05:00Z",
+        "completed_by": "frontend-developer-agent"
+      },
+      "plan_reference": "admin-page-refactor-plan.md#implementation-approach",
+      "context_bundle": "docs/planning/context-bundles/T011-context.md",
+      "files_to_create": [
+        "web/src/pages/admin/AdminPageV2.tsx"
+      ],
+      "files_to_edit": [
+        "web/src/App.tsx",
+        "web/src/pages/admin/index.ts"
+      ],
+      "tests": {
+        "type": "playwright",
+        "file": "e2e/admin-v2.spec.ts",
+        "cases": [
+          "navigates to /app/admin-v2",
+          "renders tab bar with 4 tabs",
+          "switches between tabs"
+        ]
+      },
+      "queries": [],
+      "notes": "Shell only - tabs render placeholder content initially"
+    },
+    {
+      "id": "T012",
+      "title": "Create PeopleTab - Members section",
+      "description": "Create PeopleTab.tsx with Members AdminSection. Display user list with avatar, name, email, role badge. Each user has role toggle (lead/member). Remove relationship/connections UI entirely. Use AdminToggle for permission toggles (chat, email, reaction notify permissions).",
+      "parent": "T020",
+      "subtasks": [],
+      "dependencies": ["T003", "T004", "T005", "T009"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": ["web/src/pages/admin/tabs/index.ts", "web/src/pages/admin/components/AdminToggle.tsx", "web/src/pages/admin/components/AdminSelect.tsx", "web/src/pages/admin/AdminContext.tsx", "web/src/pages/admin/admin.css"],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was well-structured and comprehensive. Minor improvement: Include full component props interfaces for AdminToggle and AdminSelect.",
+        "completed_at": "2026-01-22T10:15:00Z",
+        "completed_by": "frontend-developer-agent-abbf6ba"
+      },
+      "plan_reference": "settings-inventory.md#tab-1-people",
+      "context_bundle": "docs/planning/context-bundles/T012-context.md",
+      "files_to_create": [
+        "web/src/pages/admin/tabs/PeopleTab.tsx"
+      ],
+      "files_to_edit": [
+        "web/src/pages/admin/tabs/index.ts"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/tabs/PeopleTab.test.tsx",
+        "cases": [
+          "renders member list from context",
+          "displays user avatar, name, role",
+          "role toggle changes user role",
+          "permission toggles update user permissions"
+        ]
+      },
+      "queries": [],
+      "notes": "Simplified from original - NO relationship UI"
+    },
+    {
+      "id": "T013",
+      "title": "Create PeopleTab - Invitations section",
+      "description": "Add Invitations AdminSection to PeopleTab. Display active invite codes with status (used/pending/expired). Form to create new invite: email input + generate button. Copy code button for each invite.",
+      "parent": "T020",
+      "subtasks": [],
+      "dependencies": ["T012"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was complete. Implemented with invite list, create form, and copy functionality.",
+        "completed_at": "2026-01-22T11:30:00Z",
+        "completed_by": "frontend-developer-agent-a32beb7"
+      },
+      "plan_reference": "settings-inventory.md#tab-1-people",
+      "context_bundle": "docs/planning/context-bundles/T013-context.md",
+      "files_to_create": [],
+      "files_to_edit": [
+        "web/src/pages/admin/tabs/PeopleTab.tsx"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/tabs/PeopleTab.test.tsx",
+        "cases": [
+          "renders invite list",
+          "create invite form works",
+          "copy code button copies to clipboard"
+        ],
+        "bundle_with": "T012"
+      },
+      "queries": [],
+      "notes": "Extract from AdminPage invites tab (~70 lines)"
+    },
+    {
+      "id": "T014",
+      "title": "Create PeopleTab - Competitors section",
+      "description": "Add Competitors AdminSection to PeopleTab. Display season competitors with name and linked profile (if any). Dropdown to link competitor to existing profile. Remove AI image traits JSON textarea entirely.",
+      "parent": "T020",
+      "subtasks": [],
+      "dependencies": ["T012"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was complete. Implemented competitor list with profile linking dropdown.",
+        "completed_at": "2026-01-22T11:35:00Z",
+        "completed_by": "frontend-developer-agent-a30f725"
+      },
+      "plan_reference": "settings-inventory.md#tab-1-people",
+      "context_bundle": "docs/planning/context-bundles/T014-context.md",
+      "files_to_create": [],
+      "files_to_edit": [
+        "web/src/pages/admin/tabs/PeopleTab.tsx"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/tabs/PeopleTab.test.tsx",
+        "cases": [
+          "renders competitor list",
+          "profile link dropdown shows available profiles",
+          "linking competitor updates database"
+        ],
+        "bundle_with": "T012"
+      },
+      "queries": [],
+      "notes": "Simplified - NO ai_image_traits JSON field"
+    },
+    {
+      "id": "T015",
+      "title": "Create ContentTab - Leagues section",
+      "description": "Create ContentTab.tsx with Leagues AdminSection. Display league list with name, season number. Expandable row for narrative editing (textarea + save button).",
+      "parent": "T021",
+      "subtasks": [],
+      "dependencies": ["T003", "T004", "T009"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was comprehensive and well-structured. All code snippets were copy-paste ready with proper dark mode support.",
+        "completed_at": "2026-01-22T10:16:00Z",
+        "completed_by": "frontend-developer-agent-aa1d64b"
+      },
+      "plan_reference": "settings-inventory.md#tab-2-content",
+      "context_bundle": "docs/planning/context-bundles/T015-context.md",
+      "files_to_create": [
+        "web/src/pages/admin/tabs/ContentTab.tsx"
+      ],
+      "files_to_edit": [
+        "web/src/pages/admin/tabs/index.ts"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/tabs/ContentTab.test.tsx",
+        "cases": [
+          "renders league list",
+          "expand shows narrative editor",
+          "save updates league narrative"
+        ]
+      },
+      "queries": [],
+      "notes": "Extract from AdminPage leagues tab"
+    },
+    {
+      "id": "T016",
+      "title": "Create ContentTab - Rounds section",
+      "description": "Add Rounds AdminSection to ContentTab. Display rounds grouped by league. Each round: theme, status dropdown (open/voting/revealed/archived), theme image upload, winners image upload, playlist URL inputs, narrative textarea.",
+      "parent": "T021",
+      "subtasks": [],
+      "dependencies": ["T015"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": true,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was comprehensive. Had to fix test setup for chained Supabase query mocks (.order().order() pattern). All 27 ContentTab tests passing.",
+        "completed_at": "2026-01-22T12:15:00Z",
+        "completed_by": "frontend-developer-agent-afdcbae"
+      },
+      "plan_reference": "settings-inventory.md#tab-2-content",
+      "context_bundle": "docs/planning/context-bundles/T016-context.md",
+      "files_to_create": [],
+      "files_to_edit": [
+        "web/src/pages/admin/tabs/ContentTab.tsx"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/tabs/ContentTab.test.tsx",
+        "cases": [
+          "renders round list",
+          "status dropdown changes round status",
+          "image upload works",
+          "URL inputs save on blur"
+        ],
+        "bundle_with": "T015"
+      },
+      "queries": [],
+      "notes": "Most complex section - extract from AdminPage rounds tab (~330 lines)"
+    },
+    {
+      "id": "T017",
+      "title": "Create ContentTab - Imports section",
+      "description": "Add Imports AdminSection to ContentTab. Three sub-sections: Import Submissions (CSV upload + preview), Import Votes (CSV upload + preview), Process Emails (manual trigger button with status).",
+      "parent": "T021",
+      "subtasks": [],
+      "dependencies": ["T015"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": true,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was good. Had to fix test disambiguation for elements with same text (Process Emails as card title vs button). Tests integrated into ContentTab.test.tsx.",
+        "completed_at": "2026-01-22T12:20:00Z",
+        "completed_by": "frontend-developer-agent-a72ac2b"
+      },
+      "plan_reference": "settings-inventory.md#tab-2-content",
+      "context_bundle": "docs/planning/context-bundles/T017-context.md",
+      "files_to_create": [],
+      "files_to_edit": [
+        "web/src/pages/admin/tabs/ContentTab.tsx"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/tabs/ContentTab.test.tsx",
+        "cases": [
+          "CSV upload shows preview",
+          "import button processes CSV",
+          "process emails button triggers function"
+        ],
+        "bundle_with": "T015"
+      },
+      "queries": [],
+      "notes": "Extract from AdminPage imports tab - keep Papa parse logic"
+    },
+    {
+      "id": "T018",
+      "title": "Create GamesTab - Minigames sections",
+      "description": "Create GamesTab.tsx with three AdminSections for minigames: Guess the Submitter (enabled toggle, phase select), Timeline Game (enabled toggle, phase select, beta toggle, link to release years), Round Challenge (enabled toggle, phase select). Each section has master toggle in header.",
+      "parent": "T022",
+      "subtasks": [],
+      "dependencies": ["T003", "T004", "T005", "T006", "T010"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": true,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was excellent. Had to fix test failures from duplicate test IDs by scoping queries to specific sections using parent element selectors.",
+        "completed_at": "2026-01-22T10:17:00Z",
+        "completed_by": "frontend-developer-agent-affe818"
+      },
+      "plan_reference": "settings-inventory.md#tab-3-games-ai",
+      "context_bundle": "docs/planning/context-bundles/T018-context.md",
+      "files_to_create": [
+        "web/src/pages/admin/tabs/GamesTab.tsx"
+      ],
+      "files_to_edit": [
+        "web/src/pages/admin/tabs/index.ts"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/tabs/GamesTab.test.tsx",
+        "cases": [
+          "renders three minigame sections",
+          "master toggles enable/disable games",
+          "phase selects update settings"
+        ]
+      },
+      "queries": [],
+      "notes": "Combine minigame settings from AI Settings tab"
+    },
+    {
+      "id": "T019",
+      "title": "Create GamesTab - AI and Bonus sections",
+      "description": "Add AI Assistant AdminSection (master toggle, explain/hint/check/chat toggles, daily limit input) and AI Images AdminSection (theme/winners toggles, model select, palette select) and Bonus Points AdminSection (award form, recent awards list) to GamesTab. Move Release Years UI into Timeline Game section.",
+      "parent": "T022",
+      "subtasks": [],
+      "dependencies": ["T018"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was comprehensive. Added AI Assistant, AI Images, and Bonus Points sections with all toggles and controls.",
+        "completed_at": "2026-01-22T11:45:00Z",
+        "completed_by": "frontend-developer-agent-a391622"
+      },
+      "plan_reference": "settings-inventory.md#tab-3-games-ai",
+      "context_bundle": "docs/planning/context-bundles/T019-context.md",
+      "files_to_create": [],
+      "files_to_edit": [
+        "web/src/pages/admin/tabs/GamesTab.tsx"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/tabs/GamesTab.test.tsx",
+        "cases": [
+          "AI toggles update settings",
+          "model/palette selects work",
+          "bonus points form submits",
+          "release years UI in timeline section"
+        ],
+        "bundle_with": "T018"
+      },
+      "queries": [],
+      "notes": "Merge AI Settings + Bonus tabs"
+    },
+    {
+      "id": "T020",
+      "title": "PeopleTab complete",
+      "description": "Parent task for People tab. Complete when all subtasks (Members, Invitations, Competitors) are done and integrated.",
+      "parent": null,
+      "subtasks": ["T012", "T013", "T014"],
+      "dependencies": [],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "All subtasks (T012, T013, T014) completed. PeopleTab has Members, Invitations, and Competitors sections.",
+        "completed_at": "2026-01-22T12:00:00Z",
+        "completed_by": "orchestrator"
+      },
+      "plan_reference": "settings-inventory.md#tab-1-people",
+      "context_bundle": null,
+      "files_to_create": [],
+      "files_to_edit": [],
+      "tests": {
+        "type": "playwright",
+        "file": "e2e/admin-people-tab.spec.ts",
+        "cases": [
+          "full People tab E2E flow"
+        ]
+      },
+      "queries": [],
+      "notes": "Integration milestone"
+    },
+    {
+      "id": "T021",
+      "title": "ContentTab complete",
+      "description": "Parent task for Content tab. Complete when all subtasks (Leagues, Rounds, Imports) are done and integrated.",
+      "parent": null,
+      "subtasks": ["T015", "T016", "T017"],
+      "dependencies": [],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "All subtasks (T015, T016, T017) completed. ContentTab has Leagues, Rounds, and Imports sections. 27 tests passing.",
+        "completed_at": "2026-01-22T12:25:00Z",
+        "completed_by": "orchestrator"
+      },
+      "plan_reference": "settings-inventory.md#tab-2-content",
+      "context_bundle": null,
+      "files_to_create": [],
+      "files_to_edit": [],
+      "tests": {
+        "type": "playwright",
+        "file": "e2e/admin-content-tab.spec.ts",
+        "cases": [
+          "full Content tab E2E flow"
+        ]
+      },
+      "queries": [],
+      "notes": "Integration milestone"
+    },
+    {
+      "id": "T022",
+      "title": "GamesTab complete",
+      "description": "Parent task for Games tab. Complete when all subtasks (Minigames, AI, Bonus) are done and integrated.",
+      "parent": null,
+      "subtasks": ["T018", "T019"],
+      "dependencies": [],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "All subtasks (T018, T019) completed. GamesTab has Minigames (Guess/Timeline/Challenge), AI Assistant, AI Images, and Bonus Points sections.",
+        "completed_at": "2026-01-22T12:00:00Z",
+        "completed_by": "orchestrator"
+      },
+      "plan_reference": "settings-inventory.md#tab-3-games-ai",
+      "context_bundle": null,
+      "files_to_create": [],
+      "files_to_edit": [],
+      "tests": {
+        "type": "playwright",
+        "file": "e2e/admin-games-tab.spec.ts",
+        "cases": [
+          "full Games tab E2E flow"
+        ]
+      },
+      "queries": [],
+      "notes": "Integration milestone"
+    },
+    {
+      "id": "T023",
+      "title": "Create SystemTab",
+      "description": "Create SystemTab.tsx with Testing AdminSection (seed test data button, clear test data button, status display) and Diagnostics AdminSection (email processing status, placeholder for future health checks).",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": ["T003", "T004"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": ["web/src/pages/admin/tabs/GamesTab.test.tsx"],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was comprehensive. Provided full component implementation. Used GamesTab.test.tsx to understand test pattern.",
+        "completed_at": "2026-01-22T10:18:00Z",
+        "completed_by": "frontend-developer-agent-a6d0256"
+      },
+      "plan_reference": "settings-inventory.md#tab-4-system",
+      "context_bundle": "docs/planning/context-bundles/T023-context.md",
+      "files_to_create": [
+        "web/src/pages/admin/tabs/SystemTab.tsx"
+      ],
+      "files_to_edit": [
+        "web/src/pages/admin/tabs/index.ts"
+      ],
+      "tests": {
+        "type": "vitest",
+        "file": "web/src/pages/admin/tabs/SystemTab.test.tsx",
+        "cases": [
+          "seed button calls seed function",
+          "clear button calls clear function",
+          "diagnostics section renders"
+        ]
+      },
+      "queries": [],
+      "notes": "Extract from Testing tab, add new diagnostics"
+    },
+    {
+      "id": "T024",
+      "title": "Wire all tabs into AdminPageV2",
+      "description": "Import and render all four tabs (PeopleTab, ContentTab, GamesTab, SystemTab) in AdminPageV2.tsx based on activeTab state. Ensure tab switching works and all tabs render without errors.",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": ["T011", "T020", "T021", "T022", "T023"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": true,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Integrated all 4 tabs. Updated AdminPageV2.test.tsx to work with real tab components instead of placeholders. All 109 AdminPageV2 and tab tests passing.",
+        "completed_at": "2026-01-22T12:45:00Z",
+        "completed_by": "orchestrator"
+      },
+      "plan_reference": "admin-page-refactor-plan.md#implementation-approach",
+      "context_bundle": "docs/planning/context-bundles/T024-context.md",
+      "files_to_create": [],
+      "files_to_edit": [
+        "web/src/pages/admin/AdminPageV2.tsx"
+      ],
+      "tests": {
+        "type": "playwright",
+        "file": "e2e/admin-v2-integration.spec.ts",
+        "cases": [
+          "all tabs render without errors",
+          "tab switching preserves state",
+          "data persists across tab changes"
+        ]
+      },
+      "queries": [],
+      "notes": "Integration point - all tabs must be complete"
+    },
+    {
+      "id": "T025",
+      "title": "Add feature flag for admin version switch",
+      "description": "Add admin_v2_enabled flag to group_settings. In App.tsx routing, check flag to serve either /app/admin (old) or redirect to /app/admin-v2 (new). Add toggle in System tab to switch versions.",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": ["T024"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": ["web/src/pages/admin/tabs/GamesTab.tsx", "web/src/pages/admin/components/index.ts"],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was excellent. Created migration, AdminRouteWrapper in App.tsx, and toggle in SystemTab. Migration applied via MCP.",
+        "completed_at": "2026-01-22T13:00:00Z",
+        "completed_by": "frontend-developer-agent-ac37ef5"
+      },
+      "plan_reference": "admin-page-refactor-plan.md#implementation-approach",
+      "context_bundle": "docs/planning/context-bundles/T025-context.md",
+      "files_to_create": [
+        "supabase/migrations/YYYYMMDD_add_admin_v2_flag.sql"
+      ],
+      "files_to_edit": [
+        "web/src/App.tsx",
+        "web/src/pages/admin/tabs/SystemTab.tsx"
+      ],
+      "tests": {
+        "type": "manual",
+        "description": "Toggle flag, verify correct admin version loads"
+      },
+      "queries": [],
+      "notes": "Allows gradual rollout and easy rollback"
+    },
+    {
+      "id": "T026",
+      "title": "Mobile responsiveness pass",
+      "description": "Review all admin components on mobile viewport (375px). Ensure: tab bar scrolls horizontally, forms don't overflow, touch targets are 44px+, sections collapse properly, no horizontal scroll on page body.",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": ["T024"],
+      "status": "completed",
+      "execution": {
+        "testing_passed": true,
+        "remediation_required": false,
+        "extra_context_read": [],
+        "agent_queries": [],
+        "agent_notes": "Context bundle was complete. Added mobile CSS fixes: overflow-x hidden, 44px touch targets, responsive cards, mobile media queries for stacked forms.",
+        "completed_at": "2026-01-22T12:55:00Z",
+        "completed_by": "frontend-developer-agent-a20b4b7"
+      },
+      "plan_reference": "admin-page-refactor-plan.md#phase-4-mobile-layout",
+      "context_bundle": "docs/planning/context-bundles/T026-context.md",
+      "files_to_create": [],
+      "files_to_edit": [
+        "web/src/pages/admin/admin.css"
+      ],
+      "tests": {
+        "type": "playwright",
+        "file": "e2e/admin-mobile.spec.ts",
+        "cases": [
+          "no horizontal overflow at 375px",
+          "tab bar is scrollable",
+          "forms are usable on mobile"
+        ]
+      },
+      "queries": [],
+      "notes": "Use Chrome DevTools mobile simulation"
+    },
+    {
+      "id": "T027",
+      "title": "Remove old AdminPage after validation",
+      "description": "After admin-v2 is validated in production: remove AdminPage.tsx, remove /app/admin route, remove feature flag, update SettingsDrawer link to point to new admin.",
+      "parent": null,
+      "subtasks": [],
+      "dependencies": ["T025", "T026"],
+      "status": "pending",
+      "plan_reference": "admin-page-refactor-plan.md#implementation-approach",
+      "context_bundle": "docs/planning/context-bundles/T027-context.md",
+      "files_to_create": [],
+      "files_to_edit": [
+        "web/src/App.tsx",
+        "web/src/components/SettingsDrawer.tsx"
+      ],
+      "files_to_delete": [
+        "web/src/pages/AdminPage.tsx"
+      ],
+      "tests": {
+        "type": "manual",
+        "description": "Verify admin link works, old page is gone"
+      },
+      "queries": [],
+      "notes": "Final cleanup - only after production validation"
+    }
+  ],
+  "parallel_groups": [
+    {
+      "name": "Phase 0 - Foundation Components",
+      "tasks": ["T003", "T004", "T005", "T006", "T007", "T008"],
+      "max_parallel": 5,
+      "notes": "All depend on T001+T002, can run in parallel after those complete"
+    },
+    {
+      "name": "Phase 1 - Hooks and Context",
+      "tasks": ["T009", "T010"],
+      "max_parallel": 2,
+      "notes": "Can run in parallel, both depend only on T001"
+    },
+    {
+      "name": "Phase 2 - Tab Development",
+      "tasks": ["T012", "T015", "T018", "T023"],
+      "max_parallel": 4,
+      "notes": "Initial tab tasks can run in parallel once components ready"
+    }
+  ]
+}

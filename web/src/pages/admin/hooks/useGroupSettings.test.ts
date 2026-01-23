@@ -144,6 +144,7 @@ describe("useGroupSettings", () => {
       playlist_tab_respect_timer: true,
       progress_tab_respect_timer: true,
       games_tab_respect_timer: true,
+      admin_v2_enabled: false,
     });
   });
 
@@ -182,6 +183,7 @@ describe("useGroupSettings", () => {
       ai_validate_enabled: true,
       ai_hint_enabled: true,
       ai_chat_enabled: true,
+      admin_v2_enabled: false,
     };
 
     singleMock.mockResolvedValueOnce({ data: mockSettings, error: null });
@@ -192,14 +194,17 @@ describe("useGroupSettings", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    // Mock successful update
-    eqMock.mockResolvedValueOnce({ error: null });
+    // Mock successful update - need to override the default implementation for update path
+    const updateEqMock = vi.fn().mockResolvedValue({ error: null });
+    updateMock.mockReturnValueOnce({ eq: updateEqMock });
 
     // Call updateSetting
     await result.current.updateSetting("round_challenge_enabled", true);
 
     // State should be updated optimistically
-    expect(result.current.settings?.round_challenge_enabled).toBe(true);
+    await waitFor(() => {
+      expect(result.current.settings?.round_challenge_enabled).toBe(true);
+    });
   });
 
   it("updateSetting calls supabase update", async () => {
@@ -227,6 +232,7 @@ describe("useGroupSettings", () => {
       ai_validate_enabled: true,
       ai_hint_enabled: true,
       ai_chat_enabled: true,
+      admin_v2_enabled: false,
     };
 
     singleMock.mockResolvedValueOnce({ data: mockSettings, error: null });
@@ -237,15 +243,16 @@ describe("useGroupSettings", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    // Mock successful update
-    eqMock.mockResolvedValueOnce({ error: null });
+    // Mock successful update with separate eq mock for update path
+    const updateEqMock = vi.fn().mockResolvedValue({ error: null });
+    updateMock.mockReturnValueOnce({ eq: updateEqMock });
 
     // Call updateSetting
     await result.current.updateSetting("ai_validate_daily_limit", 10);
 
     // Verify supabase was called correctly
     expect(updateMock).toHaveBeenCalledWith({ ai_validate_daily_limit: 10 });
-    expect(eqMock).toHaveBeenCalledWith("id", "settings-1");
+    expect(updateEqMock).toHaveBeenCalledWith("id", "settings-1");
   });
 
   it("sets error when update fails", async () => {
@@ -273,6 +280,7 @@ describe("useGroupSettings", () => {
       ai_validate_enabled: true,
       ai_hint_enabled: true,
       ai_chat_enabled: true,
+      admin_v2_enabled: false,
     };
 
     singleMock.mockResolvedValueOnce({ data: mockSettings, error: null });
@@ -283,8 +291,9 @@ describe("useGroupSettings", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    // Mock failed update
-    eqMock.mockResolvedValueOnce({ error: { message: "Update failed" } });
+    // Mock failed update with separate eq mock for update path
+    const updateEqMock = vi.fn().mockResolvedValue({ error: { message: "Update failed" } });
+    updateMock.mockReturnValueOnce({ eq: updateEqMock });
 
     // Call updateSetting
     await result.current.updateSetting("ai_validate_daily_limit", 10);
@@ -307,7 +316,9 @@ describe("useGroupSettings", () => {
     // Settings loaded with defaults (id is empty string)
     await result.current.updateSetting("round_challenge_enabled", true);
 
-    // Should set error
-    expect(result.current.error).toBe("Cannot update: settings not loaded");
+    // Should set error - wait for state update
+    await waitFor(() => {
+      expect(result.current.error).toBe("Cannot update: settings not loaded");
+    });
   });
 });

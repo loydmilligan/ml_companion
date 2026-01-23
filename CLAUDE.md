@@ -237,3 +237,106 @@ Linear issues use format `LOYD-XXX`. Local IDs in issues.md use category prefixe
 - `EF-XXX` → Edge Functions
 - `STG-XXX` → Storage
 - `AWD-XXX` → Awards
+
+---
+
+## Parallel Agent Task Execution Workflow
+
+This project uses a structured workflow for executing complex sprints with parallel AI agents. Tasks are defined in JSON files with context bundles that provide all necessary information for implementation.
+
+### Task Structure
+
+Task files are located in `docs/planning/` with format `*_tasks.json`. Each task includes:
+- **context_bundle**: Path to markdown file with all context agent needs
+- **execution**: Object tracking completion status and agent feedback
+
+### Agent Execution Workflow
+
+#### 1. Pre-Execution (Orchestrator)
+
+Before launching agents, the orchestrator should:
+1. Read the tasks JSON file
+2. Identify tasks ready for execution (dependencies satisfied)
+3. Group tasks by parallel_groups for concurrent execution
+4. Launch agents with proper prompts
+
+#### 2. Agent Instructions
+
+When calling Task tool to execute a task, include these instructions:
+
+```
+You are implementing task {task_id}: {title}
+
+CRITICAL REQUIREMENTS:
+1. READ the context bundle FIRST: {context_bundle_path}
+2. The context bundle contains ALL code snippets and context you need
+3. DO NOT read additional files unless absolutely necessary
+4. If you must read extra files, document them in your response
+
+IMPLEMENTATION:
+- Follow the context bundle exactly
+- Create files listed in files_to_create
+- Edit files listed in files_to_edit
+- Run tests if specified
+
+RESPONSE FORMAT:
+After completing, provide:
+1. TESTING_PASSED: true/false
+2. REMEDIATION_REQUIRED: true/false (did you have to fix issues?)
+3. EXTRA_CONTEXT_READ: [list of files you read beyond context bundle]
+4. AGENT_QUERIES: [questions/assumptions you made]
+5. AGENT_NOTES: feedback on context bundle quality
+```
+
+#### 3. Post-Execution Review
+
+After each agent completes, the orchestrator should:
+1. Update the tasks JSON with execution results
+2. Check for agent queries/assumptions
+3. Review extra_context_read - if agents consistently need the same files, update context bundles
+4. Update workflow to prevent future issues
+
+#### 4. JSON Update Pattern
+
+```json
+{
+  "execution": {
+    "testing_passed": true,
+    "remediation_required": false,
+    "extra_context_read": [],
+    "agent_queries": [],
+    "agent_notes": "Context bundle was complete, no issues",
+    "completed_at": "2026-01-23T10:30:00Z",
+    "completed_by": "agent-frontend-1"
+  }
+}
+```
+
+### Parallel Execution Rules
+
+1. **Max 5 concurrent agents** - prevents context thrashing
+2. **Respect dependencies** - only execute tasks whose dependencies are complete
+3. **Use parallel_groups** - defined in tasks JSON for optimal batching
+4. **Monitor actively** - use TaskOutput to track agent progress
+
+### Context Bundle Quality Improvement
+
+If agents consistently:
+- Read extra files → Add those snippets to context bundle
+- Make wrong assumptions → Clarify in context bundle description
+- Fail tests → Review acceptance criteria specificity
+- Request clarification → Expand context bundle with details
+
+### Example: Executing Admin Refactor Tasks
+
+```
+Tasks file: docs/planning/admin_page_refactor_tasks.json
+Context bundles: docs/planning/context-bundles/T001-context.md, etc.
+JTBD orchestration: docs/planning/admin-refactor-jtbd.md
+
+Phase 0 (parallel): T001, T002
+Phase 1 (parallel after T001+T002): T003, T004, T005, T006, T007, T008
+Phase 2 (parallel after Phase 1): T009, T010
+Phase 3 (parallel after Phase 2): T012, T015, T018, T023
+... continue per dependency graph
+```
