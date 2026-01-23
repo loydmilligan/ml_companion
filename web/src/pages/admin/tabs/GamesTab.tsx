@@ -20,6 +20,21 @@ type RoundSummary = {
   theme: string;
   season_number: number | null;
   round_number: number | null;
+  status?: string;
+};
+
+type AdminPickSong = {
+  id: string;
+  title: string;
+  artist: string | null;
+  artwork_url: string | null;
+  youtube_url: string | null;
+};
+
+type ThemeCategory = {
+  id: string;
+  title: string;
+  description: string;
 };
 
 type SubmissionRow = {
@@ -44,7 +59,7 @@ export default function GamesTab() {
   if (!settings) return <p>Loading settings...</p>;
 
   return (
-    <div className="games-tab">
+    <div className="admin-games-tab">
       {/* Guess the Submitter */}
       <AdminSection
         icon="🎯"
@@ -121,17 +136,24 @@ export default function GamesTab() {
         />
 
         {settings.round_challenge_enabled && (
-          <AdminFieldGroup>
-            <AdminSelect
-              icon="📅"
-              label="Available during"
-              value={settings.round_challenge_phase}
-              onChange={(val) =>
-                updateSetting("round_challenge_phase", val as "open" | "voting" | "both")
-              }
-              options={PHASE_OPTIONS}
-            />
-          </AdminFieldGroup>
+          <>
+            <AdminFieldGroup>
+              <AdminSelect
+                icon="📅"
+                label="Available during"
+                value={settings.round_challenge_phase}
+                onChange={(val) =>
+                  updateSetting("round_challenge_phase", val as "open" | "voting" | "both")
+                }
+                options={PHASE_OPTIONS}
+              />
+            </AdminFieldGroup>
+
+            {/* Song Picks Management */}
+            <AdminSection icon="🎵" title="Song Picks" color="purple" defaultOpen={false}>
+              <RoundChallengeSongPicks groupId={group?.id} />
+            </AdminSection>
+          </>
         )}
       </AdminSection>
 
@@ -527,6 +549,374 @@ function BonusPointsManager({ groupId, users }: { groupId?: string; users: any[]
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Round Challenge Song Picks Manager Component
+function RoundChallengeSongPicks({ groupId }: { groupId?: string }) {
+  const [rounds, setRounds] = useState<RoundSummary[]>([]);
+  const [sourceRoundId, setSourceRoundId] = useState<string | null>(null);
+  const [songs, setSongs] = useState<AdminPickSong[]>([]);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [themes, setThemes] = useState<Record<string, string>>({});
+  const [categories, setCategories] = useState<ThemeCategory[]>([]);
+  const [existing, setExisting] = useState<{ submission_id: string; theme_id: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+
+  // Fetch rounds on mount
+  useEffect(() => {
+    if (!groupId) return;
+    const fetchRounds = async () => {
+      const { data } = await supabase
+        .from("rounds")
+        .select("id, theme, season_number, round_number, status")
+        .eq("group_id", groupId)
+        .order("season_number", { ascending: false })
+        .order("round_number", { ascending: false });
+      if (data) setRounds(data as RoundSummary[]);
+    };
+    fetchRounds();
+  }, [groupId]);
+
+  // Load songs for selected source round
+  const loadSongs = async (roundId: string) => {
+    if (!groupId) return;
+    setLoading(true);
+    setSourceRoundId(roundId);
+    setSelected({});
+    setThemes({});
+    setExisting([]);
+    setStatus(null);
+
+    try {
+      // Load S1 theme categories from JSON if not already loaded
+      if (categories.length === 0) {
+        const response = await fetch("/data/round_challenge_song_list.json");
+        if (response.ok) {
+          const jsonData = await response.json();
+          setCategories(
+            jsonData.categories.map((c: { id: string; revised_title: string; description: string }) => ({
+              id: c.id,
+              title: c.revised_title,
+              description: c.description,
+            }))
+          );
+        }
+      }
+
+      // Load songs from the source round
+      const { data: songsData, error: songsError } = await supabase
+        .from("submissions")
+        .select("id,title,artist,artwork_url,youtube_url")
+        .eq("round_id", roundId)
+        .order("created_at");
+
+      if (songsError) {
+        console.error("Error loading songs:", songsError);
+        setSongs([]);
+        return;
+      }
+
+      setSongs(songsData ?? []);
+
+      // Find the target round (source round_number + 1)
+      const sourceRound = rounds.find((r) => r.id === roundId);
+      if (sourceRound?.round_number) {
+        const possibleTargets = rounds.filter(
+          (r) => r.round_number === sourceRound.round_number! + 1 && r.season_number === sourceRound.season_number
+        );
+        const targetRound = possibleTargets.find((r) => r.status !== "archived") || possibleTargets[0];
+        if (targetRound) {
+          // Load existing picks for the target round
+          const { data: existingPicks } = await supabase
+            .from("round_challenge_admin_picks")
+            .select("submission_id, theme_id")
+            .eq("target_round_id", targetRound.id);
+
+          if (existingPicks && existingPicks.length > 0) {
+            setExisting(existingPicks);
+            // Pre-populate the selection UI
+            const selectedMap: Record<string, boolean> = {};
+            const themesMap: Record<string, string> = {};
+            existingPicks.forEach((pick) => {
+              selectedMap[pick.submission_id] = true;
+              themesMap[pick.submission_id] = pick.theme_id;
+            });
+            setSelected(selectedMap);
+            setThemes(themesMap);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error loading songs:", err);
+      setSongs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Save picks
+  const savePicks = async () => {
+    if (!groupId || !sourceRoundId) return;
+
+    // Validate: 2-3 songs selected with themes
+    const selectedSongIds = Object.entries(selected)
+      .filter(([, isSelected]) => isSelected)
+      .map(([songId]) => songId);
+
+    if (selectedSongIds.length < 2 || selectedSongIds.length > 3) {
+      setStatus("Please select 2 or 3 songs.");
+      return;
+    }
+
+    const allHaveThemes = selectedSongIds.every((songId) => themes[songId]);
+    if (!allHaveThemes) {
+      setStatus("Please assign a theme to each selected song.");
+      return;
+    }
+
+    // Check for duplicate themes
+    const themeValues = selectedSongIds.map((songId) => themes[songId]);
+    const uniqueThemes = new Set(themeValues);
+    if (uniqueThemes.size !== themeValues.length) {
+      setStatus("Each song must have a different theme.");
+      return;
+    }
+
+    setSaving(true);
+    setStatus(null);
+
+    try {
+      // Find source and target rounds
+      const sourceRound = rounds.find((r) => r.id === sourceRoundId);
+      if (!sourceRound?.round_number) {
+        setStatus("Could not find source round.");
+        return;
+      }
+
+      // Find target round - prefer non-archived rounds
+      const possibleTargets = rounds.filter(
+        (r) => r.round_number === sourceRound.round_number! + 1 && r.season_number === sourceRound.season_number
+      );
+      const targetRound = possibleTargets.find((r) => r.status !== "archived") || possibleTargets[0];
+      if (!targetRound) {
+        setStatus(`No Round ${sourceRound.round_number + 1} found in Season ${sourceRound.season_number}.`);
+        return;
+      }
+
+      // Delete existing picks for this target round
+      await supabase
+        .from("round_challenge_admin_picks")
+        .delete()
+        .eq("target_round_id", targetRound.id);
+
+      // Insert new picks
+      const picks = selectedSongIds.map((songId) => ({
+        target_round_id: targetRound.id,
+        source_round_id: sourceRoundId,
+        submission_id: songId,
+        theme_id: themes[songId],
+      }));
+
+      const { error: insertError } = await supabase
+        .from("round_challenge_admin_picks")
+        .insert(picks);
+
+      if (insertError) {
+        console.error("Error saving picks:", insertError);
+        setStatus("Error saving picks. Please try again.");
+        return;
+      }
+
+      // Reset existing user guesses for this target round
+      await supabase
+        .from("round_challenge_guesses")
+        .delete()
+        .eq("round_id", targetRound.id)
+        .eq("group_id", groupId);
+
+      // Delete/regenerate the round_challenge_v2 entry if it exists
+      await supabase
+        .from("round_challenge_v2")
+        .delete()
+        .eq("round_id", targetRound.id)
+        .eq("group_id", groupId);
+
+      setExisting(picks.map((p) => ({ submission_id: p.submission_id, theme_id: p.theme_id })));
+      setStatus(`Saved! Songs from Round ${sourceRound.round_number} will be used for Round ${targetRound.round_number}'s game. Any existing guesses have been reset.`);
+    } catch (err) {
+      console.error("Error saving picks:", err);
+      setStatus("Unexpected error. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Get target round info for display
+  const getTargetRoundInfo = () => {
+    if (!sourceRoundId) return null;
+    const sourceRound = rounds.find((r) => r.id === sourceRoundId);
+    if (!sourceRound?.round_number) return "Select a round to see target.";
+    const targetRound = rounds.find(
+      (r) => r.round_number === sourceRound.round_number! + 1 && r.season_number === sourceRound.season_number
+    );
+    return targetRound
+      ? `Songs from this round will be used for Round ${targetRound.round_number}'s game (${targetRound.theme}).`
+      : `No Round ${sourceRound.round_number + 1} found yet.`;
+  };
+
+  const selectedCount = Object.values(selected).filter(Boolean).length;
+
+  return (
+    <div style={{ display: "grid", gap: 12 }}>
+      <p className="muted" style={{ fontSize: "0.85rem", margin: 0 }}>
+        Select 2-3 songs from a round's playlist and assign S1 themes. These songs will be used for the next round's game.
+      </p>
+
+      <select
+        className="field-input"
+        value={sourceRoundId ?? ""}
+        onChange={(e) => e.target.value && loadSongs(e.target.value)}
+      >
+        <option value="">Select source round...</option>
+        {rounds
+          .filter((r) => r.season_number === 2) // Only S2 rounds
+          .sort((a, b) => (a.round_number ?? 0) - (b.round_number ?? 0))
+          .map((r) => (
+            <option key={r.id} value={r.id}>
+              S{r.season_number ?? "?"} R{r.round_number ?? "?"}: {r.theme}
+            </option>
+          ))}
+      </select>
+
+      {sourceRoundId && (
+        <div style={{ padding: 8, background: "var(--bg-secondary)", borderRadius: 6, fontSize: "0.85rem" }}>
+          {getTargetRoundInfo()}
+        </div>
+      )}
+
+      {loading && <p className="muted">Loading songs...</p>}
+
+      {songs.length > 0 && !loading && (
+        <div style={{ display: "grid", gap: 8 }}>
+          {songs.map((song) => {
+            const isSelected = selected[song.id] ?? false;
+            const themeId = themes[song.id] ?? "";
+            return (
+              <div
+                key={song.id}
+                style={{
+                  padding: 12,
+                  background: isSelected ? "var(--bg-secondary)" : "var(--surface)",
+                  borderRadius: 8,
+                  border: isSelected ? "2px solid var(--coral)" : "2px solid transparent",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(e) =>
+                      setSelected((prev) => ({
+                        ...prev,
+                        [song.id]: e.target.checked,
+                      }))
+                    }
+                    style={{ width: 18, height: 18, flexShrink: 0 }}
+                  />
+                  {song.artwork_url && (
+                    <img
+                      src={song.artwork_url}
+                      alt=""
+                      style={{ width: 40, height: 40, borderRadius: 4, objectFit: "cover", flexShrink: 0 }}
+                    />
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {song.title}
+                    </div>
+                    <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {song.artist}
+                    </div>
+                  </div>
+                  {song.youtube_url && (
+                    <a
+                      href={song.youtube_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: "var(--coral)", fontSize: "0.85rem", flexShrink: 0 }}
+                    >
+                      YouTube
+                    </a>
+                  )}
+                </div>
+                {isSelected && (
+                  <div style={{ marginTop: 8, marginLeft: 30 }}>
+                    <select
+                      className="field-input"
+                      value={themeId}
+                      onChange={(e) =>
+                        setThemes((prev) => ({
+                          ...prev,
+                          [song.id]: e.target.value,
+                        }))
+                      }
+                      style={{ width: "100%" }}
+                    >
+                      <option value="">Assign S1 theme...</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Selection count and save button */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
+            <span style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}>
+              {selectedCount} of 2-3 selected
+            </span>
+            <button
+              type="button"
+              className="btn"
+              onClick={savePicks}
+              disabled={saving}
+              style={{ marginLeft: "auto" }}
+            >
+              {saving ? "Saving..." : existing.length > 0 ? "Update Picks" : "Finalize Picks"}
+            </button>
+          </div>
+
+          {status && (
+            <div
+              style={{
+                marginTop: 8,
+                padding: 12,
+                borderRadius: 6,
+                background: status.startsWith("Saved") ? "var(--success-bg)" : "rgba(255, 111, 97, 0.1)",
+                color: status.startsWith("Saved") ? "var(--success)" : "var(--error)",
+                fontSize: "0.9rem",
+              }}
+            >
+              {status}
+            </div>
+          )}
+        </div>
+      )}
+
+      {sourceRoundId && songs.length === 0 && !loading && (
+        <div style={{ padding: 16, color: "var(--text-muted)", background: "var(--bg-secondary)", borderRadius: 8 }}>
+          No songs found for this round.
+        </div>
+      )}
     </div>
   );
 }

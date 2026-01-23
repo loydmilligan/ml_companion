@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import SeasonImport from "../components/SeasonImport";
@@ -2733,6 +2734,22 @@ export default function AdminPage() {
       <div className="page-header">
         <h1>Admin</h1>
         <p>Manage invites, rounds, and season data.</p>
+        <Link
+          to="/app/admin-v2"
+          style={{
+            display: "inline-block",
+            marginTop: 12,
+            padding: "8px 16px",
+            background: "var(--coral)",
+            color: "white",
+            borderRadius: 6,
+            textDecoration: "none",
+            fontSize: "0.9rem",
+            fontWeight: 500,
+          }}
+        >
+          Try Admin v2
+        </Link>
       </div>
 
       <div className="admin-tabs">

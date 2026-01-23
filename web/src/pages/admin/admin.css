@@ -770,6 +770,18 @@ code {
   }
 }
 
+/* === Admin Tab Content Containers === */
+.admin-games-tab,
+.people-tab,
+.content-tab,
+.system-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 100%;
+}
+
 /* === Mobile First === */
 @media (min-width: 768px) {
   .admin-page-v2 { padding: 24px; }
