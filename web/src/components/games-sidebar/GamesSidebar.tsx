@@ -158,10 +158,12 @@ export default function GamesSidebar({
     if (!round) return "No active round";
     // Always available during revealed phase for viewing results
     if (round.status === "revealed") return null;
+    // After early return, status can only be "open", "voting", or "archived"
+    // Check if current phase matches the configured availability
     const inPhase =
       (timelineGamePhase === "voting" && round.status === "voting") ||
-      (timelineGamePhase === "revealed" && round.status === "revealed") ||
-      (timelineGamePhase === "both" && (round.status === "voting" || round.status === "revealed"));
+      (timelineGamePhase === "both" && round.status === "voting");
+    // Note: timelineGamePhase === "revealed" case is not in inPhase since revealed status is handled above
     if (!inPhase) {
       if (timelineGamePhase === "voting") return "Available during voting";
       if (timelineGamePhase === "revealed") return "Available after reveal";
