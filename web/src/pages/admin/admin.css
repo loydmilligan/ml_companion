@@ -13,6 +13,20 @@
   min-height: 100vh;
   overflow-x: hidden;
   width: 100%;
+  box-sizing: border-box;
+}
+
+/* Prevent any child from causing horizontal overflow */
+.admin-page-v2 * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Allow flex items to shrink */
+.admin-page-v2 input,
+.admin-page-v2 select,
+.admin-page-v2 textarea {
+  min-width: 0;
 }
 
 .admin-title {
@@ -767,6 +781,22 @@ code {
   .invite-form .field-input,
   .invite-form .btn {
     width: 100%;
+  }
+
+  /* Ensure competitor select doesn't overflow */
+  .competitor-link-select {
+    min-width: 120px;
+    max-width: 150px;
+  }
+
+  /* Make member header wrap on small screens */
+  .member-header {
+    flex-wrap: wrap;
+  }
+
+  /* Ensure round header wraps properly */
+  .round-header {
+    flex-wrap: wrap;
   }
 }
 
