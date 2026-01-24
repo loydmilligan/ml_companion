@@ -4,10 +4,10 @@ import userEvent from "@testing-library/user-event";
 import AdminTabBar from "./AdminTabBar";
 
 const mockTabs = [
-  { id: "people", label: "People", shortLabel: "People", icon: "👥" },
-  { id: "content", label: "Content", shortLabel: "Content", icon: "📋" },
-  { id: "games", label: "Games & AI", shortLabel: "Games", icon: "🎮" },
-  { id: "system", label: "System", shortLabel: "System", icon: "⚙️" },
+  { id: "people", label: "People", icon: "👥" },
+  { id: "content", label: "Content", icon: "📋" },
+  { id: "games", label: "Games & AI", icon: "🎮" },
+  { id: "system", label: "System", icon: "⚙️" },
 ];
 
 describe("AdminTabBar", () => {
@@ -19,11 +19,11 @@ describe("AdminTabBar", () => {
     const tabs = screen.getAllByRole("tab");
     expect(tabs).toHaveLength(4);
 
-    // Verify tab text (appears in both label and shortLabel)
+    // Verify tab text (appears in tab button and selected title)
     expect(screen.getAllByText("People").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Content").length).toBeGreaterThan(0);
+    expect(screen.getByText("Content")).toBeInTheDocument();
     expect(screen.getByText("Games & AI")).toBeInTheDocument();
-    expect(screen.getAllByText("System").length).toBeGreaterThan(0);
+    expect(screen.getByText("System")).toBeInTheDocument();
   });
 
   it("shows active state on current tab", () => {

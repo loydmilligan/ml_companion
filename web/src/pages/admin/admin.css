@@ -218,6 +218,10 @@
 }
 
 /* === Admin Tab Bar === */
+.admin-tab-bar-wrapper {
+  margin-bottom: 16px;
+}
+
 .admin-tab-bar {
   display: flex;
   gap: 4px;
@@ -227,7 +231,6 @@
   scroll-behavior: smooth;
   user-select: none;
   padding: 8px 0;
-  margin-bottom: 16px;
   border-bottom: 1px solid rgba(10, 26, 47, 0.12);
 }
 
@@ -242,8 +245,9 @@
 .admin-tab {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 10px 16px;
+  padding: 10px 12px;
   border-radius: 8px 8px 0 0;
   background: transparent;
   border: none;
@@ -252,7 +256,7 @@
   color: var(--text-muted);
   font-size: 0.9rem;
   transition: all 0.2s ease;
-  flex-shrink: 0;
+  flex: 1;
   min-height: 44px;
 }
 
@@ -269,29 +273,40 @@
 }
 
 .admin-tab__icon {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
 }
 
-/* Mobile: show short label */
+/* Mobile: hide labels, show only icons */
 .admin-tab__label {
   display: none;
 }
 
-.admin-tab__short-label {
-  display: inline;
+/* Mobile: show selected tab title below tabs */
+.admin-tab-bar__selected-title {
+  display: block;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  padding: 8px 0 4px;
 }
 
-/* Desktop: show full label */
-@media (min-width: 768px) {
+/* Desktop: show labels in tabs, hide selected title */
+@media (min-width: 640px) {
   .admin-tab {
     padding: 12px 20px;
+    flex: 0 0 auto;
   }
 
   .admin-tab__label {
     display: inline;
   }
 
-  .admin-tab__short-label {
+  .admin-tab__icon {
+    font-size: 1.1rem;
+  }
+
+  .admin-tab-bar__selected-title {
     display: none;
   }
 }

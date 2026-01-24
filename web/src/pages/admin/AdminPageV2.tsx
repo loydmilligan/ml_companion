@@ -5,10 +5,10 @@ import { PeopleTab, ContentTab, GamesTab, SystemTab } from "./tabs";
 import "./admin.css";
 
 const ADMIN_TABS = [
-  { id: "people", label: "People", shortLabel: "People", icon: "👥" },
-  { id: "content", label: "Content", shortLabel: "Content", icon: "📋" },
-  { id: "games", label: "Games & AI", shortLabel: "Games", icon: "🎮" },
-  { id: "system", label: "System", shortLabel: "System", icon: "⚙️" },
+  { id: "people", label: "People", icon: "👥" },
+  { id: "content", label: "Content", icon: "📋" },
+  { id: "games", label: "Games & AI", icon: "🎮" },
+  { id: "system", label: "System", icon: "⚙️" },
 ] as const;
 
 type AdminTabId = typeof ADMIN_TABS[number]["id"];
