@@ -1,5 +1,55 @@
-import { corsHeaders } from "../_shared/cors.ts";
-import { verifyAuth, unauthorizedResponse } from "../_shared/auth.ts";
+// v39 - MCP deploy to fix entrypoint path
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Inline auth module to avoid module loading issues
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+type AuthResult = {
+  user: { id: string; email: string } | null;
+  isServiceRole: boolean;
+  error: string | null;
+};
+
+async function verifyAuth(req: Request): Promise<AuthResult> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return { user: null, isServiceRole: false, error: "Missing or invalid Authorization header" };
+  }
+
+  const token = authHeader.replace("Bearer ", "");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (token === supabaseServiceKey) {
+    return { user: null, isServiceRole: true, error: null };
+  }
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return { user: null, isServiceRole: false, error: "Server configuration error" };
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+
+  if (error || !user) {
+    return { user: null, isServiceRole: false, error: error?.message || "Invalid token" };
+  }
+
+  return { user: { id: user.id, email: user.email || "" }, isServiceRole: false, error: null };
+}
+
+function unauthorizedResponse(message: string): Response {
+  return new Response(
+    JSON.stringify({ error: message }),
+    { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
 
 const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
 const OPENROUTER_MODEL = Deno.env.get("OPENROUTER_MODEL") ?? "anthropic/claude-3.5-sonnet";
@@ -128,7 +178,7 @@ Deno.serve(async (req) => {
   // Verify authentication (accepts both user JWTs and service role key for internal calls)
   const { user, isServiceRole, error: authError } = await verifyAuth(req);
   if (authError) {
-    return unauthorizedResponse(authError, corsHeaders);
+    return unauthorizedResponse(authError);
   }
 
   if (!OPENROUTER_API_KEY) {
