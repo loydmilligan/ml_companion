@@ -9,11 +9,21 @@
 /* === Base Admin Layout === */
 .admin-page-v2 {
   padding: 16px;
-  max-width: 100%;
   min-height: 100vh;
-  overflow-x: hidden;
-  width: 100%;
   box-sizing: border-box;
+  /* Critical: use calc to account for parent padding */
+  width: calc(100vw - 48px); /* 24px padding on each side from app-shell-body */
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 639px) {
+  .admin-page-v2 {
+    /* On mobile, app-shell-body might have different padding */
+    width: 100%;
+    max-width: calc(100vw - 32px);
+    padding: 8px;
+  }
 }
 
 /* Prevent any child from causing horizontal overflow */
@@ -27,6 +37,7 @@
 .admin-page-v2 select,
 .admin-page-v2 textarea {
   min-width: 0;
+  max-width: 100%;
 }
 
 .admin-title {
