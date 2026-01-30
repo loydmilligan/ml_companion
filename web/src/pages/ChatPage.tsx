@@ -71,6 +71,7 @@ type TagHandlers = {
   onGameTabClick?: () => void;
   onGameNumClick?: (gameNum: number) => void;
   onProgressClick?: () => void;
+  onResearchClick?: () => void;
   youtubePlaylistUrl?: string | null;
   spotifyPlaylistUrl?: string | null;
 };
@@ -78,7 +79,7 @@ type TagHandlers = {
 type MessagePart = {
   text: string;
   href?: string;
-  tagType?: "peek_btn" | "hist" | "game_tab" | "game_num" | "prog_tab" | "yt_list" | "spt_list";
+  tagType?: "peek_btn" | "hist" | "game_tab" | "game_num" | "prog_tab" | "rsch_tab" | "yt_list" | "spt_list";
   season?: number;
   round?: number;
   gameNum?: number;
@@ -87,8 +88,8 @@ type MessagePart = {
 function renderMessageBody(text: string, handlers?: TagHandlers) {
   const parts: MessagePart[] = [];
   // Match @[label](url) links and all custom tags
-  // Tags: <peek_btn>, <hist_y.z>, <game_tab>, <game_1-3>, <prog_tab>, <yt_list>, <spt_list>
-  const regex = /(@\[(.+?)\]\((https?:\/\/[^)]+)\)|<peek_btn>|<hist_(\d+)\.(\d+)>|<game_tab>|<game_([1-3])>|<prog_tab>|<yt_list>|<spt_list>)/g;
+  // Tags: <peek_btn>, <hist_y.z>, <game_tab>, <game_1-3>, <prog_tab>, <rsch_tab>, <yt_list>, <spt_list>
+  const regex = /(@\[(.+?)\]\((https?:\/\/[^)]+)\)|<peek_btn>|<hist_(\d+)\.(\d+)>|<game_tab>|<game_([1-3])>|<prog_tab>|<rsch_tab>|<yt_list>|<spt_list>)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = regex.exec(text)) !== null) {
@@ -109,6 +110,8 @@ function renderMessageBody(text: string, handlers?: TagHandlers) {
       parts.push({ text: "", tagType: "game_num", gameNum });
     } else if (fullMatch === "<prog_tab>") {
       parts.push({ text: "", tagType: "prog_tab" });
+    } else if (fullMatch === "<rsch_tab>") {
+      parts.push({ text: "", tagType: "rsch_tab" });
     } else if (fullMatch === "<yt_list>") {
       parts.push({ text: "", tagType: "yt_list" });
     } else if (fullMatch === "<spt_list>") {
@@ -213,6 +216,26 @@ function renderMessageBody(text: string, handlers?: TagHandlers) {
             <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
           </svg>
           <span>Progress</span>
+        </button>
+      );
+    }
+    if (part.tagType === "rsch_tab") {
+      return (
+        <button
+          key={`rsch-${index}`}
+          type="button"
+          className="inline-tag-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            handlers?.onResearchClick?.();
+          }}
+          title="Open Research panel"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <span>Research</span>
         </button>
       );
     }
@@ -1084,6 +1107,7 @@ export default function ChatPage() {
                     openPanel("games");
                   },
                   onProgressClick: () => openPanel("progress"),
+                  onResearchClick: () => openPanel("research"),
                   youtubePlaylistUrl: round?.youtube_playlist_url,
                   spotifyPlaylistUrl: round?.playlist_url || round?.external_playlist_url,
                 })}</p>
