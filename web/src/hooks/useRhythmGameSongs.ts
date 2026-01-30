@@ -55,11 +55,13 @@ export function useRhythmGameSongs(filters: RhythmGameFilters = DEFAULT_FILTERS)
       setLoading(true);
       setError(null);
 
+      // Supabase default limit is 1000, we need all ~5000 songs
       const { data, error: fetchError } = await supabase
         .from("rhythm_game_songs")
         .select("*")
         .order("artist", { ascending: true })
-        .order("title", { ascending: true });
+        .order("title", { ascending: true })
+        .range(0, 9999);
 
       if (!active) return;
 
