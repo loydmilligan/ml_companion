@@ -9,6 +9,7 @@ import {
   fetchSpotifyData,
 } from "../../hooks/useRhythmGameSongs";
 import { useAuth } from "../../contexts/AuthContext";
+import { supabase } from "../../lib/supabase";
 
 type ResearchSongCardProps = {
   song: RhythmGameSong;
@@ -66,6 +67,13 @@ export default function ResearchSongCard({
     popularity: number | null;
   } | null>(null);
   const [loadingSpotify, setLoadingSpotify] = useState(false);
+  const [platformLinks, setPlatformLinks] = useState<{
+    spotify?: string;
+    appleMusic?: string;
+    youtube?: string;
+    youtubeMusic?: string;
+  } | null>(null);
+  const [loadingLinks, setLoadingLinks] = useState(false);
   const { profile } = useAuth();
 
   // Lazy-load Spotify data when card becomes visible
@@ -103,6 +111,57 @@ export default function ResearchSongCard({
       cancelled = true;
     };
   }, [song]);
+
+  // Fetch multi-platform links when card is expanded and we have Spotify URL
+  useEffect(() => {
+    if (!expanded || !spotifyData?.spotify_url || platformLinks || loadingLinks) return;
+
+    let cancelled = false;
+
+    async function fetchPlatformLinks() {
+      setLoadingLinks(true);
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || cancelled) return;
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/song-links`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              mode: "convert",
+              spotify_uri: spotifyData?.spotify_url,
+            }),
+          }
+        );
+
+        if (!response.ok || cancelled) return;
+
+        const result = await response.json();
+
+        if (!cancelled && result.links) {
+          setPlatformLinks(result.links);
+        }
+      } catch (error) {
+        console.error("Error fetching platform links:", error);
+      } finally {
+        if (!cancelled) {
+          setLoadingLinks(false);
+        }
+      }
+    }
+
+    fetchPlatformLinks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [expanded, spotifyData?.spotify_url, platformLinks, loadingLinks]);
 
   // Get the appropriate music service URL based on user preference
   const preferredProvider = profile?.preferred_music_provider ?? "spotify";
@@ -249,6 +308,38 @@ export default function ResearchSongCard({
               ))}
             </ul>
           </div>
+
+          {/* Multi-platform links */}
+          {spotifyData?.spotify_url && (
+            <div className="platform-links">
+              <strong>Listen on:</strong>
+              {loadingLinks && <span className="platform-links-loading">Loading links...</span>}
+              {!loadingLinks && platformLinks && (
+                <div className="platform-links-list">
+                  {platformLinks.spotify && (
+                    <a href={platformLinks.spotify} target="_blank" rel="noopener noreferrer" className="platform-link spotify">
+                      Spotify
+                    </a>
+                  )}
+                  {platformLinks.appleMusic && (
+                    <a href={platformLinks.appleMusic} target="_blank" rel="noopener noreferrer" className="platform-link apple-music">
+                      Apple Music
+                    </a>
+                  )}
+                  {platformLinks.youtubeMusic && (
+                    <a href={platformLinks.youtubeMusic} target="_blank" rel="noopener noreferrer" className="platform-link youtube-music">
+                      YouTube Music
+                    </a>
+                  )}
+                  {platformLinks.youtube && (
+                    <a href={platformLinks.youtube} target="_blank" rel="noopener noreferrer" className="platform-link youtube">
+                      YouTube
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
