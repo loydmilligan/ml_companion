@@ -12,7 +12,6 @@ import { useAuth } from "../../contexts/AuthContext";
 type ResearchPanelProps = {
   isOpen: boolean;
   onClose: () => void;
-  onMention?: (text: string) => void;
 };
 
 const DEBOUNCE_MS = 300;
@@ -24,7 +23,6 @@ const DEBOUNCE_MS = 300;
 export default function ResearchPanel({
   isOpen,
   onClose,
-  onMention,
 }: ResearchPanelProps) {
   const { profile } = useAuth();
   const userId = profile?.id ?? null;
@@ -92,6 +90,18 @@ export default function ResearchPanel({
         ? f.decades.filter(d => d !== decade)
         : [...f.decades, decade],
     }));
+  }, []);
+
+  // Handle copying song mention to clipboard
+  const handleMention = useCallback(async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      // TODO: Replace with proper toast notification
+      alert(`📋 Copied to clipboard!\n\n${text}\n\nPaste this into chat to share the song.`);
+    } catch (err) {
+      console.error("Failed to copy to clipboard:", err);
+      alert("Failed to copy to clipboard. Please try again.");
+    }
   }, []);
 
   // Get favorite songs from ALL songs (unfiltered) so favorites always show
@@ -374,7 +384,7 @@ export default function ResearchPanel({
                         song={song}
                         isFavorite={true}
                         onToggleFavorite={() => toggleFavorite(song.id)}
-                        onMention={onMention}
+                        onMention={handleMention}
                         rankPosition={index + 1}
                         totalFavorites={favoriteSongs.length}
                         onMoveUp={index > 0 ? () => moveFavoriteUp(song.id) : undefined}
@@ -400,7 +410,7 @@ export default function ResearchPanel({
                       song={song}
                       isFavorite={isFavorite(song.id)}
                       onToggleFavorite={() => toggleFavorite(song.id)}
-                      onMention={onMention}
+                      onMention={handleMention}
                     />
                   ))}
                   {hasMore && (
