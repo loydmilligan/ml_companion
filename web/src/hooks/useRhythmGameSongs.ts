@@ -31,7 +31,10 @@ export type RhythmGameFilters = {
   showGuitarHero: boolean;
   showRockBand: boolean;
   hideDLC: boolean;
-  genre: string | null;
+  genres: string[]; // Changed from single to array
+  decades: string[]; // e.g., ["1970s", "1980s"]
+  yearRange: [number, number] | null; // e.g., [1975, 1985]
+  useDecades: boolean; // true = decades pills, false = timeline slider
 };
 
 const DEFAULT_FILTERS: RhythmGameFilters = {
@@ -39,7 +42,10 @@ const DEFAULT_FILTERS: RhythmGameFilters = {
   showGuitarHero: true,
   showRockBand: true,
   hideDLC: false,
-  genre: null,
+  genres: [],
+  decades: [],
+  yearRange: null,
+  useDecades: true,
 };
 
 /**
@@ -112,6 +118,12 @@ export function useRhythmGameSongs(filters: RhythmGameFilters = DEFAULT_FILTERS)
     };
   }, []);
 
+  // Calculate year range from all songs
+  const yearRange = useMemo((): [number, number] => {
+    const years = songs.filter(s => s.year).map(s => s.year!);
+    return years.length ? [Math.min(...years), Math.max(...years)] : [1950, new Date().getFullYear()];
+  }, [songs]);
+
   // Filter songs based on current filters
   const filteredSongs = useMemo(() => {
     return songs.filter(song => {
@@ -131,8 +143,24 @@ export function useRhythmGameSongs(filters: RhythmGameFilters = DEFAULT_FILTERS)
       // DLC filter
       if (filters.hideDLC && song.is_dlc) return false;
 
-      // Genre filter
-      if (filters.genre && song.genre !== filters.genre) return false;
+      // Genre filters (multiple selection)
+      if (filters.genres.length > 0 && !filters.genres.includes(song.genre || "")) return false;
+
+      // Year filters
+      if (song.year) {
+        // Decade filters
+        if (filters.useDecades && filters.decades.length > 0) {
+          const decade = Math.floor(song.year / 10) * 10;
+          const decadeStr = `${decade}s`;
+          if (!filters.decades.includes(decadeStr)) return false;
+        }
+
+        // Year range filter (timeline slider)
+        if (!filters.useDecades && filters.yearRange) {
+          const [min, max] = filters.yearRange;
+          if (song.year < min || song.year > max) return false;
+        }
+      }
 
       return true;
     });
@@ -142,6 +170,7 @@ export function useRhythmGameSongs(filters: RhythmGameFilters = DEFAULT_FILTERS)
     songs: filteredSongs,
     allSongs: songs,
     genres,
+    yearRange,
     loading,
     error,
     totalCount: songs.length,

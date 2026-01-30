@@ -30,14 +30,20 @@ export default function ResearchPanel({
   const userId = profile?.id ?? null;
 
   // Filters state
-  const [filters, setFilters] = useState<RhythmGameFilters>({
+  const DEFAULT_FILTERS: RhythmGameFilters = {
     search: "",
     showGuitarHero: true,
     showRockBand: true,
     hideDLC: false,
-    genre: null,
-  });
+    genres: [],
+    decades: [],
+    yearRange: null,
+    useDecades: true,
+  };
+
+  const [filters, setFilters] = useState<RhythmGameFilters>(DEFAULT_FILTERS);
   const [searchInput, setSearchInput] = useState("");
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
 
   // Debounce search input
   useEffect(() => {
@@ -48,8 +54,45 @@ export default function ResearchPanel({
   }, [searchInput]);
 
   // Data hooks
-  const { songs, allSongs, genres, loading, error, filteredCount, totalCount } = useRhythmGameSongs(filters);
+  const { songs, allSongs, genres, yearRange, loading, error, filteredCount, totalCount } = useRhythmGameSongs(filters);
   const { isFavorite, toggleFavorite, favoriteIds } = useRhythmGameFavorites(userId);
+
+  // Generate decade pills
+  const decades = useMemo(() => {
+    if (!yearRange) return [];
+    const [min, max] = yearRange;
+    const startDecade = Math.floor(min / 10) * 10;
+    const endDecade = Math.floor(max / 10) * 10;
+    const result = [];
+    for (let d = startDecade; d <= endDecade; d += 10) {
+      result.push(`${d}s`);
+    }
+    return result;
+  }, [yearRange]);
+
+  // Filter helpers
+  const resetFilters = useCallback(() => {
+    setFilters(DEFAULT_FILTERS);
+    setSearchInput("");
+  }, [DEFAULT_FILTERS]);
+
+  const toggleGenre = useCallback((genre: string) => {
+    setFilters(f => ({
+      ...f,
+      genres: f.genres.includes(genre)
+        ? f.genres.filter(g => g !== genre)
+        : [...f.genres, genre],
+    }));
+  }, []);
+
+  const toggleDecade = useCallback((decade: string) => {
+    setFilters(f => ({
+      ...f,
+      decades: f.decades.includes(decade)
+        ? f.decades.filter(d => d !== decade)
+        : [...f.decades, decade],
+    }));
+  }, []);
 
   // Get favorite songs from ALL songs (unfiltered) so favorites always show
   const favoriteSongs = useMemo(() => {
@@ -193,17 +236,107 @@ export default function ResearchPanel({
               ⛔ No DLC
             </button>
 
-            <select
-              className="research-genre-select"
-              value={filters.genre || ""}
-              onChange={(e) => setFilters(f => ({ ...f, genre: e.target.value || null }))}
+            <button
+              type="button"
+              className="filter-pill-outline"
+              onClick={() => setFiltersExpanded(!filtersExpanded)}
             >
-              <option value="">All Genres</option>
-              {genres.map(genre => (
-                <option key={genre} value={genre}>{genre}</option>
-              ))}
-            </select>
+              {filtersExpanded ? "▲" : "▼"} More Filters
+            </button>
+
+            <button
+              type="button"
+              className="filter-pill-outline reset"
+              onClick={resetFilters}
+              title="Reset all filters"
+            >
+              ↻ Reset
+            </button>
           </div>
+
+          {/* Collapsible Advanced Filters */}
+          {filtersExpanded && (
+            <div className="research-advanced-filters">
+              {/* Genre Filters */}
+              {genres.length > 0 && (
+                <div className="filter-group">
+                  <div className="filter-group-label">Genres</div>
+                  <div className="filter-pills-wrap">
+                    {genres.map(genre => (
+                      <button
+                        key={genre}
+                        type="button"
+                        className={clsx("filter-pill-small", filters.genres.includes(genre) && "active")}
+                        onClick={() => toggleGenre(genre)}
+                      >
+                        {genre}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Year Filters */}
+              <div className="filter-group">
+                <div className="filter-group-header">
+                  <div className="filter-group-label">Release Year</div>
+                  <button
+                    type="button"
+                    className="filter-toggle-btn"
+                    onClick={() => setFilters(f => ({ ...f, useDecades: !f.useDecades, decades: [], yearRange: null }))}
+                  >
+                    {filters.useDecades ? "📅 Timeline" : "📊 Decades"}
+                  </button>
+                </div>
+
+                {filters.useDecades ? (
+                  <div className="filter-pills-wrap">
+                    {decades.map(decade => (
+                      <button
+                        key={decade}
+                        type="button"
+                        className={clsx("filter-pill-small", filters.decades.includes(decade) && "active")}
+                        onClick={() => toggleDecade(decade)}
+                      >
+                        {decade}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="timeline-slider-container">
+                    <input
+                      type="range"
+                      min={yearRange[0]}
+                      max={yearRange[1]}
+                      value={filters.yearRange?.[0] ?? yearRange[0]}
+                      onChange={(e) => {
+                        const min = parseInt(e.target.value);
+                        const max = filters.yearRange?.[1] ?? yearRange[1];
+                        setFilters(f => ({ ...f, yearRange: [Math.min(min, max), max] }));
+                      }}
+                      className="timeline-slider"
+                    />
+                    <input
+                      type="range"
+                      min={yearRange[0]}
+                      max={yearRange[1]}
+                      value={filters.yearRange?.[1] ?? yearRange[1]}
+                      onChange={(e) => {
+                        const max = parseInt(e.target.value);
+                        const min = filters.yearRange?.[0] ?? yearRange[0];
+                        setFilters(f => ({ ...f, yearRange: [min, Math.max(min, max)] }));
+                      }}
+                      className="timeline-slider"
+                    />
+                    <div className="timeline-labels">
+                      <span>{filters.yearRange?.[0] ?? yearRange[0]}</span>
+                      <span>{filters.yearRange?.[1] ?? yearRange[1]}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="research-filter-count">
             Showing {filteredCount.toLocaleString()} of {totalCount.toLocaleString()} songs
