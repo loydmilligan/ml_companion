@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 
 type PanelType = "playlist" | "progress" | "games" | "research" | null;
 type GameTab = "submitter-guess" | "timeline" | "round-challenge";
@@ -28,9 +29,21 @@ type SidePanelContextValue = {
 const SidePanelContext = createContext<SidePanelContextValue | null>(null);
 
 export function SidePanelProvider({ children }: { children: ReactNode }) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activePanel, setActivePanel] = useState<PanelType>(null);
   const [quotedSong, setQuotedSong] = useState<SubmissionRow | null>(null);
   const [gamesActiveTab, setGamesActiveTab] = useState<GameTab>("submitter-guess");
+
+  // Check for panel URL parameter on mount
+  useEffect(() => {
+    const panelParam = searchParams.get("panel");
+    if (panelParam && ["playlist", "progress", "games", "research"].includes(panelParam)) {
+      setActivePanel(panelParam as PanelType);
+      // Clear the parameter after opening the panel
+      searchParams.delete("panel");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, []); // Only run once on mount
 
   // Opening a panel closes any other open panel (mutex behavior)
   const openPanel = useCallback((panel: PanelType) => {
