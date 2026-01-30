@@ -8,7 +8,8 @@ import {
   type RhythmGameFilters,
 } from "../../hooks/useRhythmGameSongs";
 import { useAuth } from "../../contexts/AuthContext";
-import rockBandLogo from "../../assets/rock-band-logo.png";
+import rockBandLogo from "../../assets/rock_band_4_inst_logo.png";
+import guitarHeroLogo from "../../assets/gh_flames_logo.png";
 
 type ResearchPanelProps = {
   isOpen: boolean;
@@ -92,7 +93,7 @@ export default function ResearchPanel({
   }, [filters]);
 
   // Data hooks
-  const { songs, allSongs, genres, yearRange, loading, error, filteredCount, totalCount } = useRhythmGameSongs(filters);
+  const { songs, allSongs, yearRange, loading, error, filteredCount, totalCount } = useRhythmGameSongs(filters);
   const { favorites, isFavorite, toggleFavorite, moveFavoriteUp, moveFavoriteDown, favoriteIds } = useRhythmGameFavorites(userId);
 
   // Generate decade pills
@@ -279,10 +280,11 @@ export default function ResearchPanel({
           <div className="research-filter-row">
             <button
               type="button"
-              className={clsx("filter-pill", filters.showGuitarHero && "active")}
+              className={clsx("filter-pill filter-pill-with-logo", filters.showGuitarHero && "active")}
               onClick={() => setFilters(f => ({ ...f, showGuitarHero: !f.showGuitarHero }))}
             >
-              🎸 Guitar Hero
+              <img src={guitarHeroLogo} alt="Guitar Hero" className="filter-pill-logo" />
+              Guitar Hero
             </button>
 
             <button
