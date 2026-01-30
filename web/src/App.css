@@ -9324,6 +9324,23 @@
   color: #a5b4fc;
 }
 
+.popularity-badge {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.15) 0%, rgba(249, 115, 22, 0.15) 100%);
+  color: #ea580c;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+[data-mode="dark"] .popularity-badge {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.25) 0%, rgba(249, 115, 22, 0.25) 100%);
+  color: #fb923c;
+}
+
 /* Action buttons */
 .research-song-card-actions {
   display: flex;

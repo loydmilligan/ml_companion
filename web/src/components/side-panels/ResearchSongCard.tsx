@@ -63,6 +63,7 @@ export default function ResearchSongCard({
   const [spotifyData, setSpotifyData] = useState<{
     spotify_url: string | null;
     artwork_url: string | null;
+    popularity: number | null;
   } | null>(null);
   const [loadingSpotify, setLoadingSpotify] = useState(false);
   const { profile } = useAuth();
@@ -73,6 +74,7 @@ export default function ResearchSongCard({
       setSpotifyData({
         spotify_url: song.spotify_url,
         artwork_url: song.artwork_url,
+        popularity: song.popularity ?? null,
       });
       return;
     }
@@ -89,6 +91,7 @@ export default function ResearchSongCard({
         setSpotifyData({
           spotify_url: data.spotify_url,
           artwork_url: data.artwork_url,
+          popularity: data.popularity,
         });
         setLoadingSpotify(false);
       }
@@ -166,6 +169,14 @@ export default function ResearchSongCard({
           <div className="research-song-card-meta">
             {song.year && <span>{song.year}</span>}
             {song.genre && <span className="genre-tag">{song.genre}</span>}
+            {spotifyData?.popularity !== null && spotifyData?.popularity !== undefined && (
+              <span className="popularity-badge" title={`Spotify popularity: ${spotifyData.popularity}/100`}>
+                {spotifyData.popularity >= 70 && '🔥'}
+                {spotifyData.popularity >= 50 && spotifyData.popularity < 70 && '📈'}
+                {spotifyData.popularity < 50 && '💎'}
+                {spotifyData.popularity}
+              </span>
+            )}
           </div>
         </div>
 

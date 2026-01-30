@@ -18,6 +18,7 @@ interface SpotifyTrack {
   external_urls: {
     spotify: string;
   };
+  popularity: number; // 0-100 popularity score
 }
 
 interface SpotifySearchResponse {
@@ -33,6 +34,7 @@ interface SearchResult {
   title: string;
   artist: string;
   confidence: "high" | "medium" | "low";
+  popularity: number | null; // 0-100 popularity score from Spotify
 }
 
 // In-memory token cache (edge function instances last ~5 minutes)
@@ -111,6 +113,7 @@ async function searchSpotifyTrack(
       title,
       artist,
       confidence: "low",
+      popularity: null,
     };
   }
 
@@ -124,6 +127,7 @@ async function searchSpotifyTrack(
       title,
       artist,
       confidence: "low",
+      popularity: null,
     };
   }
 
@@ -155,6 +159,7 @@ async function searchSpotifyTrack(
     title: track.name,
     artist: track.artists.map(a => a.name).join(", "),
     confidence,
+    popularity: track.popularity,
   };
 }
 

@@ -17,6 +17,7 @@ export type RhythmGameSong = {
   spotify_track_id?: string | null;
   spotify_url?: string | null;
   artwork_url?: string | null;
+  popularity?: number | null; // 0-100 Spotify popularity score
 };
 
 export type RhythmGameFavorite = {
@@ -385,7 +386,7 @@ export function formatSongForMention(song: RhythmGameSong): string {
  */
 export async function fetchSpotifyData(
   song: RhythmGameSong
-): Promise<{ spotify_track_id: string | null; spotify_url: string | null; artwork_url: string | null }> {
+): Promise<{ spotify_track_id: string | null; spotify_url: string | null; artwork_url: string | null; popularity: number | null }> {
   // Check cache
   const cacheKey = `spotify_${song.id}`;
   const cached = localStorage.getItem(cacheKey);
@@ -400,7 +401,7 @@ export async function fetchSpotifyData(
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      return { spotify_track_id: null, spotify_url: null, artwork_url: null };
+      return { spotify_track_id: null, spotify_url: null, artwork_url: null, popularity: null };
     }
 
     const response = await fetch(
@@ -428,6 +429,7 @@ export async function fetchSpotifyData(
       spotify_track_id: result.trackId || null,
       spotify_url: result.spotifyUrl || null,
       artwork_url: result.artworkUrl || null,
+      popularity: result.popularity ?? null,
     };
 
     // Cache for 7 days
@@ -436,6 +438,6 @@ export async function fetchSpotifyData(
     return spotifyData;
   } catch (error) {
     console.error("Error fetching Spotify data:", error);
-    return { spotify_track_id: null, spotify_url: null, artwork_url: null };
+    return { spotify_track_id: null, spotify_url: null, artwork_url: null, popularity: null };
   }
 }
