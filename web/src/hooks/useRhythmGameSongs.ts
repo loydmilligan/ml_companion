@@ -13,6 +13,10 @@ export type RhythmGameSong = {
   is_dlc: boolean;
   games: string[];
   created_at: string;
+  // Spotify data (fetched lazily)
+  spotify_track_id?: string | null;
+  spotify_url?: string | null;
+  artwork_url?: string | null;
 };
 
 export type RhythmGameFavorite = {
@@ -279,4 +283,65 @@ export function formatSongForMention(song: RhythmGameSong): string {
   const games = song.games.slice(0, 2).join(", ");
   const moreGames = song.games.length > 2 ? ` +${song.games.length - 2} more` : "";
   return `${song.artist} - "${song.title}" (${games}${moreGames})`;
+}
+
+/**
+ * Fetch Spotify data for a song (track ID, artwork, direct link)
+ * Uses localStorage for caching
+ */
+export async function fetchSpotifyData(
+  song: RhythmGameSong
+): Promise<{ spotify_track_id: string | null; spotify_url: string | null; artwork_url: string | null }> {
+  // Check cache
+  const cacheKey = `spotify_${song.id}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch {
+      // Invalid cache, continue to fetch
+    }
+  }
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return { spotify_track_id: null, spotify_url: null, artwork_url: null };
+    }
+
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/spotify-search`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          artist: song.artist,
+          title: song.title,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Spotify search failed: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    const spotifyData = {
+      spotify_track_id: result.trackId || null,
+      spotify_url: result.spotifyUrl || null,
+      artwork_url: result.artworkUrl || null,
+    };
+
+    // Cache for 7 days
+    localStorage.setItem(cacheKey, JSON.stringify(spotifyData));
+
+    return spotifyData;
+  } catch (error) {
+    console.error("Error fetching Spotify data:", error);
+    return { spotify_track_id: null, spotify_url: null, artwork_url: null };
+  }
 }

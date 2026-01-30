@@ -8721,7 +8721,14 @@
    ======================================== */
 
 .side-panel-research {
-  width: min(380px, 90vw);
+  width: min(800px, 95vw);
+  max-width: 95vw;
+}
+
+@media (max-width: 768px) {
+  .side-panel-research {
+    width: 90vw;
+  }
 }
 
 /* Header */
@@ -8821,56 +8828,50 @@
   align-items: center;
 }
 
-.research-filter-toggle {
-  display: flex;
+/* Pill filter buttons */
+.filter-pill {
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  cursor: pointer;
-}
-
-.research-filter-toggle input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
-  accent-color: #6366f1;
-}
-
-.filter-label {
-  font-size: 12px;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 2px solid rgba(99, 102, 241, 0.2);
+  border-radius: 24px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
 }
 
-.filter-label.gh {
-  background: rgba(255, 165, 0, 0.15);
-  color: #d97706;
+.filter-pill:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(99, 102, 241, 0.05);
 }
 
-.filter-label.rb {
-  background: rgba(220, 38, 38, 0.15);
-  color: #dc2626;
+.filter-pill.active {
+  border-color: #6366f1;
+  background: #6366f1;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 
-.filter-label.dlc {
-  background: rgba(100, 116, 139, 0.15);
-  color: #64748b;
+[data-mode="dark"] .filter-pill {
+  border-color: rgba(129, 140, 248, 0.25);
+  color: var(--text-secondary);
 }
 
-[data-mode="dark"] .filter-label.gh {
-  background: rgba(255, 165, 0, 0.25);
-  color: #fbbf24;
+[data-mode="dark"] .filter-pill:hover {
+  border-color: rgba(129, 140, 248, 0.4);
+  background: rgba(129, 140, 248, 0.1);
 }
 
-[data-mode="dark"] .filter-label.rb {
-  background: rgba(220, 38, 38, 0.25);
-  color: #f87171;
-}
-
-[data-mode="dark"] .filter-label.dlc {
-  background: rgba(100, 116, 139, 0.25);
-  color: #94a3b8;
+[data-mode="dark"] .filter-pill.active {
+  border-color: #818cf8;
+  background: #818cf8;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(129, 140, 248, 0.4);
 }
 
 .research-genre-select {
@@ -8961,6 +8962,29 @@
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
+}
+
+/* Album artwork */
+.research-song-artwork {
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.research-song-artwork-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  color: var(--text-tertiary);
+  font-size: 18px;
+  font-weight: 300;
+}
+
+[data-mode="dark"] .research-song-artwork-placeholder {
+  background: linear-gradient(135deg, rgba(129, 140, 248, 0.15) 0%, rgba(167, 139, 250, 0.15) 100%);
 }
 
 /* Franchise icons column */

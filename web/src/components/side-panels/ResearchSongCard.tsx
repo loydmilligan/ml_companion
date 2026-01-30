@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import clsx from "clsx";
 import type { RhythmGameSong } from "../../hooks/useRhythmGameSongs";
 import {
@@ -6,6 +6,7 @@ import {
   getYouTubeMusicSearchUrl,
   getAppleMusicSearchUrl,
   formatSongForMention,
+  fetchSpotifyData,
 } from "../../hooks/useRhythmGameSongs";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -51,12 +52,57 @@ export default function ResearchSongCard({
   onMention,
 }: ResearchSongCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [spotifyData, setSpotifyData] = useState<{
+    spotify_url: string | null;
+    artwork_url: string | null;
+  } | null>(null);
+  const [loadingSpotify, setLoadingSpotify] = useState(false);
   const { profile } = useAuth();
+
+  // Lazy-load Spotify data when card becomes visible
+  useEffect(() => {
+    if (song.spotify_url && song.artwork_url) {
+      setSpotifyData({
+        spotify_url: song.spotify_url,
+        artwork_url: song.artwork_url,
+      });
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadSpotifyData() {
+      if (loadingSpotify || spotifyData) return;
+
+      setLoadingSpotify(true);
+      const data = await fetchSpotifyData(song);
+
+      if (!cancelled) {
+        setSpotifyData({
+          spotify_url: data.spotify_url,
+          artwork_url: data.artwork_url,
+        });
+        setLoadingSpotify(false);
+      }
+    }
+
+    loadSpotifyData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [song]);
 
   // Get the appropriate music service URL based on user preference
   const preferredProvider = profile?.preferred_music_provider ?? "spotify";
 
   const getMusicUrl = () => {
+    // Use real Spotify link if available
+    if (preferredProvider === "spotify" && spotifyData?.spotify_url) {
+      return spotifyData.spotify_url;
+    }
+
+    // Fallback to search URLs
     switch (preferredProvider) {
       case "apple_music":
         return getAppleMusicSearchUrl(song);
@@ -76,6 +122,19 @@ export default function ResearchSongCard({
   return (
     <div className={clsx("research-song-card", expanded && "expanded")}>
       <div className="research-song-card-main">
+        {/* Album artwork */}
+        {spotifyData?.artwork_url ? (
+          <img
+            src={spotifyData.artwork_url}
+            alt={`${song.title} album art`}
+            className="research-song-artwork"
+          />
+        ) : (
+          <div className="research-song-artwork research-song-artwork-placeholder">
+            {loadingSpotify ? "..." : "♪"}
+          </div>
+        )}
+
         {/* Franchise icons */}
         <div className="research-song-card-icons">
           {song.is_guitar_hero && <GuitarHeroIcon />}

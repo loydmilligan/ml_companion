@@ -169,32 +169,29 @@ export default function ResearchPanel({
           />
 
           <div className="research-filter-row">
-            <label className="research-filter-toggle">
-              <input
-                type="checkbox"
-                checked={filters.showGuitarHero}
-                onChange={(e) => setFilters(f => ({ ...f, showGuitarHero: e.target.checked }))}
-              />
-              <span className="filter-label gh">GH</span>
-            </label>
+            <button
+              type="button"
+              className={clsx("filter-pill", filters.showGuitarHero && "active")}
+              onClick={() => setFilters(f => ({ ...f, showGuitarHero: !f.showGuitarHero }))}
+            >
+              🎸 Guitar Hero
+            </button>
 
-            <label className="research-filter-toggle">
-              <input
-                type="checkbox"
-                checked={filters.showRockBand}
-                onChange={(e) => setFilters(f => ({ ...f, showRockBand: e.target.checked }))}
-              />
-              <span className="filter-label rb">RB</span>
-            </label>
+            <button
+              type="button"
+              className={clsx("filter-pill", filters.showRockBand && "active")}
+              onClick={() => setFilters(f => ({ ...f, showRockBand: !f.showRockBand }))}
+            >
+              🥁 Rock Band
+            </button>
 
-            <label className="research-filter-toggle">
-              <input
-                type="checkbox"
-                checked={filters.hideDLC}
-                onChange={(e) => setFilters(f => ({ ...f, hideDLC: e.target.checked }))}
-              />
-              <span className="filter-label dlc">No DLC</span>
-            </label>
+            <button
+              type="button"
+              className={clsx("filter-pill", filters.hideDLC && "active")}
+              onClick={() => setFilters(f => ({ ...f, hideDLC: !f.hideDLC }))}
+            >
+              ⛔ No DLC
+            </button>
 
             <select
               className="research-genre-select"
