@@ -8,6 +8,7 @@ import {
   type RhythmGameFilters,
 } from "../../hooks/useRhythmGameSongs";
 import { useAuth } from "../../contexts/AuthContext";
+import rockBandLogo from "../../assets/rock-band-logo.png";
 
 type ResearchPanelProps = {
   isOpen: boolean;
@@ -16,10 +17,24 @@ type ResearchPanelProps = {
 
 const DEBOUNCE_MS = 300;
 
+// Genre groups for better mobile UX
+const GENRE_GROUPS = {
+  "Rock: Classic & Mainstream": ["Classic Rock", "Glam", "Pop-Rock", "Rock", "Southern Rock"],
+  "Rock: Heavy & Aggressive": ["Emo", "Grunge", "Metal", "Nu-Metal", "Punk"],
+  "Rock: Alternative & Experimental": ["Alternative", "Indie Rock", "J-Rock", "New Wave", "Prog"],
+  "Hip-Hop, R&B & Urban": ["Hip-Hop/Rap", "R&B/Soul/Funk", "Urban"],
+  "Country, Blues & Roots": ["Blues", "Country", "Reggae/Ska"],
+  "Jazz & Classical": ["Classical", "Fusion", "Jazz"],
+  "Pop & International": ["Latin", "Pop/Dance/Electronic"],
+  "Miscellaneous": ["Inspirational", "Novelty", "N/A", "Other"],
+};
+
 /**
  * Panel for researching Guitar Hero / Rock Band songs for the
  * "Shred Dead Redemption" round theme.
  */
+const STORAGE_KEY = "research-panel-filters";
+
 export default function ResearchPanel({
   isOpen,
   onClose,
@@ -32,16 +47,32 @@ export default function ResearchPanel({
     search: "",
     showGuitarHero: true,
     showRockBand: true,
-    hideDLC: false,
+    hideDLC: true, // Hide DLC by default
     genres: [],
     decades: [],
     yearRange: null,
     useDecades: true,
   };
 
-  const [filters, setFilters] = useState<RhythmGameFilters>(DEFAULT_FILTERS);
-  const [searchInput, setSearchInput] = useState("");
+  // Load filters from localStorage on mount
+  const loadSavedFilters = useCallback((): RhythmGameFilters => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Merge with defaults to ensure new fields are present
+        return { ...DEFAULT_FILTERS, ...parsed };
+      }
+    } catch (err) {
+      console.error("Failed to load saved filters:", err);
+    }
+    return DEFAULT_FILTERS;
+  }, [DEFAULT_FILTERS]);
+
+  const [filters, setFilters] = useState<RhythmGameFilters>(loadSavedFilters);
+  const [searchInput, setSearchInput] = useState(filters.search);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [expandedGenreGroups, setExpandedGenreGroups] = useState<Set<string>>(new Set());
 
   // Debounce search input
   useEffect(() => {
@@ -50,6 +81,15 @@ export default function ResearchPanel({
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [searchInput]);
+
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
+    } catch (err) {
+      console.error("Failed to save filters:", err);
+    }
+  }, [filters]);
 
   // Data hooks
   const { songs, allSongs, genres, yearRange, loading, error, filteredCount, totalCount } = useRhythmGameSongs(filters);
@@ -92,16 +132,28 @@ export default function ResearchPanel({
     }));
   }, []);
 
-  // Handle copying song mention to clipboard
-  const handleMention = useCallback(async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      // TODO: Replace with proper toast notification
-      alert(`📋 Copied to clipboard!\n\n${text}\n\nPaste this into chat to share the song.`);
-    } catch (err) {
-      console.error("Failed to copy to clipboard:", err);
-      alert("Failed to copy to clipboard. Please try again.");
-    }
+  const toggleGenreGroup = useCallback((groupName: string) => {
+    const groupGenres = GENRE_GROUPS[groupName as keyof typeof GENRE_GROUPS];
+    const allSelected = groupGenres.every(g => filters.genres.includes(g));
+
+    setFilters(f => ({
+      ...f,
+      genres: allSelected
+        ? f.genres.filter(g => !groupGenres.includes(g))
+        : [...new Set([...f.genres, ...groupGenres])],
+    }));
+  }, [filters.genres]);
+
+  const toggleGenreGroupExpansion = useCallback((groupName: string) => {
+    setExpandedGenreGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupName)) {
+        next.delete(groupName);
+      } else {
+        next.add(groupName);
+      }
+      return next;
+    });
   }, []);
 
   // Get favorite songs from ALL songs (unfiltered) so favorites always show
@@ -235,10 +287,11 @@ export default function ResearchPanel({
 
             <button
               type="button"
-              className={clsx("filter-pill", filters.showRockBand && "active")}
+              className={clsx("filter-pill filter-pill-with-logo", filters.showRockBand && "active")}
               onClick={() => setFilters(f => ({ ...f, showRockBand: !f.showRockBand }))}
             >
-              🥁 Rock Band
+              <img src={rockBandLogo} alt="Rock Band" className="filter-pill-logo" />
+              Rock Band
             </button>
 
             <button
@@ -270,24 +323,57 @@ export default function ResearchPanel({
           {/* Collapsible Advanced Filters */}
           {filtersExpanded && (
             <div className="research-advanced-filters">
-              {/* Genre Filters */}
-              {genres.length > 0 && (
-                <div className="filter-group">
-                  <div className="filter-group-label">Genres</div>
-                  <div className="filter-pills-wrap">
-                    {genres.map(genre => (
-                      <button
-                        key={genre}
-                        type="button"
-                        className={clsx("filter-pill-small", filters.genres.includes(genre) && "active")}
-                        onClick={() => toggleGenre(genre)}
-                      >
-                        {genre}
-                      </button>
-                    ))}
-                  </div>
+              {/* Genre Group Filters */}
+              <div className="filter-group">
+                <div className="filter-group-label">Genres</div>
+                <div className="filter-pills-wrap">
+                  {Object.entries(GENRE_GROUPS).map(([groupName, groupGenres]) => {
+                    const allSelected = groupGenres.every(g => filters.genres.includes(g));
+                    const someSelected = groupGenres.some(g => filters.genres.includes(g));
+                    const isExpanded = expandedGenreGroups.has(groupName);
+
+                    return (
+                      <div key={groupName} className="genre-group-container">
+                        <div className="genre-group-header-row">
+                          <button
+                            type="button"
+                            className={clsx(
+                              "filter-pill-small",
+                              allSelected && "active",
+                              someSelected && !allSelected && "partial"
+                            )}
+                            onClick={() => toggleGenreGroup(groupName)}
+                          >
+                            {groupName}
+                          </button>
+                          <button
+                            type="button"
+                            className="genre-group-expand-btn"
+                            onClick={() => toggleGenreGroupExpansion(groupName)}
+                            aria-label={isExpanded ? "Collapse" : "Expand"}
+                          >
+                            {isExpanded ? "−" : "+"}
+                          </button>
+                        </div>
+                        {isExpanded && (
+                          <div className="genre-group-items">
+                            {groupGenres.map(genre => (
+                              <button
+                                key={genre}
+                                type="button"
+                                className={clsx("filter-pill-tiny", filters.genres.includes(genre) && "active")}
+                                onClick={() => toggleGenre(genre)}
+                              >
+                                {genre}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
 
               {/* Year Filters */}
               <div className="filter-group">
@@ -384,7 +470,6 @@ export default function ResearchPanel({
                         song={song}
                         isFavorite={true}
                         onToggleFavorite={() => toggleFavorite(song.id)}
-                        onMention={handleMention}
                         rankPosition={index + 1}
                         totalFavorites={favoriteSongs.length}
                         onMoveUp={index > 0 ? () => moveFavoriteUp(song.id) : undefined}
@@ -410,7 +495,6 @@ export default function ResearchPanel({
                       song={song}
                       isFavorite={isFavorite(song.id)}
                       onToggleFavorite={() => toggleFavorite(song.id)}
-                      onMention={handleMention}
                     />
                   ))}
                   {hasMore && (

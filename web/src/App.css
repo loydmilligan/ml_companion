@@ -8874,6 +8874,20 @@
   box-shadow: 0 2px 8px rgba(129, 140, 248, 0.4);
 }
 
+/* Filter pill with logo */
+.filter-pill-logo {
+  height: 18px;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.filter-pill-with-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Outline filter pills (More Filters, Reset) */
 .filter-pill-outline {
   display: inline-flex;
@@ -9028,6 +9042,118 @@
 }
 
 [data-mode="dark"] .filter-pill-small.active {
+  border-color: #818cf8;
+  background: #818cf8;
+  color: #fff;
+}
+
+/* Partial selection state for genre groups */
+.filter-pill-small.partial {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.25);
+  color: #6366f1;
+}
+
+[data-mode="dark"] .filter-pill-small.partial {
+  border-color: #818cf8;
+  background: rgba(129, 140, 248, 0.25);
+  color: #a5b4fc;
+}
+
+/* Genre group container */
+.genre-group-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.genre-group-header-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.genre-group-header-row .filter-pill-small {
+  flex: 1;
+}
+
+.genre-group-expand-btn {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.genre-group-expand-btn:hover {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+}
+
+[data-mode="dark"] .genre-group-expand-btn {
+  border-color: rgba(129, 140, 248, 0.25);
+}
+
+[data-mode="dark"] .genre-group-expand-btn:hover {
+  border-color: #818cf8;
+  background: rgba(129, 140, 248, 0.15);
+  color: #a5b4fc;
+}
+
+.genre-group-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-left: 8px;
+  margin-top: 2px;
+}
+
+/* Tiny filter pills (individual genres within groups) */
+.filter-pill-tiny {
+  padding: 4px 8px;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.filter-pill-tiny:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.filter-pill-tiny.active {
+  border-color: #6366f1;
+  background: #6366f1;
+  color: #fff;
+}
+
+[data-mode="dark"] .filter-pill-tiny {
+  border-color: rgba(129, 140, 248, 0.2);
+}
+
+[data-mode="dark"] .filter-pill-tiny:hover {
+  border-color: rgba(129, 140, 248, 0.35);
+  background: rgba(129, 140, 248, 0.1);
+}
+
+[data-mode="dark"] .filter-pill-tiny.active {
   border-color: #818cf8;
   background: #818cf8;
   color: #fff;
@@ -9204,6 +9330,15 @@
 
 [data-mode="dark"] .research-song-artwork-placeholder {
   background: linear-gradient(135deg, rgba(129, 140, 248, 0.15) 0%, rgba(167, 139, 250, 0.15) 100%);
+}
+
+/* Rank badge container (vertical stack with arrows) */
+.rank-badge-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 /* Rank badge for favorites */
@@ -9393,6 +9528,46 @@
   color: #1ed760;
 }
 
+.music-link.spotify {
+  background: rgba(30, 215, 96, 0.15);
+  color: #1db954;
+}
+
+[data-mode="dark"] .music-link.spotify {
+  background: rgba(30, 215, 96, 0.25);
+  color: #1ed760;
+}
+
+.music-link.apple-music {
+  background: rgba(252, 61, 100, 0.15);
+  color: #fc3d64;
+}
+
+[data-mode="dark"] .music-link.apple-music {
+  background: rgba(252, 61, 100, 0.25);
+  color: #ff5c83;
+}
+
+.music-link.youtube-music {
+  background: rgba(255, 0, 0, 0.15);
+  color: #ff0000;
+}
+
+[data-mode="dark"] .music-link.youtube-music {
+  background: rgba(255, 0, 0, 0.25);
+  color: #ff3333;
+}
+
+.music-link.youtube {
+  background: rgba(255, 0, 0, 0.15);
+  color: #ff0000;
+}
+
+[data-mode="dark"] .music-link.youtube {
+  background: rgba(255, 0, 0, 0.25);
+  color: #ff3333;
+}
+
 .mention-btn {
   background: rgba(99, 102, 241, 0.15);
   color: #6366f1;
@@ -9403,51 +9578,39 @@
   color: #a5b4fc;
 }
 
-/* Ranking controls */
-.rank-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
+/* Ranking arrow buttons (vertical layout) */
 .rank-arrow {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 13px;
+  width: 20px;
+  height: 16px;
   border: none;
-  border-radius: 3px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: transform 0.15s, background 0.15s, opacity 0.15s;
-  background: rgba(99, 102, 241, 0.15);
+  transition: transform 0.15s, background 0.15s;
+  background: rgba(99, 102, 241, 0.12);
   color: #6366f1;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1;
   padding: 0;
 }
 
-.rank-arrow:hover:not(:disabled) {
+.rank-arrow:hover {
   background: rgba(99, 102, 241, 0.25);
-  transform: scale(1.05);
+  transform: scale(1.1);
 }
 
-.rank-arrow:active:not(:disabled) {
-  transform: scale(0.95);
-}
-
-.rank-arrow:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
+.rank-arrow:active {
+  transform: scale(0.9);
 }
 
 [data-mode="dark"] .rank-arrow {
-  background: rgba(129, 140, 248, 0.2);
+  background: rgba(129, 140, 248, 0.15);
   color: #a5b4fc;
 }
 
-[data-mode="dark"] .rank-arrow:hover:not(:disabled) {
+[data-mode="dark"] .rank-arrow:hover {
   background: rgba(129, 140, 248, 0.3);
 }
 

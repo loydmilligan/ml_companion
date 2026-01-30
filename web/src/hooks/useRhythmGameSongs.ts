@@ -43,7 +43,7 @@ const DEFAULT_FILTERS: RhythmGameFilters = {
   search: "",
   showGuitarHero: true,
   showRockBand: true,
-  hideDLC: false,
+  hideDLC: true, // Hide DLC by default
   genres: [],
   decades: [],
   yearRange: null,
@@ -237,22 +237,39 @@ export function useRhythmGameFavorites(userId: string | null) {
         setFavorites(prev => prev.filter(f => f.song_id !== songId));
       }
     } else {
-      // Add favorite - assign next rank
+      // Add favorite - assign next rank (if rank column exists)
       const maxRank = favorites.reduce((max, f) => {
         return f.rank !== null && f.rank > max ? f.rank : max;
       }, 0);
 
-      const { data, error } = await supabase
+      // Try inserting with rank first (for after migration)
+      let insertData: { profile_id: string; song_id: string; rank?: number } = {
+        profile_id: userId,
+        song_id: songId,
+        rank: maxRank + 1
+      };
+
+      let { data, error } = await supabase
         .from("rhythm_game_favorites")
-        .insert({
-          profile_id: userId,
-          song_id: songId,
-          rank: maxRank + 1
-        })
+        .insert(insertData)
         .select()
         .single();
 
-      if (!error && data) {
+      // If rank column doesn't exist yet, retry without it
+      if (error && error.message?.includes('column "rank"')) {
+        const { profile_id, song_id } = insertData;
+        const fallbackResult = await supabase
+          .from("rhythm_game_favorites")
+          .insert({ profile_id, song_id })
+          .select()
+          .single();
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+      }
+
+      if (error) {
+        console.error("Error adding favorite:", error);
+      } else if (data) {
         setFavorites(prev => [...prev, data].sort((a, b) => {
           if (a.rank === null && b.rank === null) return 0;
           if (a.rank === null) return 1;

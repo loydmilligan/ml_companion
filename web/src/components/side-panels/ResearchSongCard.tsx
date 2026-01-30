@@ -5,17 +5,16 @@ import {
   getSpotifySearchUrl,
   getYouTubeMusicSearchUrl,
   getAppleMusicSearchUrl,
-  formatSongForMention,
   fetchSpotifyData,
 } from "../../hooks/useRhythmGameSongs";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
+import { useSidePanel } from "./SidePanelContext";
 
 type ResearchSongCardProps = {
   song: RhythmGameSong;
   isFavorite: boolean;
   onToggleFavorite: () => void;
-  onMention?: (text: string) => void;
   rankPosition?: number; // Display position (1-based) in favorites list
   totalFavorites?: number; // Total number of favorites
   onMoveUp?: () => void; // Move up in ranking (only for favorites)
@@ -54,7 +53,6 @@ export default function ResearchSongCard({
   song,
   isFavorite,
   onToggleFavorite,
-  onMention,
   rankPosition,
   totalFavorites,
   onMoveUp,
@@ -75,6 +73,7 @@ export default function ResearchSongCard({
   } | null>(null);
   const [loadingLinks, setLoadingLinks] = useState(false);
   const { profile } = useAuth();
+  const { setQuotedSong } = useSidePanel();
 
   // Lazy-load Spotify data when card becomes visible
   useEffect(() => {
@@ -123,7 +122,12 @@ export default function ResearchSongCard({
 
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session || cancelled) return;
+        if (!session) {
+          console.error("No session for platform links");
+          if (!cancelled) setLoadingLinks(false);
+          return;
+        }
+        if (cancelled) return;
 
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/song-links`,
@@ -140,16 +144,27 @@ export default function ResearchSongCard({
           }
         );
 
-        if (!response.ok || cancelled) return;
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Platform links fetch failed:", response.status, errorText);
+          if (!cancelled) setLoadingLinks(false);
+          return;
+        }
+
+        if (cancelled) return;
 
         const result = await response.json();
 
-        if (!cancelled && result.links) {
-          setPlatformLinks(result.links);
+        if (!cancelled) {
+          if (result.links) {
+            setPlatformLinks(result.links);
+          } else {
+            console.warn("No links in result:", result);
+          }
+          setLoadingLinks(false);
         }
       } catch (error) {
         console.error("Error fetching platform links:", error);
-      } finally {
         if (!cancelled) {
           setLoadingLinks(false);
         }
@@ -163,39 +178,102 @@ export default function ResearchSongCard({
     };
   }, [expanded, spotifyData?.spotify_url, platformLinks, loadingLinks]);
 
-  // Get the appropriate music service URL based on user preference
+  // Get music links based on user preferences
   const preferredProvider = profile?.preferred_music_provider ?? "spotify";
+  const showYouTube = profile?.show_youtube_video ?? true;
 
-  const getMusicUrl = () => {
-    // Use real Spotify link if available
-    if (preferredProvider === "spotify" && spotifyData?.spotify_url) {
-      return spotifyData.spotify_url;
-    }
+  // Determine which music links to show
+  const getMusicLinks = () => {
+    const links: Array<{ url: string; label: string; className: string }> = [];
 
-    // Fallback to search URLs
+    // Primary music service link
     switch (preferredProvider) {
+      case "spotify":
+        links.push({
+          url: platformLinks?.spotify || spotifyData?.spotify_url || getSpotifySearchUrl(song),
+          label: "Spotify",
+          className: "spotify",
+        });
+        break;
       case "apple_music":
-        return getAppleMusicSearchUrl(song);
+        links.push({
+          url: platformLinks?.appleMusic || getAppleMusicSearchUrl(song),
+          label: "Apple Music",
+          className: "apple-music",
+        });
+        break;
       case "youtube_music":
-        return getYouTubeMusicSearchUrl(song);
-      default:
-        return getSpotifySearchUrl(song);
+        links.push({
+          url: platformLinks?.youtubeMusic || getYouTubeMusicSearchUrl(song),
+          label: "YouTube Music",
+          className: "youtube-music",
+        });
+        break;
     }
+
+    // Add YouTube video link if enabled
+    if (showYouTube) {
+      links.push({
+        url: platformLinks?.youtube || `https://www.youtube.com/results?search_query=${encodeURIComponent(`${song.title} ${song.artist}`)}`,
+        label: "YouTube",
+        className: "youtube",
+      });
+    }
+
+    return links;
+  };
+
+  const musicLinks = getMusicLinks();
+
+  // Get the preferred music service URL for the mention link
+  const getMentionUrl = () => {
+    // Use the first music link's URL (which respects user preferences)
+    return musicLinks[0]?.url || null;
   };
 
   const handleMention = () => {
-    if (onMention) {
-      onMention(formatSongForMention(song));
-    }
+    // Insert song mention into chat using the quotedSong mechanism
+    // Format: @[Title — Artist](url)
+    setQuotedSong({
+      id: song.id,
+      title: song.title,
+      artist: song.artist,
+      link: getMentionUrl(),
+      artwork_url: spotifyData?.artwork_url || null,
+    });
   };
 
   return (
     <div className={clsx("research-song-card", expanded && "expanded", rankPosition && "ranked")}>
       <div className="research-song-card-main">
-        {/* Rank badge for favorites */}
+        {/* Rank badge with controls for favorites */}
         {rankPosition && (
-          <div className="rank-badge" title={`Rank #${rankPosition} of ${totalFavorites}`}>
-            {rankPosition}
+          <div className="rank-badge-container">
+            {onMoveUp && (
+              <button
+                type="button"
+                className="rank-arrow rank-arrow-up"
+                onClick={onMoveUp}
+                title="Move up in ranking"
+                aria-label="Move up"
+              >
+                ▲
+              </button>
+            )}
+            <div className="rank-badge" title={`Rank #${rankPosition} of ${totalFavorites}`}>
+              {rankPosition}
+            </div>
+            {onMoveDown && (
+              <button
+                type="button"
+                className="rank-arrow rank-arrow-down"
+                onClick={onMoveDown}
+                title="Move down in ranking"
+                aria-label="Move down"
+              >
+                ▼
+              </button>
+            )}
           </div>
         )}
 
@@ -230,10 +308,11 @@ export default function ResearchSongCard({
             {song.genre && <span className="genre-tag">{song.genre}</span>}
             {spotifyData?.popularity !== null && spotifyData?.popularity !== undefined && (
               <span className="popularity-badge" title={`Spotify popularity: ${spotifyData.popularity}/100`}>
-                {spotifyData.popularity >= 70 && '🔥'}
-                {spotifyData.popularity >= 50 && spotifyData.popularity < 70 && '📈'}
-                {spotifyData.popularity < 50 && '💎'}
-                {spotifyData.popularity}
+                {spotifyData.popularity >= 80 && '💎'}
+                {spotifyData.popularity >= 60 && spotifyData.popularity < 80 && '🥇'}
+                {spotifyData.popularity >= 40 && spotifyData.popularity < 60 && '🥈'}
+                {spotifyData.popularity >= 20 && spotifyData.popularity < 40 && '🥉'}
+                {spotifyData.popularity < 20 && '💿'}
               </span>
             )}
           </div>
@@ -241,32 +320,6 @@ export default function ResearchSongCard({
 
         {/* Actions */}
         <div className="research-song-card-actions">
-          {/* Ranking arrows (only for favorites) */}
-          {(onMoveUp || onMoveDown) && (
-            <div className="rank-controls">
-              <button
-                type="button"
-                className="rank-arrow rank-arrow-up"
-                onClick={onMoveUp}
-                disabled={!onMoveUp}
-                title="Move up in ranking"
-                aria-label="Move up"
-              >
-                ▲
-              </button>
-              <button
-                type="button"
-                className="rank-arrow rank-arrow-down"
-                onClick={onMoveDown}
-                disabled={!onMoveDown}
-                title="Move down in ranking"
-                aria-label="Move down"
-              >
-                ▼
-              </button>
-            </div>
-          )}
-
           <button
             type="button"
             className={clsx("research-action-btn favorite-btn", isFavorite && "is-favorite")}
@@ -275,25 +328,29 @@ export default function ResearchSongCard({
           >
             <HeartIcon filled={isFavorite} />
           </button>
-          <a
-            href={getMusicUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="research-action-btn music-link"
-            title={`Search on ${preferredProvider === "apple_music" ? "Apple Music" : preferredProvider === "youtube_music" ? "YouTube Music" : "Spotify"}`}
-          >
-            <SpotifyIcon />
-          </a>
-          {onMention && (
-            <button
-              type="button"
-              className="research-action-btn mention-btn"
-              onClick={handleMention}
-              title="Share in chat"
+          {musicLinks.map((link, idx) => (
+            <a
+              key={idx}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={clsx("research-action-btn music-link", link.className)}
+              title={`Listen on ${link.label}`}
             >
-              @
-            </button>
-          )}
+              {link.label === "Spotify" && <SpotifyIcon />}
+              {link.label === "Apple Music" && "🍎"}
+              {link.label === "YouTube Music" && "🎵"}
+              {link.label === "YouTube" && "▶️"}
+            </a>
+          ))}
+          <button
+            type="button"
+            className="research-action-btn mention-btn"
+            onClick={handleMention}
+            title="Share in chat"
+          >
+            @
+          </button>
         </div>
       </div>
 
