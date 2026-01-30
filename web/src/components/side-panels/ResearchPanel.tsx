@@ -48,12 +48,17 @@ export default function ResearchPanel({
   }, [searchInput]);
 
   // Data hooks
-  const { songs, genres, loading, error, filteredCount, totalCount } = useRhythmGameSongs(filters);
+  const { songs, allSongs, genres, loading, error, filteredCount, totalCount } = useRhythmGameSongs(filters);
   const { isFavorite, toggleFavorite, favoriteIds } = useRhythmGameFavorites(userId);
 
-  // Get favorite songs
+  // Get favorite songs from ALL songs (unfiltered) so favorites always show
   const favoriteSongs = useMemo(() => {
-    return songs.filter(s => favoriteIds.has(s.id));
+    return allSongs.filter(s => favoriteIds.has(s.id));
+  }, [allSongs, favoriteIds]);
+
+  // Filter out favorites from the main list to avoid duplicates
+  const nonFavoriteSongs = useMemo(() => {
+    return songs.filter(s => !favoriteIds.has(s.id));
   }, [songs, favoriteIds]);
 
   // Swipe-to-close
@@ -111,9 +116,9 @@ export default function ResearchPanel({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Limit displayed songs for performance
-  const displayedSongs = songs.slice(0, 100);
-  const hasMore = songs.length > 100;
+  // Limit displayed songs for performance (use non-favorites to avoid duplicates)
+  const displayedSongs = nonFavoriteSongs.slice(0, 100);
+  const hasMore = nonFavoriteSongs.length > 100;
 
   return (
     <>
@@ -263,7 +268,7 @@ export default function ResearchPanel({
                   ))}
                   {hasMore && (
                     <div className="research-more-hint">
-                      {songs.length - 100} more songs... Use search to narrow down.
+                      {nonFavoriteSongs.length - 100} more songs... Use search to narrow down.
                     </div>
                   )}
                   {displayedSongs.length === 0 && (

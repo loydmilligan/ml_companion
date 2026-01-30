@@ -8783,6 +8783,7 @@
 
 [data-mode="dark"] .research-panel-filters {
   border-bottom-color: rgba(255, 255, 255, 0.1);
+  background: #1e2433;
 }
 
 .research-search-input {
@@ -8804,6 +8805,8 @@
 
 [data-mode="dark"] .research-search-input {
   border-color: rgba(255, 255, 255, 0.2);
+  background: #1a1f2e;
+  color: #e2e8f0;
 }
 
 [data-mode="dark"] .research-search-input:focus {
@@ -8884,6 +8887,13 @@
 
 [data-mode="dark"] .research-genre-select {
   border-color: rgba(255, 255, 255, 0.2);
+  background: #1a1f2e;
+  color: #e2e8f0;
+}
+
+[data-mode="dark"] .research-genre-select option {
+  background: #1a1f2e;
+  color: #e2e8f0;
 }
 
 .research-filter-count {

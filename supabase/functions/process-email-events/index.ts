@@ -209,9 +209,8 @@ async function updateCurrentSeasonStory(
   league: { id: string; name: string; season_number: number | null; current_story_round_id?: string | null },
   roundId: string
 ) {
-  if (league.current_story_round_id === roundId) {
-    return;
-  }
+  // Always regenerate on votes_in - the story should reflect the completed round
+  // (Removed the skip-if-same-round check that was causing updates to be missed)
 
   // Verify this round belongs to the current season's league
   const { data: roundData } = await supabase
@@ -473,8 +472,27 @@ async function processPlaylistReady(
     round = await findActiveRound(supabase, league.id);
   }
 
+  // If no round found, create one (handles case where round_start email was missed)
+  if (!round && event.round_name) {
+    const { data: newRound, error: createError } = await supabase
+      .from("rounds")
+      .insert({
+        league_id: league.id,
+        theme: event.round_name,
+        status: "open",
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      return { event_id: event.id, event_type: event.event_type, success: false, action: "create_round_failed", error: createError.message };
+    }
+    round = newRound;
+    console.log(`Created missing round "${event.round_name}" for league ${league.id}`);
+  }
+
   if (!round) {
-    return { event_id: event.id, event_type: event.event_type, success: false, action: "skip", error: "Round not found" };
+    return { event_id: event.id, event_type: event.event_type, success: false, action: "skip", error: "Round not found and no round_name to create" };
   }
 
   // Update round status and playlist URL
@@ -528,8 +546,27 @@ async function processVotesIn(
     round = await findActiveRound(supabase, league.id);
   }
 
+  // If no round found, create one (handles case where round_start/playlist_ready emails were missed)
+  if (!round && event.round_name) {
+    const { data: newRound, error: createError } = await supabase
+      .from("rounds")
+      .insert({
+        league_id: league.id,
+        theme: event.round_name,
+        status: "voting", // Set to voting since we're about to reveal
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      return { event_id: event.id, event_type: event.event_type, success: false, action: "create_round_failed", error: createError.message };
+    }
+    round = newRound;
+    console.log(`Created missing round "${event.round_name}" for league ${league.id} during votes_in`);
+  }
+
   if (!round) {
-    return { event_id: event.id, event_type: event.event_type, success: false, action: "skip", error: "Round not found" };
+    return { event_id: event.id, event_type: event.event_type, success: false, action: "skip", error: "Round not found and no round_name to create" };
   }
 
   // Fetch reveal timer setting from group_settings (default 8 hours)

@@ -1,12 +1,13 @@
 # Issues & Roadmap
 
-Version: v1.17
-Date: 2026-01-15
+Version: v1.18
+Date: 2026-01-23
 
 **Sync Status:**
-- Last Local Change: 2026-01-14
-- Last Linear Sync: 2026-01-14
-- Pending Sync: Yes (TEST-002, DM-001 through DM-004 not yet in Linear)
+- Last Local Change: 2026-01-23
+- Last Linear Sync: 2026-01-23 (partial)
+- Pending Sync: Yes - Many issues with "—" in Linear column have no Linear issue created
+- Last Sync Note: Created LOYD-204 (IMP-001), LOYD-205 (TEST-002), LOYD-206-209 (DM-001 through DM-004)
 
 **Legend:**
 - **Effort:** Low (< 1 day) | Medium (1-3 days) | High (1+ week)
@@ -20,6 +21,7 @@ Date: 2026-01-15
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.18 | 2026-01-23 | Added IMP-001 (Round sync requires re-upload after linking) - HIGH PRIORITY |
 | v1.17 | 2026-01-15 | Added TEST-004 (Test Dashboard Data Sync Issues) with detailed debugging notes |
 | v1.16 | 2026-01-14 | Added DEV-001, DEV-002 (DevOps/CI-CD hardening); updated TEST-003 to In Progress |
 | v1.15 | 2026-01-14 | Added TEST-003 (Historical CSV Import in Test Dashboard) |
@@ -119,10 +121,10 @@ Date: 2026-01-15
 
 | ID | Linear | Issue | Status | Effort | Benefit | Risk | Notes |
 |----|--------|-------|--------|--------|---------|------|-------|
-| DM-001 | — | DM Inbox Blank Screen on Load | **Complete** | Low | High | Low | Added padding-top to push content below header. Deployed 2026-01-10 |
-| DM-002 | — | DM Message Text Illegible | **Complete** | Low | High | Low | Added explicit color styles for light/dark modes. Deployed 2026-01-10 |
-| DM-003 | — | DM Icon Styling & Position | **Complete** | Medium | Medium | Low | Raised circle, shimmer border, paper airplane icon, reordered in TopBar. Deployed 2026-01-10 |
-| DM-004 | — | DM Unread Badge Animation | **Complete** | Low | Medium | Low | Lipstick red (#f21b3f) badge with shimmer animation when unread. Deployed 2026-01-10 |
+| DM-001 | [LOYD-206](https://linear.app/loydmilligan/issue/LOYD-206) | DM Inbox Blank Screen on Load | **Complete** | Low | High | Low | Added padding-top to push content below header. Deployed 2026-01-10 |
+| DM-002 | [LOYD-207](https://linear.app/loydmilligan/issue/LOYD-207) | DM Message Text Illegible | **Complete** | Low | High | Low | Added explicit color styles for light/dark modes. Deployed 2026-01-10 |
+| DM-003 | [LOYD-208](https://linear.app/loydmilligan/issue/LOYD-208) | DM Icon Styling & Position | **Complete** | Medium | Medium | Low | Raised circle, shimmer border, paper airplane icon, reordered in TopBar. Deployed 2026-01-10 |
+| DM-004 | [LOYD-209](https://linear.app/loydmilligan/issue/LOYD-209) | DM Unread Badge Animation | **Complete** | Low | Medium | Low | Lipstick red (#f21b3f) badge with shimmer animation when unread. Deployed 2026-01-10 |
 
 ### DM-003: DM Icon Styling Requirements
 
@@ -307,7 +309,7 @@ Display on History page showing:
 | ID | Linear | Feature | Status | Effort | Benefit | Risk | Notes |
 |----|--------|---------|--------|--------|---------|------|-------|
 | TEST-001 | [LOYD-185](https://linear.app/loydmilligan/issue/LOYD-185) | Automated Test Environment & Data Factory | **In Progress** | High | High | Low | Full test harness for round lifecycle, multi-user simulation, observation dashboard |
-| TEST-002 | — | Test Dashboard Song Tracking | Planned | Low | Medium | Low | Display actual song names in submission grid; requires edge function enhancement to return song data |
+| TEST-002 | [LOYD-205](https://linear.app/loydmilligan/issue/LOYD-205) | Test Dashboard Song Tracking | Planned | Low | Medium | Low | Display actual song names in submission grid; requires edge function enhancement to return song data |
 | TEST-003 | — | Historical CSV Import in Test Dashboard | **In Progress** | Medium | High | Low | Generate and import historical CSVs directly from test dashboard; consolidate import workflow |
 | TEST-004 | — | Test Dashboard Data Sync Issues | Planned | Medium | High | Medium | Fix inconsistencies between test-factory edge function and UI state; investigate CSV import failures |
 
@@ -399,6 +401,57 @@ Display on History page showing:
 
 ---
 
+### IMP-001: Round Sync Requires Re-upload After Linking
+
+**Problem:** When importing round data from Music League files, users must upload files twice - once to see unlinked rounds, link them, then re-upload for the data to actually be associated. This has caused issues in multiple rounds (Round 2 and Round 3 of Season 2).
+
+**Current Workflow (Bad):**
+1. Upload CSV files (rounds, submissions, votes)
+2. System stores data in `round_imports` with `round_id = NULL`
+3. User sees unlinked rounds in UI
+4. User manually links external round to TML round
+5. **User must re-upload files** for submissions/votes to be associated
+6. If they don't re-upload, votes don't appear in results
+
+**Expected Workflow (Good):**
+1. Upload CSV files
+2. System stores data in `round_imports`
+3. User links external round to TML round
+4. System **automatically re-processes** existing import data with new round linkage
+5. No re-upload required
+
+**Root Cause:**
+- The import process uses `round_id` from the `round_imports` table to link submissions/votes
+- When first uploaded, `round_id` is NULL (no round linked yet)
+- Submissions/votes are imported with this NULL linkage
+- Linking the round later only updates `round_imports.round_id`, not the already-imported data
+
+**Solution Options:**
+
+1. **Auto-reprocess on link (Recommended)**
+   - When `round_imports.round_id` is updated, trigger a function to reprocess
+   - Update all submissions/votes with the correct round linkage
+   - Add user feedback showing reprocessing status
+
+2. **Prevent upload until linked**
+   - Require round linking before allowing data import
+   - Less flexible but eliminates the problem
+
+3. **Just-in-time linking**
+   - Store external_round_id on submissions/votes
+   - At query time, join through round_imports to get the actual round
+   - More complex queries but no reprocessing needed
+
+**Acceptance Criteria:**
+- [ ] User can upload files, link rounds, and see data without re-uploading
+- [ ] Clear feedback when linking is successful
+- [ ] Existing submissions/votes are retroactively associated
+- [ ] This functionality included in AdminV2 imports tab
+
+**Priority:** HIGH - Blocks every round transition
+
+---
+
 ### TEST-003: Historical CSV Import in Test Dashboard
 
 **Problem:** Currently, historical CSV generation creates downloadable files, but importing them requires navigating to the Admin > Imports tab manually. This breaks the test workflow and requires extra steps.
@@ -439,6 +492,7 @@ Display on History page showing:
 
 | ID | Linear | Issue | Status | Effort | Benefit | Risk | Notes |
 |----|--------|-------|--------|--------|---------|------|-------|
+| IMP-001 | [LOYD-204](https://linear.app/loydmilligan/issue/LOYD-204) | Round sync requires re-upload after linking | **Planned** | Medium | High | Low | After linking external round to TML round, must re-upload files for data to associate. Blocks every round end. |
 | EF-001 | — | No auth on edge functions | **Complete** | Medium | High | Medium | JWT verification added to all 6 functions. Deployed 2026-01-02 |
 | EF-002 | [LOYD-137](https://linear.app/loydmilligan/issue/LOYD-137) | `notify` accepts arbitrary recipients | **Canceled** | Low | High | Low | JWT auth mitigates spam risk - only authenticated users can call |
 

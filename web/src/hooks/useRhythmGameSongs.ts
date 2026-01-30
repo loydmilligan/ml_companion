@@ -55,26 +55,44 @@ export function useRhythmGameSongs(filters: RhythmGameFilters = DEFAULT_FILTERS)
       setLoading(true);
       setError(null);
 
-      // Supabase default limit is 1000, we need all ~5000 songs
-      const { data, error: fetchError } = await supabase
-        .from("rhythm_game_songs")
-        .select("*")
-        .order("artist", { ascending: true })
-        .order("title", { ascending: true })
-        .range(0, 9999);
+      // Supabase has a server-side max-rows limit (default 1000)
+      // Fetch in chunks to get all ~5000 songs
+      const allSongs: RhythmGameSong[] = [];
+      const CHUNK_SIZE = 1000;
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore && active) {
+        const { data, error: fetchError } = await supabase
+          .from("rhythm_game_songs")
+          .select("*")
+          .order("artist", { ascending: true })
+          .order("title", { ascending: true })
+          .range(offset, offset + CHUNK_SIZE - 1);
+
+        if (!active) return;
+
+        if (fetchError) {
+          setError(fetchError.message);
+          setLoading(false);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          allSongs.push(...data);
+          hasMore = data.length === CHUNK_SIZE;
+          offset += CHUNK_SIZE;
+        } else {
+          hasMore = false;
+        }
+      }
 
       if (!active) return;
 
-      if (fetchError) {
-        setError(fetchError.message);
-        setLoading(false);
-        return;
-      }
-
-      setSongs(data || []);
+      setSongs(allSongs);
 
       // Extract unique genres
-      const uniqueGenres = [...new Set((data || [])
+      const uniqueGenres = [...new Set(allSongs
         .map(s => s.genre)
         .filter((g): g is string => g !== null && g !== "")
       )].sort();
