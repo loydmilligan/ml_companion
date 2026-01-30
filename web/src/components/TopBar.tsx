@@ -270,8 +270,8 @@ export default function TopBar() {
         isTimelineTester={isTimelineTester}
       />
 
-      {/* Research Panel (slide-out from right) - only for Round 5 */}
-      {round?.round_number === 5 && (
+      {/* Research Panel (slide-out from right) - for Round 4 or 5 */}
+      {((round?.round_number === 5 || round?.round_number === 4) && round?.status !== "archived") && (
         <ResearchPanel
           isOpen={activePanel === "research"}
           onClose={closePanel}
