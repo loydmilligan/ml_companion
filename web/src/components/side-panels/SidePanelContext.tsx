@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 
-type PanelType = "playlist" | "progress" | "games" | null;
+type PanelType = "playlist" | "progress" | "games" | "research" | null;
 type GameTab = "submitter-guess" | "timeline" | "round-challenge";
 
 type SubmissionRow = {
@@ -100,6 +100,16 @@ export function useGamesSidebar() {
     closeSidebar: ctx.closePanel,
     toggleSidebar: () => ctx.togglePanel("games"),
     setActiveTab: ctx.setGamesActiveTab,
+  };
+}
+
+export function useResearchPanel() {
+  const ctx = useSidePanel();
+  return {
+    isOpen: ctx.activePanel === "research",
+    openPanel: () => ctx.openPanel("research"),
+    closePanel: ctx.closePanel,
+    togglePanel: () => ctx.togglePanel("research"),
   };
 }
 

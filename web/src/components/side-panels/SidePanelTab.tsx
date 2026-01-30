@@ -24,6 +24,12 @@ const TAB_CONFIG = {
     label: "Games",
     title: "Open games panel",
   },
+  research: {
+    lightImage: "/images/research_tab_light.png",
+    darkImage: "/images/research_tab_dark.png",
+    label: "Research",
+    title: "Research songs for this round",
+  },
 };
 
 /**

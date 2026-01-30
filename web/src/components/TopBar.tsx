@@ -9,7 +9,7 @@ import DMDrawer from "./DMDrawer";
 import SettingsGear from "./SettingsGear";
 import ProfileDrawer from "./ProfileDrawer";
 import SettingsDrawer from "./SettingsDrawer";
-import { useSidePanel, PlaylistPanel, ProgressPanel } from "./side-panels";
+import { useSidePanel, PlaylistPanel, ProgressPanel, ResearchPanel } from "./side-panels";
 import { GamesSidebar } from "./games-sidebar";
 
 export default function TopBar() {
@@ -269,6 +269,14 @@ export default function TopBar() {
         timelineGamePhase={timelineGamePhase}
         isTimelineTester={isTimelineTester}
       />
+
+      {/* Research Panel (slide-out from right) - only for Round 5 */}
+      {round?.round_number === 5 && (
+        <ResearchPanel
+          isOpen={activePanel === "research"}
+          onClose={closePanel}
+        />
+      )}
     </>
   );
 }

@@ -968,6 +968,9 @@ export default function ChatPage() {
       <SidePanelTab panel="playlist" onClick={() => togglePanel("playlist")} />
       <SidePanelTab panel="progress" onClick={() => togglePanel("progress")} />
       <SidePanelTab panel="games" onClick={() => togglePanel("games")} />
+      {round?.round_number === 5 && (
+        <SidePanelTab panel="research" onClick={() => togglePanel("research")} />
+      )}
 
       {/* Connection status banner */}
       {!isConnected && connectionState !== "connecting" && (
