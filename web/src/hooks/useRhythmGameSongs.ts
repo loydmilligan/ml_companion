@@ -23,6 +23,7 @@ export type RhythmGameFavorite = {
   id: string;
   profile_id: string;
   song_id: string;
+  rank: number | null;
   created_at: string;
 };
 
@@ -179,63 +180,51 @@ export function useRhythmGameSongs(filters: RhythmGameFilters = DEFAULT_FILTERS)
 }
 
 /**
- * Hook for managing user's favorite rhythm game songs
+ * Hook for managing user's favorite rhythm game songs with ranking support
  */
 export function useRhythmGameFavorites(userId: string | null) {
-  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [favorites, setFavorites] = useState<RhythmGameFavorite[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user's favorites
-  useEffect(() => {
+  // Fetch user's favorites with ranking
+  const fetchFavorites = useCallback(async () => {
     if (!userId) {
-      setFavoriteIds(new Set());
+      setFavorites([]);
       setLoading(false);
       return;
     }
 
-    let active = true;
+    setLoading(true);
 
-    async function fetchFavorites() {
-      setLoading(true);
+    const { data, error } = await supabase
+      .from("rhythm_game_favorites")
+      .select("*")
+      .eq("profile_id", userId)
+      .order("rank", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: true });
 
-      const { data, error } = await supabase
-        .from("rhythm_game_favorites")
-        .select("song_id")
-        .eq("profile_id", userId);
-
-      if (!active) return;
-
-      if (!error && data) {
-        setFavoriteIds(new Set(data.map(f => f.song_id)));
-      }
-      setLoading(false);
+    if (!error && data) {
+      setFavorites(data);
     }
-
-    fetchFavorites();
-
-    return () => {
-      active = false;
-    };
+    setLoading(false);
   }, [userId]);
+
+  useEffect(() => {
+    fetchFavorites();
+  }, [fetchFavorites]);
+
+  // Computed favoriteIds set for quick lookups
+  const favoriteIds = useMemo(() => {
+    return new Set(favorites.map(f => f.song_id));
+  }, [favorites]);
 
   // Toggle favorite
   const toggleFavorite = useCallback(async (songId: string) => {
     if (!userId) return;
 
-    const isFavorite = favoriteIds.has(songId);
+    const existingFavorite = favorites.find(f => f.song_id === songId);
 
-    // Optimistic update
-    setFavoriteIds(prev => {
-      const next = new Set(prev);
-      if (isFavorite) {
-        next.delete(songId);
-      } else {
-        next.add(songId);
-      }
-      return next;
-    });
-
-    if (isFavorite) {
+    if (existingFavorite) {
       // Remove favorite
       const { error } = await supabase
         .from("rhythm_game_favorites")
@@ -243,41 +232,117 @@ export function useRhythmGameFavorites(userId: string | null) {
         .eq("profile_id", userId)
         .eq("song_id", songId);
 
-      if (error) {
-        // Revert on error
-        setFavoriteIds(prev => {
-          const next = new Set(prev);
-          next.add(songId);
-          return next;
-        });
+      if (!error) {
+        setFavorites(prev => prev.filter(f => f.song_id !== songId));
       }
     } else {
-      // Add favorite
-      const { error } = await supabase
-        .from("rhythm_game_favorites")
-        .insert({ profile_id: userId, song_id: songId });
+      // Add favorite - assign next rank
+      const maxRank = favorites.reduce((max, f) => {
+        return f.rank !== null && f.rank > max ? f.rank : max;
+      }, 0);
 
-      if (error) {
-        // Revert on error
-        setFavoriteIds(prev => {
-          const next = new Set(prev);
-          next.delete(songId);
-          return next;
-        });
+      const { data, error } = await supabase
+        .from("rhythm_game_favorites")
+        .insert({
+          profile_id: userId,
+          song_id: songId,
+          rank: maxRank + 1
+        })
+        .select()
+        .single();
+
+      if (!error && data) {
+        setFavorites(prev => [...prev, data].sort((a, b) => {
+          if (a.rank === null && b.rank === null) return 0;
+          if (a.rank === null) return 1;
+          if (b.rank === null) return -1;
+          return a.rank - b.rank;
+        }));
       }
     }
-  }, [userId, favoriteIds]);
+  }, [userId, favorites]);
+
+  // Move favorite up in ranking (decrease rank number)
+  const moveFavoriteUp = useCallback(async (songId: string) => {
+    if (!userId) return;
+
+    const currentIndex = favorites.findIndex(f => f.song_id === songId);
+    if (currentIndex <= 0) return; // Already at top or not found
+
+    const current = favorites[currentIndex];
+    const above = favorites[currentIndex - 1];
+
+    // Swap ranks
+    const { error: error1 } = await supabase
+      .from("rhythm_game_favorites")
+      .update({ rank: above.rank })
+      .eq("id", current.id);
+
+    const { error: error2 } = await supabase
+      .from("rhythm_game_favorites")
+      .update({ rank: current.rank })
+      .eq("id", above.id);
+
+    if (!error1 && !error2) {
+      // Update local state
+      setFavorites(prev => {
+        const next = [...prev];
+        [next[currentIndex], next[currentIndex - 1]] = [next[currentIndex - 1], next[currentIndex]];
+        return next;
+      });
+    }
+  }, [userId, favorites]);
+
+  // Move favorite down in ranking (increase rank number)
+  const moveFavoriteDown = useCallback(async (songId: string) => {
+    if (!userId) return;
+
+    const currentIndex = favorites.findIndex(f => f.song_id === songId);
+    if (currentIndex < 0 || currentIndex >= favorites.length - 1) return; // At bottom or not found
+
+    const current = favorites[currentIndex];
+    const below = favorites[currentIndex + 1];
+
+    // Swap ranks
+    const { error: error1 } = await supabase
+      .from("rhythm_game_favorites")
+      .update({ rank: below.rank })
+      .eq("id", current.id);
+
+    const { error: error2 } = await supabase
+      .from("rhythm_game_favorites")
+      .update({ rank: current.rank })
+      .eq("id", below.id);
+
+    if (!error1 && !error2) {
+      // Update local state
+      setFavorites(prev => {
+        const next = [...prev];
+        [next[currentIndex], next[currentIndex + 1]] = [next[currentIndex + 1], next[currentIndex]];
+        return next;
+      });
+    }
+  }, [userId, favorites]);
 
   const isFavorite = useCallback((songId: string) => {
     return favoriteIds.has(songId);
   }, [favoriteIds]);
 
+  const getFavoriteRank = useCallback((songId: string): number | null => {
+    const favorite = favorites.find(f => f.song_id === songId);
+    return favorite?.rank ?? null;
+  }, [favorites]);
+
   return {
+    favorites,
     favoriteIds,
     loading,
     toggleFavorite,
+    moveFavoriteUp,
+    moveFavoriteDown,
     isFavorite,
-    favoriteCount: favoriteIds.size,
+    getFavoriteRank,
+    favoriteCount: favorites.length,
   };
 }
 

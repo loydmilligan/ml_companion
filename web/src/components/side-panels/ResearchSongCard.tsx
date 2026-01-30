@@ -15,6 +15,10 @@ type ResearchSongCardProps = {
   isFavorite: boolean;
   onToggleFavorite: () => void;
   onMention?: (text: string) => void;
+  rankPosition?: number; // Display position (1-based) in favorites list
+  totalFavorites?: number; // Total number of favorites
+  onMoveUp?: () => void; // Move up in ranking (only for favorites)
+  onMoveDown?: () => void; // Move down in ranking (only for favorites)
 };
 
 // SVG Icons
@@ -50,6 +54,10 @@ export default function ResearchSongCard({
   isFavorite,
   onToggleFavorite,
   onMention,
+  rankPosition,
+  totalFavorites,
+  onMoveUp,
+  onMoveDown,
 }: ResearchSongCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [spotifyData, setSpotifyData] = useState<{
@@ -120,8 +128,15 @@ export default function ResearchSongCard({
   };
 
   return (
-    <div className={clsx("research-song-card", expanded && "expanded")}>
+    <div className={clsx("research-song-card", expanded && "expanded", rankPosition && "ranked")}>
       <div className="research-song-card-main">
+        {/* Rank badge for favorites */}
+        {rankPosition && (
+          <div className="rank-badge" title={`Rank #${rankPosition} of ${totalFavorites}`}>
+            {rankPosition}
+          </div>
+        )}
+
         {/* Album artwork */}
         {spotifyData?.artwork_url ? (
           <img
@@ -156,6 +171,32 @@ export default function ResearchSongCard({
 
         {/* Actions */}
         <div className="research-song-card-actions">
+          {/* Ranking arrows (only for favorites) */}
+          {(onMoveUp || onMoveDown) && (
+            <div className="rank-controls">
+              <button
+                type="button"
+                className="rank-arrow rank-arrow-up"
+                onClick={onMoveUp}
+                disabled={!onMoveUp}
+                title="Move up in ranking"
+                aria-label="Move up"
+              >
+                ▲
+              </button>
+              <button
+                type="button"
+                className="rank-arrow rank-arrow-down"
+                onClick={onMoveDown}
+                disabled={!onMoveDown}
+                title="Move down in ranking"
+                aria-label="Move down"
+              >
+                ▼
+              </button>
+            </div>
+          )}
+
           <button
             type="button"
             className={clsx("research-action-btn favorite-btn", isFavorite && "is-favorite")}

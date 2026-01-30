@@ -55,7 +55,7 @@ export default function ResearchPanel({
 
   // Data hooks
   const { songs, allSongs, genres, yearRange, loading, error, filteredCount, totalCount } = useRhythmGameSongs(filters);
-  const { isFavorite, toggleFavorite, favoriteIds } = useRhythmGameFavorites(userId);
+  const { favorites, isFavorite, toggleFavorite, moveFavoriteUp, moveFavoriteDown, favoriteIds } = useRhythmGameFavorites(userId);
 
   // Generate decade pills
   const decades = useMemo(() => {
@@ -95,9 +95,12 @@ export default function ResearchPanel({
   }, []);
 
   // Get favorite songs from ALL songs (unfiltered) so favorites always show
+  // Maintain ranking order from favorites list
   const favoriteSongs = useMemo(() => {
-    return allSongs.filter(s => favoriteIds.has(s.id));
-  }, [allSongs, favoriteIds]);
+    return favorites
+      .map(fav => allSongs.find(s => s.id === fav.song_id))
+      .filter((s): s is NonNullable<typeof s> => s !== undefined);
+  }, [favorites, allSongs]);
 
   // Filter out favorites from the main list to avoid duplicates
   const nonFavoriteSongs = useMemo(() => {
@@ -365,13 +368,17 @@ export default function ResearchPanel({
                   defaultExpanded={true}
                 >
                   <div className="research-songs-list">
-                    {favoriteSongs.map(song => (
+                    {favoriteSongs.map((song, index) => (
                       <ResearchSongCard
                         key={song.id}
                         song={song}
                         isFavorite={true}
                         onToggleFavorite={() => toggleFavorite(song.id)}
                         onMention={onMention}
+                        rankPosition={index + 1}
+                        totalFavorites={favoriteSongs.length}
+                        onMoveUp={index > 0 ? () => moveFavoriteUp(song.id) : undefined}
+                        onMoveDown={index < favoriteSongs.length - 1 ? () => moveFavoriteDown(song.id) : undefined}
                       />
                     ))}
                   </div>

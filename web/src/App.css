@@ -9206,6 +9206,27 @@
   background: linear-gradient(135deg, rgba(129, 140, 248, 0.15) 0%, rgba(167, 139, 250, 0.15) 100%);
 }
 
+/* Rank badge for favorites */
+.rank-badge {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+}
+
+[data-mode="dark"] .rank-badge {
+  background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
+  box-shadow: 0 2px 6px rgba(129, 140, 248, 0.4);
+}
+
 /* Franchise icons column */
 .research-song-card-icons {
   display: flex;
@@ -9363,6 +9384,54 @@
 [data-mode="dark"] .mention-btn {
   background: rgba(129, 140, 248, 0.25);
   color: #a5b4fc;
+}
+
+/* Ranking controls */
+.rank-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.rank-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 13px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s, opacity 0.15s;
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+  font-size: 9px;
+  line-height: 1;
+  padding: 0;
+}
+
+.rank-arrow:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.25);
+  transform: scale(1.05);
+}
+
+.rank-arrow:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.rank-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+[data-mode="dark"] .rank-arrow {
+  background: rgba(129, 140, 248, 0.2);
+  color: #a5b4fc;
+}
+
+[data-mode="dark"] .rank-arrow:hover:not(:disabled) {
+  background: rgba(129, 140, 248, 0.3);
 }
 
 /* Expanded details */
