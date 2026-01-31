@@ -8,6 +8,7 @@ import {
   type RhythmGameFilters,
 } from "../../hooks/useRhythmGameSongs";
 import { useAuth } from "../../contexts/AuthContext";
+import { useRound } from "../../contexts/RoundContext";
 import rockBandLogo from "../../assets/rock_band_4_inst_logo.png";
 import guitarHeroLogo from "../../assets/gh_flames_logo.png";
 
@@ -41,7 +42,9 @@ export default function ResearchPanel({
   onClose,
 }: ResearchPanelProps) {
   const { profile } = useAuth();
+  const { round } = useRound();
   const userId = profile?.id ?? null;
+  const roundId = round?.id ?? null;
 
   // Filters state
   const DEFAULT_FILTERS: RhythmGameFilters = {
@@ -94,7 +97,11 @@ export default function ResearchPanel({
 
   // Data hooks
   const { songs, allSongs, yearRange, loading, error, filteredCount, totalCount } = useRhythmGameSongs(filters);
-  const { favorites, isFavorite, toggleFavorite, moveFavoriteUp, moveFavoriteDown, favoriteIds } = useRhythmGameFavorites(userId);
+  const { favorites, isFavorite, toggleFavorite, moveFavoriteUp, moveFavoriteDown, favoriteIds } = useRhythmGameFavorites(userId, roundId);
+
+  // Mode detection: curated list vs search-first
+  const isCuratedMode = totalCount > 0;
+  const isSearchMode = !loading && !isCuratedMode;
 
   // Generate decade pills
   const decades = useMemo(() => {
@@ -252,10 +259,19 @@ export default function ResearchPanel({
         {/* Header */}
         <div className="research-panel-header">
           <div className="research-panel-header-content">
-            <h2 className="research-panel-title">Shred Dead Redemption</h2>
-            <p className="research-panel-subtitle">
-              Songs in Guitar Hero (1, 2, 3) or Rock Band
-            </p>
+            <h2 className="research-panel-title">
+              {round?.name || "Song Research"}
+            </h2>
+            {isCuratedMode && (
+              <p className="research-panel-subtitle">
+                Songs in Guitar Hero (1, 2, 3) or Rock Band
+              </p>
+            )}
+            {isSearchMode && (
+              <p className="research-panel-subtitle">
+                Search and favorite songs for this round
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -268,16 +284,17 @@ export default function ResearchPanel({
         </div>
 
         {/* Search and Filters */}
-        <div className="research-panel-filters">
-          <input
-            type="search"
-            className="research-search-input"
-            placeholder="Search songs or artists..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
+        {isCuratedMode && (
+          <div className="research-panel-filters">
+            <input
+              type="search"
+              className="research-search-input"
+              placeholder="Search songs or artists..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
 
-          <div className="research-filter-row">
+            <div className="research-filter-row">
             <button
               type="button"
               className={clsx("filter-pill filter-pill-with-logo", filters.showGuitarHero && "active")}
@@ -442,7 +459,8 @@ export default function ResearchPanel({
           <div className="research-filter-count">
             Showing {filteredCount.toLocaleString()} of {totalCount.toLocaleString()} songs
           </div>
-        </div>
+          </div>
+        )}
 
         {/* Content */}
         <div className="research-panel-content">
@@ -454,7 +472,74 @@ export default function ResearchPanel({
             <div className="research-error">Error: {error}</div>
           )}
 
-          {!loading && !error && (
+          {/* Search-First Mode (no curated list) */}
+          {isSearchMode && (
+            <>
+              {/* Show favorites if user has any */}
+              {favoriteSongs.length > 0 && (
+                <CollapsibleSection
+                  id="research-favorites"
+                  title="My Favorites"
+                  icon="❤️"
+                  badge={favoriteSongs.length}
+                  defaultExpanded={true}
+                >
+                  <div className="research-songs-list">
+                    {favoriteSongs.map((song, index) => (
+                      <ResearchSongCard
+                        key={song.id}
+                        song={song}
+                        isFavorite={true}
+                        onToggleFavorite={() => toggleFavorite(song.id)}
+                        rankPosition={index + 1}
+                        totalFavorites={favoriteSongs.length}
+                        onMoveUp={index > 0 ? () => moveFavoriteUp(song.id) : undefined}
+                        onMoveDown={index < favoriteSongs.length - 1 ? () => moveFavoriteDown(song.id) : undefined}
+                      />
+                    ))}
+                  </div>
+                </CollapsibleSection>
+              )}
+
+              {/* Search Instructions */}
+              <div className="research-search-instructions">
+                <h3>Research Songs for This Round</h3>
+                <p>Use your favorite music platform to discover songs that match the round theme:</p>
+                <div className="research-search-links">
+                  <a
+                    href="https://open.spotify.com/search"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="research-search-link"
+                  >
+                    🎵 Search Spotify
+                  </a>
+                  <a
+                    href="https://music.youtube.com/search"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="research-search-link"
+                  >
+                    📺 Search YouTube Music
+                  </a>
+                  <a
+                    href="https://music.apple.com/search"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="research-search-link"
+                  >
+                    🍎 Search Apple Music
+                  </a>
+                </div>
+                <p className="research-search-hint">
+                  💡 Tip: Keep track of your favorites as you search! The research panel gives you flexibility to find songs your own way, without AI bias.
+                </p>
+              </div>
+            </>
+          )}
+
+          {/* Curated Mode (has song database) */}
+          {isCuratedMode && !loading && !error && (
             <>
               {/* Favorites Section */}
               {favoriteSongs.length > 0 && (
