@@ -24,6 +24,7 @@ export type RhythmGameFavorite = {
   id: string;
   profile_id: string;
   song_id: string;
+  round_id: string | null;
   rank: number | null;
   created_at: string;
 };
@@ -182,12 +183,13 @@ export function useRhythmGameSongs(filters: RhythmGameFilters = DEFAULT_FILTERS)
 
 /**
  * Hook for managing user's favorite rhythm game songs with ranking support
+ * Now round-aware: favorites are specific to each round
  */
-export function useRhythmGameFavorites(userId: string | null) {
+export function useRhythmGameFavorites(userId: string | null, roundId: string | null) {
   const [favorites, setFavorites] = useState<RhythmGameFavorite[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user's favorites with ranking
+  // Fetch user's favorites with ranking (filtered by round)
   const fetchFavorites = useCallback(async () => {
     if (!userId) {
       setFavorites([]);
@@ -197,10 +199,17 @@ export function useRhythmGameFavorites(userId: string | null) {
 
     setLoading(true);
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("rhythm_game_favorites")
       .select("*")
-      .eq("profile_id", userId)
+      .eq("profile_id", userId);
+
+    // Filter by round if provided, otherwise get ALL favorites (for cross-round view)
+    if (roundId !== null) {
+      query = query.eq("round_id", roundId);
+    }
+
+    const { data, error } = await query
       .order("rank", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true });
 
@@ -208,7 +217,7 @@ export function useRhythmGameFavorites(userId: string | null) {
       setFavorites(data);
     }
     setLoading(false);
-  }, [userId]);
+  }, [userId, roundId]);
 
   useEffect(() => {
     fetchFavorites();
@@ -230,42 +239,29 @@ export function useRhythmGameFavorites(userId: string | null) {
       const { error } = await supabase
         .from("rhythm_game_favorites")
         .delete()
-        .eq("profile_id", userId)
-        .eq("song_id", songId);
+        .eq("id", existingFavorite.id);
 
       if (!error) {
-        setFavorites(prev => prev.filter(f => f.song_id !== songId));
+        setFavorites(prev => prev.filter(f => f.id !== existingFavorite.id));
       }
     } else {
-      // Add favorite - assign next rank (if rank column exists)
+      // Add favorite - assign next rank and round_id
       const maxRank = favorites.reduce((max, f) => {
         return f.rank !== null && f.rank > max ? f.rank : max;
       }, 0);
 
-      // Try inserting with rank first (for after migration)
-      let insertData: { profile_id: string; song_id: string; rank?: number } = {
+      const insertData: { profile_id: string; song_id: string; round_id: string | null; rank: number } = {
         profile_id: userId,
         song_id: songId,
+        round_id: roundId, // Associate with current round
         rank: maxRank + 1
       };
 
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from("rhythm_game_favorites")
         .insert(insertData)
         .select()
         .single();
-
-      // If rank column doesn't exist yet, retry without it
-      if (error && error.message?.includes('column "rank"')) {
-        const { profile_id, song_id } = insertData;
-        const fallbackResult = await supabase
-          .from("rhythm_game_favorites")
-          .insert({ profile_id, song_id })
-          .select()
-          .single();
-        data = fallbackResult.data;
-        error = fallbackResult.error;
-      }
 
       if (error) {
         console.error("Error adding favorite:", error);
@@ -278,7 +274,7 @@ export function useRhythmGameFavorites(userId: string | null) {
         }));
       }
     }
-  }, [userId, favorites]);
+  }, [userId, roundId, favorites]);
 
   // Move favorite up in ranking (decrease rank number)
   const moveFavoriteUp = useCallback(async (songId: string) => {
