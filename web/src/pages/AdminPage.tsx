@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import SeasonImport from "../components/SeasonImport";
@@ -129,10 +130,17 @@ const RELATIONSHIP_OPTIONS = [
   "Babysitter",
 ];
 
+const VALID_TABS: TabId[] = ["users", "invites", "leagues", "rounds", "competitors", "imports", "ai-settings", "bonus"];
+
 export default function AdminPage() {
   const { group, profile } = useAuth();
   const isLead = group?.role === "lead";
-  const [activeTab, setActiveTab] = useState<TabId>("users");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const activeTab: TabId = VALID_TABS.includes(tabParam as TabId) ? (tabParam as TabId) : "users";
+  const setActiveTab = useCallback((tab: TabId) => {
+    setSearchParams({ tab }, { replace: true });
+  }, [setSearchParams]);
   const [leagues, setLeagues] = useState<LeagueSummary[]>([]);
   const [leagueName, setLeagueName] = useState("");
   const [leagueSeasonNumber, setLeagueSeasonNumber] = useState("");
