@@ -260,7 +260,7 @@ export default function ResearchPanel({
         <div className="research-panel-header">
           <div className="research-panel-header-content">
             <h2 className="research-panel-title">
-              {round?.name || "Song Research"}
+              {round?.theme || "Song Research"}
             </h2>
             {isCuratedMode && (
               <p className="research-panel-subtitle">
