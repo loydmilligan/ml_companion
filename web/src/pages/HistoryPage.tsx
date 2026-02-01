@@ -1050,7 +1050,7 @@ export default function HistoryPage() {
         .from("rounds")
         .select("id,theme,theme_description,theme_author,round_number,season_number")
         .eq("league_id", leagueId)
-        .eq("status", "revealed")
+        .in("status", ["revealed", "archived"])
         .order("round_number", { ascending: false })
         .limit(1)
         .maybeSingle();
