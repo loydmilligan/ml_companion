@@ -100,7 +100,7 @@ export default function ResearchPanel({
   const { favorites, isFavorite, toggleFavorite, moveFavoriteUp, moveFavoriteDown, favoriteIds } = useRhythmGameFavorites(userId, roundId);
 
   // Mode detection: curated list vs search-first
-  const isCuratedMode = totalCount > 0;
+  const isCuratedMode = round?.has_curated_research === true;
   const isSearchMode = !loading && !isCuratedMode;
 
   // Generate decade pills

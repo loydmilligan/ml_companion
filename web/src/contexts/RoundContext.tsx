@@ -17,6 +17,7 @@ type RoundSummary = {
   external_playlist_url: string | null;
   youtube_playlist_url: string | null;
   theme_image_url: string | null;
+  has_curated_research: boolean | null;
 };
 
 type SubmissionRow = {
@@ -136,7 +137,7 @@ export function RoundProvider({ children }: { children: ReactNode }) {
     let { data: roundData } = await supabase
       .from("rounds")
       .select(
-        "id,theme,theme_description,theme_author,status,season_number,round_number,submission_deadline,voting_deadline,reveal_until,playlist_url,external_playlist_url,youtube_playlist_url,theme_image_url"
+        "id,theme,theme_description,theme_author,status,season_number,round_number,submission_deadline,voting_deadline,reveal_until,playlist_url,external_playlist_url,youtube_playlist_url,theme_image_url,has_curated_research"
       )
       .eq("league_id", leagueData.id)
       .in("status", ["open", "voting"])
@@ -149,7 +150,7 @@ export function RoundProvider({ children }: { children: ReactNode }) {
       const { data: revealedRound } = await supabase
         .from("rounds")
         .select(
-          "id,theme,theme_description,theme_author,status,season_number,round_number,submission_deadline,voting_deadline,reveal_until,playlist_url,external_playlist_url,youtube_playlist_url,theme_image_url"
+          "id,theme,theme_description,theme_author,status,season_number,round_number,submission_deadline,voting_deadline,reveal_until,playlist_url,external_playlist_url,youtube_playlist_url,theme_image_url,has_curated_research"
         )
         .eq("league_id", leagueData.id)
         .eq("status", "revealed")

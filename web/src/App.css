@@ -9799,3 +9799,152 @@
   background: rgba(255, 0, 0, 0.25);
   color: #ff4444;
 }
+
+/* Song title link */
+.song-title-link {
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.song-title-link:hover {
+  color: #6366f1;
+  text-decoration: underline;
+}
+
+[data-mode="dark"] .song-title-link:hover {
+  color: #818cf8;
+}
+
+/* Expand button */
+.expand-btn {
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+}
+
+[data-mode="dark"] .expand-btn {
+  background: rgba(129, 140, 248, 0.25);
+  color: #a5b4fc;
+}
+
+/* Expanded section styles */
+.expanded-meta {
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.expanded-meta strong {
+  color: var(--text-primary);
+}
+
+.popularity-badge-expanded {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.15) 0%, rgba(249, 115, 22, 0.15) 100%);
+  color: #ea580c;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+[data-mode="dark"] .popularity-badge-expanded {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.25) 0%, rgba(249, 115, 22, 0.25) 100%);
+  color: #fb923c;
+}
+
+/* Expanded music buttons */
+.expanded-music-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.music-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.music-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.music-button.spotify {
+  background: rgba(30, 215, 96, 0.15);
+  color: #1db954;
+}
+
+[data-mode="dark"] .music-button.spotify {
+  background: rgba(30, 215, 96, 0.25);
+  color: #1ed760;
+}
+
+.music-button.apple-music {
+  background: rgba(252, 61, 100, 0.15);
+  color: #fc3d64;
+}
+
+[data-mode="dark"] .music-button.apple-music {
+  background: rgba(252, 61, 100, 0.25);
+  color: #ff5c83;
+}
+
+.music-button.youtube-music {
+  background: rgba(255, 0, 0, 0.15);
+  color: #ff0000;
+}
+
+[data-mode="dark"] .music-button.youtube-music {
+  background: rgba(255, 0, 0, 0.25);
+  color: #ff3333;
+}
+
+.music-button.youtube {
+  background: rgba(255, 0, 0, 0.15);
+  color: #ff0000;
+}
+
+[data-mode="dark"] .music-button.youtube {
+  background: rgba(255, 0, 0, 0.25);
+  color: #ff3333;
+}
+
+/* Expanded mention button */
+.expanded-mention-btn {
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  margin-bottom: 12px;
+}
+
+.expanded-mention-btn:hover {
+  background: rgba(99, 102, 241, 0.25);
+  transform: translateY(-1px);
+}
+
+[data-mode="dark"] .expanded-mention-btn {
+  background: rgba(129, 140, 248, 0.25);
+  color: #a5b4fc;
+}
+
+[data-mode="dark"] .expanded-mention-btn:hover {
+  background: rgba(129, 140, 248, 0.35);
+}
