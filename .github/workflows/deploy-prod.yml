@@ -40,7 +40,7 @@ jobs:
 
       - name: Deploy to Prod Pi
         run: |
-          ssh prod-pi "cd ~/ml_companion && git fetch origin && git checkout main && git pull origin main"
+          ssh prod-pi "cd ~/ml_companion && git fetch origin && git checkout main && git reset --hard origin/main"
           ssh prod-pi "cd ~/ml_companion && docker compose down && docker compose build --no-cache && docker compose up -d"
 
       - name: Health check
