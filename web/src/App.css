@@ -4546,6 +4546,28 @@
   color: #fff;
 }
 
+.song-card-action.playlist {
+  background: rgba(99, 102, 241, 0.15);
+  color: #4f46e5;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.song-card-action.playlist.in-playlist {
+  background: #4f46e5;
+  color: #fff;
+}
+
+[data-mode="dark"] .song-card-action.playlist {
+  background: rgba(129, 140, 248, 0.2);
+  color: #818cf8;
+}
+
+[data-mode="dark"] .song-card-action.playlist.in-playlist {
+  background: #818cf8;
+  color: #0a1a2f;
+}
+
 /* Ranked Song Cards */
 .song-card.ranked {
   position: relative;
@@ -9419,6 +9441,85 @@
 [data-mode="dark"] .playlist-info {
   background: rgba(129, 140, 248, 0.08);
   border-left-color: #818cf8;
+}
+
+/* Playlist Songs List */
+.playlist-songs-list {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  border: 1px solid rgba(10, 26, 47, 0.12);
+  border-radius: 8px;
+}
+
+[data-mode="dark"] .playlist-songs-list {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.playlist-song-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid rgba(10, 26, 47, 0.06);
+}
+
+.playlist-song-item:last-child {
+  border-bottom: none;
+}
+
+[data-mode="dark"] .playlist-song-item {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.playlist-song-artwork {
+  width: 48px;
+  height: 48px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.playlist-song-artwork-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--text-tertiary);
+  font-size: 20px;
+}
+
+.playlist-song-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.playlist-song-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playlist-song-artist {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playlist-song-source {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-style: italic;
+  margin-top: 2px;
 }
 
 /* Content area */

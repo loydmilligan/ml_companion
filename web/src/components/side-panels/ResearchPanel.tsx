@@ -9,6 +9,7 @@ import {
 } from "../../hooks/useRhythmGameSongs";
 import { useAuth } from "../../contexts/AuthContext";
 import { useRound } from "../../contexts/RoundContext";
+import { useFavoritesPlaylist } from "../../hooks/useFavoritesPlaylist";
 import rockBandLogo from "../../assets/rock_band_4_inst_logo.png";
 import guitarHeroLogo from "../../assets/gh_flames_logo.png";
 
@@ -98,6 +99,7 @@ export default function ResearchPanel({
   // Data hooks
   const { songs, allSongs, yearRange, loading, error, filteredCount, totalCount } = useRhythmGameSongs(filters);
   const { favorites, isFavorite, toggleFavorite, moveFavoriteUp, moveFavoriteDown, favoriteIds } = useRhythmGameFavorites(userId, roundId);
+  const { playlist, loading: playlistLoading, seedPlaylist } = useFavoritesPlaylist();
 
   // Mode detection: curated list vs search-first
   const isCuratedMode = round?.has_curated_research === true;
@@ -268,7 +270,7 @@ export default function ResearchPanel({
   }, [filters]);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'favorites' | 'all' | 'playlists'>('favorites');
+  const [activeTab, setActiveTab] = useState<'favorites' | 'all' | 'playlist'>('favorites');
 
   return (
     <>
@@ -522,10 +524,10 @@ export default function ResearchPanel({
             </button>
             <button
               type="button"
-              className={clsx("research-tab", activeTab === 'playlists' && 'active')}
-              onClick={() => setActiveTab('playlists')}
+              className={clsx("research-tab", activeTab === 'playlist' && 'active')}
+              onClick={() => setActiveTab('playlist')}
             >
-              📋 Playlists
+              📋 Favorites Playlist
             </button>
           </div>
         )}
@@ -657,16 +659,43 @@ export default function ResearchPanel({
                 </div>
               )}
 
-              {/* Playlists Tab */}
-              {activeTab === 'playlists' && (
+              {/* Favorites Playlist Tab */}
+              {activeTab === 'playlist' && (
                 <div className="research-playlists-tab">
-                  <h3>Generate Playlist</h3>
-                  <p>Create a playlist from your favorited songs:</p>
+                  <h3>Your Favorites Playlist</h3>
+                  <p>A personalized playlist seeded with your submissions and top-voted songs from Seasons 1 & 2</p>
 
-                  {favoriteSongs.length > 0 ? (
+                  {playlistLoading ? (
+                    <div className="research-loading">Loading playlist...</div>
+                  ) : playlist.length > 0 ? (
                     <>
                       <div className="playlist-stats">
-                        <strong>{favoriteSongs.length} songs</strong> in your favorites
+                        <strong>{playlist.length} songs</strong> in your playlist
+                      </div>
+
+                      <div className="playlist-songs-list">
+                        {playlist.map((item) => (
+                          <div key={item.id} className="playlist-song-item">
+                            {item.submission.artwork_url ? (
+                              <img
+                                src={item.submission.artwork_url}
+                                alt={item.submission.title}
+                                className="playlist-song-artwork"
+                              />
+                            ) : (
+                              <div className="playlist-song-artwork-placeholder">♪</div>
+                            )}
+                            <div className="playlist-song-info">
+                              <div className="playlist-song-title">{item.submission.title}</div>
+                              <div className="playlist-song-artist">{item.submission.artist || "Unknown"}</div>
+                              {item.source !== "manual" && (
+                                <div className="playlist-song-source">
+                                  {item.source === "submitted" ? "You submitted this" : "You loved this"}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
 
                       <div className="playlist-actions">
@@ -679,7 +708,7 @@ export default function ResearchPanel({
                           }}
                         >
                           <span className="btn-icon">🎵</span>
-                          Generate Spotify Playlist
+                          Export to Spotify
                         </button>
 
                         <button
@@ -691,18 +720,32 @@ export default function ResearchPanel({
                           }}
                         >
                           <span className="btn-icon">📺</span>
-                          Generate YouTube Music Playlist
+                          Export to YouTube Music
                         </button>
-                      </div>
-
-                      <div className="playlist-info">
-                        <p>💡 Playlists will be created on a shared "Talking Music League" account and will be unlisted (only visible with the link).</p>
                       </div>
                     </>
                   ) : (
-                    <div className="research-empty">
-                      Add songs to your favorites first to generate a playlist.
-                    </div>
+                    <>
+                      <div className="research-empty">
+                        Your playlist is empty. Click the button below to seed it with your submissions and top-voted songs from Seasons 1 & 2.
+                      </div>
+                      <div className="playlist-actions">
+                        <button
+                          type="button"
+                          className="playlist-generate-btn spotify"
+                          onClick={async () => {
+                            const success = await seedPlaylist();
+                            if (success) {
+                              alert("Playlist seeded successfully!");
+                            }
+                          }}
+                          disabled={playlistLoading}
+                        >
+                          <span className="btn-icon">🌱</span>
+                          Seed My Playlist
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
               )}

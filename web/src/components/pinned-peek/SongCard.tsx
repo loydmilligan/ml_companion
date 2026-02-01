@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import clsx from "clsx";
 import { useYouTubeSidebar, extractYouTubeId } from "../youtube-sidebar";
 import { useAuth } from "../../contexts/AuthContext";
+import { useFavoritesPlaylist } from "../../hooks/useFavoritesPlaylist";
 
 type VoteRow = {
   voter_id: string | null;
@@ -59,6 +60,7 @@ export default function SongCard({
   const [votersExpanded, setVotersExpanded] = useState(false);
   const { openSidebar } = useYouTubeSidebar();
   const { profile } = useAuth();
+  const { isInPlaylist, addToPlaylist, removeFromPlaylist } = useFavoritesPlaylist();
 
   // User preferences with defaults
   const preferredProvider = profile?.preferred_music_provider ?? "spotify";
@@ -218,6 +220,20 @@ export default function SongCard({
               @
             </button>
           )}
+          <button
+            type="button"
+            className={clsx("song-card-action playlist", isInPlaylist(song.id) && "in-playlist")}
+            onClick={() => {
+              if (isInPlaylist(song.id)) {
+                removeFromPlaylist(song.id);
+              } else {
+                addToPlaylist(song.id);
+              }
+            }}
+            title={isInPlaylist(song.id) ? "Remove from Favorites Playlist" : "Add to Favorites Playlist"}
+          >
+            {isInPlaylist(song.id) ? "✓" : "+"}
+          </button>
         </div>
 
         {showVotes && votes.length > 0 && (
