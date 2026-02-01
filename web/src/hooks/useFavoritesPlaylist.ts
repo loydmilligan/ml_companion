@@ -59,7 +59,12 @@ export function useFavoritesPlaylist() {
       console.error("Error fetching playlist:", fetchError);
       setError(fetchError.message);
     } else {
-      setPlaylist(data as PlaylistSong[] || []);
+      // Transform the data to match PlaylistSong type (submission comes as array, need single object)
+      const transformedData = (data || []).map(item => ({
+        ...item,
+        submission: Array.isArray(item.submission) ? item.submission[0] : item.submission
+      })) as PlaylistSong[];
+      setPlaylist(transformedData);
     }
 
     setLoading(false);
