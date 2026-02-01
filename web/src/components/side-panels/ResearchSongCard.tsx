@@ -297,28 +297,27 @@ export default function ResearchSongCard({
         </div>
 
         {/* Song info */}
-        <div className="research-song-card-info" onClick={() => setExpanded(!expanded)}>
+        <div className="research-song-card-info">
           <div className="research-song-card-title">
-            {song.title}
+            <a
+              href={spotifyData?.spotify_url || getSpotifySearchUrl(song)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="song-title-link"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {song.title}
+            </a>
             {song.is_dlc && <span className="dlc-badge">DLC</span>}
           </div>
           <div className="research-song-card-artist">{song.artist}</div>
           <div className="research-song-card-meta">
             {song.year && <span>{song.year}</span>}
             {song.genre && <span className="genre-tag">{song.genre}</span>}
-            {spotifyData?.popularity !== null && spotifyData?.popularity !== undefined && (
-              <span className="popularity-badge" title={`Spotify popularity: ${spotifyData.popularity}/100`}>
-                {spotifyData.popularity >= 80 && '💎'}
-                {spotifyData.popularity >= 60 && spotifyData.popularity < 80 && '🥇'}
-                {spotifyData.popularity >= 40 && spotifyData.popularity < 60 && '🥈'}
-                {spotifyData.popularity >= 20 && spotifyData.popularity < 40 && '🥉'}
-                {spotifyData.popularity < 20 && '💿'}
-              </span>
-            )}
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Actions - Collapsed view shows only favorite and expand */}
         <div className="research-song-card-actions">
           <button
             type="button"
@@ -328,28 +327,13 @@ export default function ResearchSongCard({
           >
             <HeartIcon filled={isFavorite} />
           </button>
-          {musicLinks.map((link, idx) => (
-            <a
-              key={idx}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={clsx("research-action-btn music-link", link.className)}
-              title={`Listen on ${link.label}`}
-            >
-              {link.label === "Spotify" && <SpotifyIcon />}
-              {link.label === "Apple Music" && "🍎"}
-              {link.label === "YouTube Music" && "🎵"}
-              {link.label === "YouTube" && "▶️"}
-            </a>
-          ))}
           <button
             type="button"
-            className="research-action-btn mention-btn"
-            onClick={handleMention}
-            title="Share in chat"
+            className="research-action-btn expand-btn"
+            onClick={() => setExpanded(!expanded)}
+            title={expanded ? "Show less" : "Show more"}
           >
-            @
+            {expanded ? "▲" : "▼"}
           </button>
         </div>
       </div>
@@ -357,6 +341,51 @@ export default function ResearchSongCard({
       {/* Expanded details */}
       {expanded && (
         <div className="research-song-card-details">
+          {/* Spotify Popularity */}
+          {spotifyData?.popularity !== null && spotifyData?.popularity !== undefined && (
+            <div className="expanded-meta">
+              <strong>Spotify Popularity:</strong>
+              <span className="popularity-badge-expanded" title={`${spotifyData.popularity}/100`}>
+                {spotifyData.popularity >= 80 && '💎 Diamond'}
+                {spotifyData.popularity >= 60 && spotifyData.popularity < 80 && '🥇 Gold'}
+                {spotifyData.popularity >= 40 && spotifyData.popularity < 60 && '🥈 Silver'}
+                {spotifyData.popularity >= 20 && spotifyData.popularity < 40 && '🥉 Bronze'}
+                {spotifyData.popularity < 20 && '💿 Rare'}
+                {` (${spotifyData.popularity}/100)`}
+              </span>
+            </div>
+          )}
+
+          {/* Music Service Buttons */}
+          <div className="expanded-music-buttons">
+            {musicLinks.map((link, idx) => (
+              <a
+                key={idx}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={clsx("music-button", link.className)}
+                title={`Listen on ${link.label}`}
+              >
+                {link.label === "Spotify" && <><SpotifyIcon /> Spotify</>}
+                {link.label === "Apple Music" && <>🍎 Apple Music</>}
+                {link.label === "YouTube Music" && <>🎵 YouTube Music</>}
+                {link.label === "YouTube" && <>▶️ YouTube</>}
+              </a>
+            ))}
+          </div>
+
+          {/* Chat Mention Button */}
+          <button
+            type="button"
+            className="expanded-mention-btn"
+            onClick={handleMention}
+            title="Share in chat"
+          >
+            @ Share in Chat
+          </button>
+
+          {/* Games List */}
           <div className="games-list">
             <strong>Appears in:</strong>
             <ul>
@@ -366,36 +395,9 @@ export default function ResearchSongCard({
             </ul>
           </div>
 
-          {/* Multi-platform links */}
-          {spotifyData?.spotify_url && (
-            <div className="platform-links">
-              <strong>Listen on:</strong>
-              {loadingLinks && <span className="platform-links-loading">Loading links...</span>}
-              {!loadingLinks && platformLinks && (
-                <div className="platform-links-list">
-                  {platformLinks.spotify && (
-                    <a href={platformLinks.spotify} target="_blank" rel="noopener noreferrer" className="platform-link spotify">
-                      Spotify
-                    </a>
-                  )}
-                  {platformLinks.appleMusic && (
-                    <a href={platformLinks.appleMusic} target="_blank" rel="noopener noreferrer" className="platform-link apple-music">
-                      Apple Music
-                    </a>
-                  )}
-                  {platformLinks.youtubeMusic && (
-                    <a href={platformLinks.youtubeMusic} target="_blank" rel="noopener noreferrer" className="platform-link youtube-music">
-                      YouTube Music
-                    </a>
-                  )}
-                  {platformLinks.youtube && (
-                    <a href={platformLinks.youtube} target="_blank" rel="noopener noreferrer" className="platform-link youtube">
-                      YouTube
-                    </a>
-                  )}
-                </div>
-              )}
-            </div>
+          {/* Platform Links (if available) */}
+          {spotifyData?.spotify_url && loadingLinks && (
+            <div className="platform-links-loading">Loading additional links...</div>
           )}
         </div>
       )}
