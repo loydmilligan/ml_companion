@@ -394,11 +394,6 @@ export default function ResearchSongCard({
               ))}
             </ul>
           </div>
-
-          {/* Platform Links (if available) */}
-          {spotifyData?.spotify_url && loadingLinks && (
-            <div className="platform-links-loading">Loading additional links...</div>
-          )}
         </div>
       )}
     </div>

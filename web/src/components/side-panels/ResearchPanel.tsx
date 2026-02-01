@@ -232,9 +232,40 @@ export default function ResearchPanel({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Infinite scroll state
+  const [displayLimit, setDisplayLimit] = useState(100);
+  const contentRef = useRef<HTMLDivElement>(null);
+
   // Limit displayed songs for performance (use non-favorites to avoid duplicates)
-  const displayedSongs = nonFavoriteSongs.slice(0, 100);
-  const hasMore = nonFavoriteSongs.length > 100;
+  const displayedSongs = nonFavoriteSongs.slice(0, displayLimit);
+  const hasMore = nonFavoriteSongs.length > displayLimit;
+
+  // Infinite scroll handler
+  const handleScroll = useCallback(() => {
+    if (!contentRef.current || !hasMore) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
+    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+
+    // Load more when scrolled 80% down
+    if (scrollPercentage > 0.8) {
+      setDisplayLimit(prev => Math.min(prev + 100, nonFavoriteSongs.length));
+    }
+  }, [hasMore, nonFavoriteSongs.length]);
+
+  // Attach scroll listener
+  useEffect(() => {
+    const element = contentRef.current;
+    if (!element) return;
+
+    element.addEventListener('scroll', handleScroll);
+    return () => element.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
+  // Reset display limit when filters change
+  useEffect(() => {
+    setDisplayLimit(100);
+  }, [filters]);
 
   return (
     <>
@@ -342,9 +373,14 @@ export default function ResearchPanel({
           {/* Collapsible Advanced Filters */}
           {filtersExpanded && (
             <div className="research-advanced-filters">
-              {/* Genre Group Filters */}
-              <div className="filter-group">
-                <div className="filter-group-label">Genres</div>
+              {/* Genre Group Filters - Collapsible */}
+              <CollapsibleSection
+                id="research-genre-filters"
+                title="Genres"
+                icon="🎵"
+                badge={filters.genres.length > 0 ? filters.genres.length : undefined}
+                defaultExpanded={false}
+              >
                 <div className="filter-pills-wrap">
                   {Object.entries(GENRE_GROUPS).map(([groupName, groupGenres]) => {
                     const allSelected = groupGenres.every(g => filters.genres.includes(g));
@@ -392,7 +428,7 @@ export default function ResearchPanel({
                     );
                   })}
                 </div>
-              </div>
+              </CollapsibleSection>
 
               {/* Year Filters */}
               <div className="filter-group">
@@ -463,7 +499,7 @@ export default function ResearchPanel({
         )}
 
         {/* Content */}
-        <div className="research-panel-content">
+        <div ref={contentRef} className="research-panel-content">
           {loading && (
             <div className="research-loading">Loading songs...</div>
           )}
@@ -586,7 +622,7 @@ export default function ResearchPanel({
                   ))}
                   {hasMore && (
                     <div className="research-more-hint">
-                      {nonFavoriteSongs.length - 100} more songs... Use search to narrow down.
+                      Showing {displayLimit} of {nonFavoriteSongs.length} songs. Scroll down for more...
                     </div>
                   )}
                   {displayedSongs.length === 0 && (
