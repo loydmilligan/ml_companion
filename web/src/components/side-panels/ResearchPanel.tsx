@@ -267,6 +267,9 @@ export default function ResearchPanel({
     setDisplayLimit(100);
   }, [filters]);
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'favorites' | 'all' | 'playlists'>('favorites');
+
   return (
     <>
       {/* Backdrop */}
@@ -498,6 +501,35 @@ export default function ResearchPanel({
           </div>
         )}
 
+        {/* Tab Navigation */}
+        {isCuratedMode && (
+          <div className="research-tabs">
+            <button
+              type="button"
+              className={clsx("research-tab", activeTab === 'favorites' && 'active')}
+              onClick={() => setActiveTab('favorites')}
+            >
+              ❤️ Favorites
+              {favoriteSongs.length > 0 && <span className="tab-badge">{favoriteSongs.length}</span>}
+            </button>
+            <button
+              type="button"
+              className={clsx("research-tab", activeTab === 'all' && 'active')}
+              onClick={() => setActiveTab('all')}
+            >
+              🎸 All Songs
+              <span className="tab-badge">{filteredCount}</span>
+            </button>
+            <button
+              type="button"
+              className={clsx("research-tab", activeTab === 'playlists' && 'active')}
+              onClick={() => setActiveTab('playlists')}
+            >
+              📋 Playlists
+            </button>
+          </div>
+        )}
+
         {/* Content */}
         <div ref={contentRef} className="research-panel-content">
           {loading && (
@@ -577,17 +609,11 @@ export default function ResearchPanel({
           {/* Curated Mode (has song database) */}
           {isCuratedMode && !loading && !error && (
             <>
-              {/* Favorites Section */}
-              {favoriteSongs.length > 0 && (
-                <CollapsibleSection
-                  id="research-favorites"
-                  title="My Favorites"
-                  icon="❤️"
-                  badge={favoriteSongs.length}
-                  defaultExpanded={true}
-                >
-                  <div className="research-songs-list">
-                    {favoriteSongs.map((song, index) => (
+              {/* Favorites Tab */}
+              {activeTab === 'favorites' && (
+                <div className="research-songs-list">
+                  {favoriteSongs.length > 0 ? (
+                    favoriteSongs.map((song, index) => (
                       <ResearchSongCard
                         key={song.id}
                         song={song}
@@ -598,19 +624,17 @@ export default function ResearchPanel({
                         onMoveUp={index > 0 ? () => moveFavoriteUp(song.id) : undefined}
                         onMoveDown={index < favoriteSongs.length - 1 ? () => moveFavoriteDown(song.id) : undefined}
                       />
-                    ))}
-                  </div>
-                </CollapsibleSection>
+                    ))
+                  ) : (
+                    <div className="research-empty">
+                      No favorites yet. Browse the "All Songs" tab and tap the ❤️ icon to save your favorites!
+                    </div>
+                  )}
+                </div>
               )}
 
-              {/* All Songs Section */}
-              <CollapsibleSection
-                id="research-all"
-                title="All Songs"
-                icon="🎸"
-                badge={filteredCount}
-                defaultExpanded={true}
-              >
+              {/* All Songs Tab */}
+              {activeTab === 'all' && (
                 <div className="research-songs-list">
                   {displayedSongs.map(song => (
                     <ResearchSongCard
@@ -631,7 +655,57 @@ export default function ResearchPanel({
                     </div>
                   )}
                 </div>
-              </CollapsibleSection>
+              )}
+
+              {/* Playlists Tab */}
+              {activeTab === 'playlists' && (
+                <div className="research-playlists-tab">
+                  <h3>Generate Playlist</h3>
+                  <p>Create a playlist from your favorited songs:</p>
+
+                  {favoriteSongs.length > 0 ? (
+                    <>
+                      <div className="playlist-stats">
+                        <strong>{favoriteSongs.length} songs</strong> in your favorites
+                      </div>
+
+                      <div className="playlist-actions">
+                        <button
+                          type="button"
+                          className="playlist-generate-btn spotify"
+                          onClick={() => {
+                            console.log('Generate Spotify playlist');
+                            // TODO: Implement Spotify playlist generation
+                          }}
+                        >
+                          <span className="btn-icon">🎵</span>
+                          Generate Spotify Playlist
+                        </button>
+
+                        <button
+                          type="button"
+                          className="playlist-generate-btn youtube"
+                          onClick={() => {
+                            console.log('Generate YouTube Music playlist');
+                            // TODO: Implement YouTube Music playlist generation
+                          }}
+                        >
+                          <span className="btn-icon">📺</span>
+                          Generate YouTube Music Playlist
+                        </button>
+                      </div>
+
+                      <div className="playlist-info">
+                        <p>💡 Playlists will be created on a shared "Talking Music League" account and will be unlisted (only visible with the link).</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="research-empty">
+                      Add songs to your favorites first to generate a playlist.
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
