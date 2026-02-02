@@ -187,7 +187,11 @@ export default function ResearchPanel({
       youtube_url: item.submission.youtube_url,
       source_uri: null,
       is_dlc: false,
-      game: null,
+      is_guitar_hero: false,
+      is_rock_band: false,
+      games: [],
+      created_at: null,
+      popularity: null,
     }));
   }, [playlist]);
 
