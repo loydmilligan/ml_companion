@@ -81,9 +81,11 @@ Deno.serve(async (req) => {
       if (!userVotes || userVotes.length === 0) continue;
 
       // Filter to only votes in this round
-      const roundVotes = userVotes.filter(
-        v => v.submission && (v.submission as any).round_id === round.id
-      );
+      // Note: Supabase joins return arrays, so unwrap submission
+      const roundVotes = userVotes.filter(v => {
+        const sub = Array.isArray(v.submission) ? v.submission[0] : v.submission;
+        return sub && sub.round_id === round.id;
+      });
 
       if (roundVotes.length === 0) continue;
 
