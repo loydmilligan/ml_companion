@@ -190,7 +190,7 @@ export default function ResearchPanel({
       is_guitar_hero: false,
       is_rock_band: false,
       games: [],
-      created_at: null,
+      created_at: item.created_at || new Date().toISOString(),
       popularity: null,
     }));
   }, [playlist]);
