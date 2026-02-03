@@ -647,14 +647,7 @@ export default function ResearchPanel({
                         totalFavorites={favoriteSongs.length}
                         onMoveUp={index > 0 ? () => moveFavoriteUp(song.id) : undefined}
                         onMoveDown={index < favoriteSongs.length - 1 ? () => moveFavoriteDown(song.id) : undefined}
-                        isInFavoritesPlaylist={isInPlaylist(song.id)}
-                        onToggleFavoritesPlaylist={() => {
-                          if (isInPlaylist(song.id)) {
-                            removeFromPlaylist(song.id);
-                          } else {
-                            addToPlaylist(song.id);
-                          }
-                        }}
+                        // Don't show star button - curated songs can't be added to favorites playlist
                       />
                     ))
                   ) : (
@@ -674,14 +667,7 @@ export default function ResearchPanel({
                       song={song}
                       isFavorite={isFavorite(song.id)}
                       onToggleFavorite={() => toggleFavorite(song.id)}
-                      isInFavoritesPlaylist={isInPlaylist(song.id)}
-                      onToggleFavoritesPlaylist={() => {
-                        if (isInPlaylist(song.id)) {
-                          removeFromPlaylist(song.id);
-                        } else {
-                          addToPlaylist(song.id);
-                        }
-                      }}
+                      // Don't show star button - curated songs can't be added to favorites playlist
                     />
                   ))}
                   {hasMore && (
