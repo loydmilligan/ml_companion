@@ -163,6 +163,45 @@ async function searchSpotifyTrack(
   };
 }
 
+/**
+ * General Spotify search - returns multiple results for user browsing
+ */
+async function generalSpotifySearch(
+  query: string,
+  limit: number = 20
+): Promise<SearchResult[]> {
+  const token = await getSpotifyToken();
+
+  const response = await fetch(
+    `https://api.spotify.com/v1/search?${new URLSearchParams({
+      q: query,
+      type: "track",
+      limit: limit.toString(),
+    })}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Spotify search failed: ${response.status}`);
+  }
+
+  const data: SpotifySearchResponse = await response.json();
+
+  return data.tracks.items.map(track => ({
+    trackId: track.id,
+    spotifyUrl: track.external_urls.spotify,
+    artworkUrl: track.album.images[0]?.url || null,
+    title: track.name,
+    artist: track.artists.map(a => a.name).join(", "),
+    confidence: "high",
+    popularity: track.popularity,
+  }));
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -178,7 +217,16 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
 
-    // Single search
+    // General search (new feature for browse/search UI)
+    if (body.query) {
+      const limit = body.limit || 20;
+      const results = await generalSpotifySearch(body.query, limit);
+      return new Response(JSON.stringify({ results }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Single search (existing feature for lookups)
     if (body.artist && body.title) {
       const result = await searchSpotifyTrack(body.artist, body.title);
       return new Response(JSON.stringify(result), {
@@ -186,7 +234,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Batch search
+    // Batch search (existing feature)
     if (body.songs && Array.isArray(body.songs)) {
       const results = [];
       for (const song of body.songs.slice(0, 20)) { // Limit to 20 per request
@@ -208,7 +256,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ error: "Missing artist/title or songs array" }),
+      JSON.stringify({ error: "Missing query, artist/title, or songs array" }),
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

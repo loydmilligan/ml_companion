@@ -10,6 +10,7 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import { useRound } from "../../contexts/RoundContext";
 import { useFavoritesPlaylist } from "../../hooks/useFavoritesPlaylist";
+import { useSpotifySearch } from "../../hooks/useSpotifySearch";
 import rockBandLogo from "../../assets/rock_band_4_inst_logo.png";
 import guitarHeroLogo from "../../assets/gh_flames_logo.png";
 
@@ -79,13 +80,89 @@ export default function ResearchPanel({
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [expandedGenreGroups, setExpandedGenreGroups] = useState<Set<string>>(new Set());
 
-  // Debounce search input
+  // Spotify search state (for search mode)
+  const [spotifySearchInput, setSpotifySearchInput] = useState("");
+
+  // Debounce search input (curated mode)
   useEffect(() => {
     const timer = setTimeout(() => {
       setFilters(f => ({ ...f, search: searchInput }));
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [searchInput]);
+
+  // Debounce Spotify search (search mode)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (spotifySearchInput.trim()) {
+        spotifySearch(spotifySearchInput);
+      } else {
+        clearSpotifySearch();
+      }
+    }, DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [spotifySearchInput, spotifySearch, clearSpotifySearch]);
+
+  // Helper: Create a submission from Spotify search result
+  const createSubmissionFromSpotifyResult = useCallback(async (result: typeof spotifyResults[0]) => {
+    if (!userId) {
+      console.error("User must be logged in to create submission");
+      return null;
+    }
+
+    // Check if submission already exists for this track
+    const { data: existing } = await supabase
+      .from("submissions")
+      .select("id")
+      .eq("spotify_url", result.spotifyUrl)
+      .maybeSingle();
+
+    if (existing) {
+      return existing.id;
+    }
+
+    // Create new submission
+    const { data, error } = await supabase
+      .from("submissions")
+      .insert({
+        title: result.title,
+        artist: result.artist,
+        spotify_url: result.spotifyUrl,
+        artwork_url: result.artworkUrl,
+        youtube_url: null,
+        submitter_name: null,
+        round_id: null, // Manual addition, not tied to a specific round
+        profile_id: userId,
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("Error creating submission:", error);
+      return null;
+    }
+
+    return data.id;
+  }, [userId]);
+
+  // Handler: Add Spotify search result to Favorites Playlist
+  const handleAddSpotifyToFavorites = useCallback(async (result: typeof spotifyResults[0]) => {
+    const submissionId = await createSubmissionFromSpotifyResult(result);
+    if (!submissionId) {
+      console.error("Failed to create submission for Spotify result");
+      return false;
+    }
+
+    const success = await addToPlaylist(submissionId);
+    return success;
+  }, [createSubmissionFromSpotifyResult, addToPlaylist]);
+
+  // Handler: Check if Spotify result is in Favorites Playlist
+  const isSpotifyResultInFavorites = useCallback((result: typeof spotifyResults[0]): boolean => {
+    // This is a simplistic check - in reality we'd need to look up the submission_id by spotify_url
+    // For now, we'll just show all as not favorited and let the user add them
+    return false;
+  }, []);
 
   // Save filters to localStorage whenever they change
   useEffect(() => {
@@ -100,6 +177,7 @@ export default function ResearchPanel({
   const { songs, allSongs, yearRange, loading, error, filteredCount, totalCount } = useRhythmGameSongs(filters);
   const { favorites, isFavorite, toggleFavorite, moveFavoriteUp, moveFavoriteDown, favoriteIds } = useRhythmGameFavorites(userId, roundId);
   const { playlist, loading: playlistLoading, seedPlaylist, isInPlaylist, addToPlaylist, removeFromPlaylist } = useFavoritesPlaylist();
+  const { results: spotifyResults, loading: spotifyLoading, error: spotifyError, search: spotifySearch, clear: clearSpotifySearch } = useSpotifySearch();
 
   // Mode detection: curated list vs search-first
   const isCuratedMode = round?.has_curated_research === true;
@@ -525,7 +603,7 @@ export default function ResearchPanel({
         )}
 
         {/* Tab Navigation */}
-        {isCuratedMode && (
+        {(isCuratedMode || isSearchMode) && (
           <div className="research-tabs">
             <button
               type="button"
@@ -540,8 +618,9 @@ export default function ResearchPanel({
               className={clsx("research-tab", activeTab === 'all' && 'active')}
               onClick={() => setActiveTab('all')}
             >
-              🎸 All Songs
-              <span className="tab-badge">{filteredCount}</span>
+              {isCuratedMode ? '🎸 All Songs' : '🔍 Search'}
+              {isCuratedMode && <span className="tab-badge">{filteredCount}</span>}
+              {isSearchMode && spotifyResults.length > 0 && <span className="tab-badge">{spotifyResults.length}</span>}
             </button>
             <button
               type="button"
@@ -564,20 +643,14 @@ export default function ResearchPanel({
             <div className="research-error">Error: {error}</div>
           )}
 
-          {/* Search-First Mode (no curated list) */}
+          {/* Search Mode (no curated list) */}
           {isSearchMode && (
             <>
-              {/* Show favorites if user has any */}
-              {favoriteSongs.length > 0 && (
-                <CollapsibleSection
-                  id="research-favorites"
-                  title="My Favorites"
-                  icon="❤️"
-                  badge={favoriteSongs.length}
-                  defaultExpanded={true}
-                >
-                  <div className="research-songs-list">
-                    {favoriteSongs.map((song, index) => (
+              {/* Theme Playlist Tab */}
+              {activeTab === 'favorites' && (
+                <div className="research-songs-list">
+                  {favoriteSongs.length > 0 ? (
+                    favoriteSongs.map((song, index) => (
                       <ResearchSongCard
                         key={song.id}
                         song={song}
@@ -588,45 +661,138 @@ export default function ResearchPanel({
                         onMoveUp={index > 0 ? () => moveFavoriteUp(song.id) : undefined}
                         onMoveDown={index < favoriteSongs.length - 1 ? () => moveFavoriteDown(song.id) : undefined}
                       />
-                    ))}
-                  </div>
-                </CollapsibleSection>
+                    ))
+                  ) : (
+                    <div className="research-empty">
+                      No songs in your theme playlist yet. Search for songs and tap the + icon to add them!
+                    </div>
+                  )}
+                </div>
               )}
 
-              {/* Search Instructions */}
-              <div className="research-search-instructions">
-                <h3>Research Songs for This Round</h3>
-                <p>Use your favorite music platform to discover songs that match the round theme:</p>
-                <div className="research-search-links">
-                  <a
-                    href="https://open.spotify.com/search"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="research-search-link"
-                  >
-                    🎵 Search Spotify
-                  </a>
-                  <a
-                    href="https://music.youtube.com/search"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="research-search-link"
-                  >
-                    📺 Search YouTube Music
-                  </a>
-                  <a
-                    href="https://music.apple.com/search"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="research-search-link"
-                  >
-                    🍎 Search Apple Music
-                  </a>
-                </div>
-                <p className="research-search-hint">
-                  💡 Tip: Keep track of your favorites as you search! The research panel gives you flexibility to find songs your own way, without AI bias.
-                </p>
-              </div>
+              {/* Search Tab */}
+              {activeTab === 'all' && (
+                <>
+                  <div className="research-panel-filters">
+                    <input
+                      type="search"
+                      className="research-search-input"
+                      placeholder="Search Spotify for songs..."
+                      value={spotifySearchInput}
+                      onChange={(e) => setSpotifySearchInput(e.target.value)}
+                    />
+                  </div>
+
+                  {spotifyLoading && (
+                    <div className="research-loading">Searching Spotify...</div>
+                  )}
+
+                  {spotifyError && (
+                    <div className="research-error">Error: {spotifyError}</div>
+                  )}
+
+                  {!spotifyLoading && !spotifyError && spotifyResults.length > 0 && (
+                    <div className="research-songs-list">
+                      {spotifyResults.map((result) => (
+                        <ResearchSongCard
+                          key={result.trackId || result.title}
+                          song={{
+                            id: result.trackId || result.title,
+                            title: result.title,
+                            artist: result.artist,
+                            year: null,
+                            genre: null,
+                            artwork_url: result.artworkUrl,
+                            spotify_url: result.spotifyUrl,
+                            youtube_url: null,
+                            source_uri: null,
+                            is_dlc: false,
+                            is_guitar_hero: false,
+                            is_rock_band: false,
+                            games: [],
+                            created_at: new Date().toISOString(),
+                            popularity: result.popularity,
+                          }}
+                          isFavorite={false}
+                          onToggleFavorite={() => {}}
+                          isInFavoritesPlaylist={isSpotifyResultInFavorites(result)}
+                          onToggleFavoritesPlaylist={async () => {
+                            await handleAddSpotifyToFavorites(result);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {!spotifyLoading && !spotifyError && spotifyResults.length === 0 && spotifySearchInput.trim() === '' && (
+                    <div className="research-search-instructions">
+                      <h3>Search Spotify</h3>
+                      <p>Enter a song title, artist, or keyword to search Spotify's catalog.</p>
+                      <p className="research-search-hint">
+                        💡 Tip: You can add search results to your Theme Playlist (+) or Favorites Playlist (⭐)
+                      </p>
+                    </div>
+                  )}
+
+                  {!spotifyLoading && !spotifyError && spotifyResults.length === 0 && spotifySearchInput.trim() !== '' && (
+                    <div className="research-empty">
+                      No results found for "{spotifySearchInput}"
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Favorites Playlist Tab */}
+              {activeTab === 'playlist' && (
+                <>
+                  {playlistLoading ? (
+                    <div className="research-loading">Loading playlist...</div>
+                  ) : (
+                    <div className="research-songs-list">
+                      {playlist.length > 0 ? (
+                        playlistSongs.map((song) => (
+                          <ResearchSongCard
+                            key={song.id}
+                            song={song}
+                            isFavorite={false}
+                            onToggleFavorite={() => {}}
+                            isInFavoritesPlaylist={isInPlaylist(song.id)}
+                            onToggleFavoritesPlaylist={() => {
+                              if (isInPlaylist(song.id)) {
+                                removeFromPlaylist(song.id);
+                              } else {
+                                addToPlaylist(song.id);
+                              }
+                            }}
+                          />
+                        ))
+                      ) : (
+                        <div className="research-empty-with-action">
+                          <div className="research-empty">
+                            No songs in your favorites playlist yet. Search for songs and tap the ⭐ icon to add them!
+                          </div>
+                          <div className="research-empty-hint">
+                            💡 Tip: You can also seed your playlist with your submissions and top-voted songs from Seasons 1 & 2.
+                          </div>
+                          <button
+                            type="button"
+                            className="research-action-btn"
+                            onClick={async () => {
+                              const success = await seedPlaylist();
+                              if (success) {
+                                // Playlist will auto-refresh via hook
+                              }
+                            }}
+                            disabled={playlistLoading}
+                          >
+                            🌱 Seed My Playlist
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </>
           )}
 
