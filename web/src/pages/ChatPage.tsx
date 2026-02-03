@@ -991,7 +991,7 @@ export default function ChatPage() {
       <SidePanelTab panel="playlist" onClick={() => togglePanel("playlist")} />
       <SidePanelTab panel="progress" onClick={() => togglePanel("progress")} />
       <SidePanelTab panel="games" onClick={() => togglePanel("games")} />
-      {(round && round.round_number >= 4 && round?.status !== "archived") && (
+      {(round && round.round_number && round.round_number >= 4 && round.status !== "archived") && (
         <SidePanelTab panel="research" onClick={() => togglePanel("research")} />
       )}
 
