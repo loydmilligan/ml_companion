@@ -702,35 +702,48 @@ export default function ResearchPanel({
                 <>
                   {playlistLoading ? (
                     <div className="research-loading">Loading playlist...</div>
-                  ) : playlist.length > 0 ? (
-                    <div className="research-songs-list">
-                      {playlistSongs.map((song) => (
-                        <ResearchSongCard
-                          key={song.id}
-                          song={song}
-                          isFavorite={false}
-                          onToggleFavorite={() => {}}
-                        />
-                      ))}
-                    </div>
                   ) : (
-                    <div className="research-empty-with-action">
-                      <div className="research-empty">
-                        Your Favorites Playlist is empty. Click the button below to seed it with your submissions and top-voted songs from Seasons 1 & 2.
-                      </div>
-                      <button
-                        type="button"
-                        className="research-action-btn"
-                        onClick={async () => {
-                          const success = await seedPlaylist();
-                          if (success) {
-                            // Playlist will auto-refresh via hook
-                          }
-                        }}
-                        disabled={playlistLoading}
-                      >
-                        🌱 Seed My Playlist
-                      </button>
+                    <div className="research-songs-list">
+                      {playlist.length > 0 ? (
+                        playlistSongs.map((song) => (
+                          <ResearchSongCard
+                            key={song.id}
+                            song={song}
+                            isFavorite={false}
+                            onToggleFavorite={() => {}}
+                            isInFavoritesPlaylist={isInPlaylist(song.id)}
+                            onToggleFavoritesPlaylist={() => {
+                              if (isInPlaylist(song.id)) {
+                                removeFromPlaylist(song.id);
+                              } else {
+                                addToPlaylist(song.id);
+                              }
+                            }}
+                          />
+                        ))
+                      ) : (
+                        <div className="research-empty-with-action">
+                          <div className="research-empty">
+                            No songs in your favorites playlist yet. Browse the "All Songs" tab and tap the ⭐ icon to add songs!
+                          </div>
+                          <div className="research-empty-hint">
+                            💡 Tip: You can also seed your playlist with your submissions and top-voted songs from Seasons 1 & 2.
+                          </div>
+                          <button
+                            type="button"
+                            className="research-action-btn"
+                            onClick={async () => {
+                              const success = await seedPlaylist();
+                              if (success) {
+                                // Playlist will auto-refresh via hook
+                              }
+                            }}
+                            disabled={playlistLoading}
+                          >
+                            🌱 Seed My Playlist
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </>

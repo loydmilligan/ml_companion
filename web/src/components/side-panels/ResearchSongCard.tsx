@@ -336,7 +336,7 @@ export default function ResearchSongCard({
             onClick={onToggleFavorite}
             title={isFavorite ? "Remove from Theme Playlist" : "Add to Theme Playlist"}
           >
-            {isFavorite ? "✓" : <PlusIcon />}
+            {isFavorite ? "−" : <PlusIcon />}
           </button>
           {onToggleFavoritesPlaylist && (
             <button
