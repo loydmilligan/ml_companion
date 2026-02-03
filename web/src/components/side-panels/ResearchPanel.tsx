@@ -152,7 +152,7 @@ export default function ResearchPanel({
         youtube_url: null,
         submitter_name: null,
         round_id: null, // Manual addition, not tied to a specific round
-        profile_id: userId,
+        submitter_id: userId,
       })
       .select("id")
       .single();
