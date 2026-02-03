@@ -99,7 +99,7 @@ export default function ResearchPanel({
   // Data hooks
   const { songs, allSongs, yearRange, loading, error, filteredCount, totalCount } = useRhythmGameSongs(filters);
   const { favorites, isFavorite, toggleFavorite, moveFavoriteUp, moveFavoriteDown, favoriteIds } = useRhythmGameFavorites(userId, roundId);
-  const { playlist, loading: playlistLoading, seedPlaylist } = useFavoritesPlaylist();
+  const { playlist, loading: playlistLoading, seedPlaylist, isInPlaylist, addToPlaylist, removeFromPlaylist } = useFavoritesPlaylist();
 
   // Mode detection: curated list vs search-first
   const isCuratedMode = round?.has_curated_research === true;
@@ -173,6 +173,27 @@ export default function ResearchPanel({
       .map(fav => allSongs.find(s => s.id === fav.song_id))
       .filter((s): s is NonNullable<typeof s> => s !== undefined);
   }, [favorites, allSongs]);
+
+  // Convert playlist items to song format for ResearchSongCard
+  const playlistSongs = useMemo(() => {
+    return playlist.map(item => ({
+      id: item.submission_id,
+      title: item.submission.title,
+      artist: item.submission.artist || "Unknown",
+      year: null,
+      genre: null,
+      artwork_url: item.submission.artwork_url,
+      spotify_url: item.submission.spotify_url,
+      youtube_url: item.submission.youtube_url,
+      source_uri: null,
+      is_dlc: false,
+      is_guitar_hero: false,
+      is_rock_band: false,
+      games: [],
+      created_at: item.created_at || new Date().toISOString(),
+      popularity: null,
+    }));
+  }, [playlist]);
 
   // Filter out favorites from the main list to avoid duplicates
   const nonFavoriteSongs = useMemo(() => {
@@ -511,7 +532,7 @@ export default function ResearchPanel({
               className={clsx("research-tab", activeTab === 'favorites' && 'active')}
               onClick={() => setActiveTab('favorites')}
             >
-              ❤️ Favorites
+              + Theme Playlist
               {favoriteSongs.length > 0 && <span className="tab-badge">{favoriteSongs.length}</span>}
             </button>
             <button
@@ -527,7 +548,8 @@ export default function ResearchPanel({
               className={clsx("research-tab", activeTab === 'playlist' && 'active')}
               onClick={() => setActiveTab('playlist')}
             >
-              📋 Favorites Playlist
+              ⭐ Favorites Playlist
+              {playlist.length > 0 && <span className="tab-badge">{playlist.length}</span>}
             </button>
           </div>
         )}
@@ -611,7 +633,7 @@ export default function ResearchPanel({
           {/* Curated Mode (has song database) */}
           {isCuratedMode && !loading && !error && (
             <>
-              {/* Favorites Tab */}
+              {/* Theme Playlist Tab */}
               {activeTab === 'favorites' && (
                 <div className="research-songs-list">
                   {favoriteSongs.length > 0 ? (
@@ -625,11 +647,12 @@ export default function ResearchPanel({
                         totalFavorites={favoriteSongs.length}
                         onMoveUp={index > 0 ? () => moveFavoriteUp(song.id) : undefined}
                         onMoveDown={index < favoriteSongs.length - 1 ? () => moveFavoriteDown(song.id) : undefined}
+                        // Don't show star button - curated songs can't be added to favorites playlist
                       />
                     ))
                   ) : (
                     <div className="research-empty">
-                      No favorites yet. Browse the "All Songs" tab and tap the ❤️ icon to save your favorites!
+                      No songs in your theme playlist yet. Browse the "All Songs" tab and tap the + icon to add songs!
                     </div>
                   )}
                 </div>
@@ -644,6 +667,7 @@ export default function ResearchPanel({
                       song={song}
                       isFavorite={isFavorite(song.id)}
                       onToggleFavorite={() => toggleFavorite(song.id)}
+                      // Don't show star button - curated songs can't be added to favorites playlist
                     />
                   ))}
                   {hasMore && (
@@ -661,93 +685,54 @@ export default function ResearchPanel({
 
               {/* Favorites Playlist Tab */}
               {activeTab === 'playlist' && (
-                <div className="research-playlists-tab">
-                  <h3>Your Favorites Playlist</h3>
-                  <p>A personalized playlist seeded with your submissions and top-voted songs from Seasons 1 & 2</p>
-
+                <>
                   {playlistLoading ? (
                     <div className="research-loading">Loading playlist...</div>
-                  ) : playlist.length > 0 ? (
-                    <>
-                      <div className="playlist-stats">
-                        <strong>{playlist.length} songs</strong> in your playlist
-                      </div>
-
-                      <div className="playlist-songs-list">
-                        {playlist.map((item) => (
-                          <div key={item.id} className="playlist-song-item">
-                            {item.submission.artwork_url ? (
-                              <img
-                                src={item.submission.artwork_url}
-                                alt={item.submission.title}
-                                className="playlist-song-artwork"
-                              />
-                            ) : (
-                              <div className="playlist-song-artwork-placeholder">♪</div>
-                            )}
-                            <div className="playlist-song-info">
-                              <div className="playlist-song-title">{item.submission.title}</div>
-                              <div className="playlist-song-artist">{item.submission.artist || "Unknown"}</div>
-                              {item.source !== "manual" && (
-                                <div className="playlist-song-source">
-                                  {item.source === "submitted" ? "You submitted this" : "You loved this"}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="playlist-actions">
-                        <button
-                          type="button"
-                          className="playlist-generate-btn spotify"
-                          onClick={() => {
-                            console.log('Generate Spotify playlist');
-                            // TODO: Implement Spotify playlist generation
-                          }}
-                        >
-                          <span className="btn-icon">🎵</span>
-                          Export to Spotify
-                        </button>
-
-                        <button
-                          type="button"
-                          className="playlist-generate-btn youtube"
-                          onClick={() => {
-                            console.log('Generate YouTube Music playlist');
-                            // TODO: Implement YouTube Music playlist generation
-                          }}
-                        >
-                          <span className="btn-icon">📺</span>
-                          Export to YouTube Music
-                        </button>
-                      </div>
-                    </>
                   ) : (
-                    <>
-                      <div className="research-empty">
-                        Your playlist is empty. Click the button below to seed it with your submissions and top-voted songs from Seasons 1 & 2.
-                      </div>
-                      <div className="playlist-actions">
-                        <button
-                          type="button"
-                          className="playlist-generate-btn spotify"
-                          onClick={async () => {
-                            const success = await seedPlaylist();
-                            if (success) {
-                              alert("Playlist seeded successfully!");
-                            }
-                          }}
-                          disabled={playlistLoading}
-                        >
-                          <span className="btn-icon">🌱</span>
-                          Seed My Playlist
-                        </button>
-                      </div>
-                    </>
+                    <div className="research-songs-list">
+                      {playlist.length > 0 ? (
+                        playlistSongs.map((song) => (
+                          <ResearchSongCard
+                            key={song.id}
+                            song={song}
+                            isFavorite={false}
+                            onToggleFavorite={() => {}}
+                            isInFavoritesPlaylist={isInPlaylist(song.id)}
+                            onToggleFavoritesPlaylist={() => {
+                              if (isInPlaylist(song.id)) {
+                                removeFromPlaylist(song.id);
+                              } else {
+                                addToPlaylist(song.id);
+                              }
+                            }}
+                          />
+                        ))
+                      ) : (
+                        <div className="research-empty-with-action">
+                          <div className="research-empty">
+                            No songs in your favorites playlist yet. Browse the "All Songs" tab and tap the ⭐ icon to add songs!
+                          </div>
+                          <div className="research-empty-hint">
+                            💡 Tip: You can also seed your playlist with your submissions and top-voted songs from Seasons 1 & 2.
+                          </div>
+                          <button
+                            type="button"
+                            className="research-action-btn"
+                            onClick={async () => {
+                              const success = await seedPlaylist();
+                              if (success) {
+                                // Playlist will auto-refresh via hook
+                              }
+                            }}
+                            disabled={playlistLoading}
+                          >
+                            🌱 Seed My Playlist
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
-                </div>
+                </>
               )}
             </>
           )}

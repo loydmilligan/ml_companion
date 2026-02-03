@@ -232,7 +232,7 @@ export default function SongCard({
             }}
             title={isInPlaylist(song.id) ? "Remove from Favorites Playlist" : "Add to Favorites Playlist"}
           >
-            {isInPlaylist(song.id) ? "✓" : "+"}
+            {isInPlaylist(song.id) ? "⭐" : "☆"}
           </button>
         </div>
 
