@@ -11,6 +11,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useRound } from "../../contexts/RoundContext";
 import { useFavoritesPlaylist } from "../../hooks/useFavoritesPlaylist";
 import { useSpotifySearch } from "../../hooks/useSpotifySearch";
+import { supabase } from "../../lib/supabase";
 import rockBandLogo from "../../assets/rock_band_4_inst_logo.png";
 import guitarHeroLogo from "../../assets/gh_flames_logo.png";
 
@@ -91,6 +92,25 @@ export default function ResearchPanel({
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
+    } catch (err) {
+      console.error("Failed to save filters:", err);
+    }
+  }, [filters]);
+
+  // Data hooks
+  const { songs, allSongs, yearRange, loading, error, filteredCount, totalCount } = useRhythmGameSongs(filters);
+  const { favorites, isFavorite, toggleFavorite, moveFavoriteUp, moveFavoriteDown, favoriteIds } = useRhythmGameFavorites(userId, roundId);
+  const { playlist, loading: playlistLoading, seedPlaylist, isInPlaylist, addToPlaylist, removeFromPlaylist } = useFavoritesPlaylist();
+  const { results: spotifyResults, loading: spotifyLoading, error: spotifyError, search: spotifySearch, clear: clearSpotifySearch } = useSpotifySearch();
+
+  // Mode detection: curated list vs search-first
+  const isCuratedMode = round?.has_curated_research === true;
+  const isSearchMode = !loading && !isCuratedMode;
+
   // Debounce Spotify search (search mode)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -158,30 +178,11 @@ export default function ResearchPanel({
   }, [createSubmissionFromSpotifyResult, addToPlaylist]);
 
   // Handler: Check if Spotify result is in Favorites Playlist
-  const isSpotifyResultInFavorites = useCallback((result: typeof spotifyResults[0]): boolean => {
+  const isSpotifyResultInFavorites = useCallback((): boolean => {
     // This is a simplistic check - in reality we'd need to look up the submission_id by spotify_url
     // For now, we'll just show all as not favorited and let the user add them
     return false;
   }, []);
-
-  // Save filters to localStorage whenever they change
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
-    } catch (err) {
-      console.error("Failed to save filters:", err);
-    }
-  }, [filters]);
-
-  // Data hooks
-  const { songs, allSongs, yearRange, loading, error, filteredCount, totalCount } = useRhythmGameSongs(filters);
-  const { favorites, isFavorite, toggleFavorite, moveFavoriteUp, moveFavoriteDown, favoriteIds } = useRhythmGameFavorites(userId, roundId);
-  const { playlist, loading: playlistLoading, seedPlaylist, isInPlaylist, addToPlaylist, removeFromPlaylist } = useFavoritesPlaylist();
-  const { results: spotifyResults, loading: spotifyLoading, error: spotifyError, search: spotifySearch, clear: clearSpotifySearch } = useSpotifySearch();
-
-  // Mode detection: curated list vs search-first
-  const isCuratedMode = round?.has_curated_research === true;
-  const isSearchMode = !loading && !isCuratedMode;
 
   // Generate decade pills
   const decades = useMemo(() => {
@@ -704,7 +705,6 @@ export default function ResearchPanel({
                             genre: null,
                             artwork_url: result.artworkUrl,
                             spotify_url: result.spotifyUrl,
-                            youtube_url: null,
                             source_uri: null,
                             is_dlc: false,
                             is_guitar_hero: false,
@@ -715,7 +715,7 @@ export default function ResearchPanel({
                           }}
                           isFavorite={false}
                           onToggleFavorite={() => {}}
-                          isInFavoritesPlaylist={isSpotifyResultInFavorites(result)}
+                          isInFavoritesPlaylist={isSpotifyResultInFavorites()}
                           onToggleFavoritesPlaylist={async () => {
                             await handleAddSpotifyToFavorites(result);
                           }}
