@@ -406,15 +406,17 @@ export default function ResearchSongCard({
             @ Share in Chat
           </button>
 
-          {/* Games List */}
-          <div className="games-list">
-            <strong>Appears in:</strong>
-            <ul>
-              {song.games.map((game, i) => (
-                <li key={i}>{game}</li>
-              ))}
-            </ul>
-          </div>
+          {/* Games List - only show for curated songs with game data */}
+          {song.games && song.games.length > 0 && (
+            <div className="games-list">
+              <strong>Appears in:</strong>
+              <ul>
+                {song.games.map((game, i) => (
+                  <li key={i}>{game}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>

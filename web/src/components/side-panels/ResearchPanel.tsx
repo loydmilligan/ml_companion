@@ -4,12 +4,12 @@ import ResearchSongCard from "./ResearchSongCard";
 import CollapsibleSection from "../pinned-peek/CollapsibleSection";
 import {
   useRhythmGameSongs,
-  useRhythmGameFavorites,
   type RhythmGameFilters,
 } from "../../hooks/useRhythmGameSongs";
 import { useAuth } from "../../contexts/AuthContext";
 import { useRound } from "../../contexts/RoundContext";
 import { useFavoritesPlaylist } from "../../hooks/useFavoritesPlaylist";
+import { useThemePlaylist } from "../../hooks/useThemePlaylist";
 import { useSpotifySearch } from "../../hooks/useSpotifySearch";
 import { supabase } from "../../lib/supabase";
 import rockBandLogo from "../../assets/rock_band_4_inst_logo.png";
@@ -103,7 +103,15 @@ export default function ResearchPanel({
 
   // Data hooks
   const { songs, allSongs, yearRange, loading, error, filteredCount, totalCount } = useRhythmGameSongs(filters);
-  const { favorites, isFavorite, toggleFavorite, moveFavoriteUp, moveFavoriteDown, favoriteIds } = useRhythmGameFavorites(userId, roundId);
+  const {
+    playlist: themePlaylist,
+    loading: themeLoading,
+    isInPlaylist: isInThemePlaylist,
+    addToPlaylist: addToThemePlaylist,
+    removeFromPlaylist: removeFromThemePlaylist,
+    moveUp: moveThemeUp,
+    moveDown: moveThemeDown
+  } = useThemePlaylist(roundId);
   const { playlist, loading: playlistLoading, seedPlaylist, isInPlaylist, addToPlaylist, removeFromPlaylist } = useFavoritesPlaylist();
   const { results: spotifyResults, loading: spotifyLoading, error: spotifyError, search: spotifySearch, clear: clearSpotifySearch } = useSpotifySearch();
 
@@ -165,6 +173,49 @@ export default function ResearchPanel({
     return data.id;
   }, [userId]);
 
+  // Helper: Create a submission from curated rhythm game song
+  const createSubmissionFromRhythmGameSong = useCallback(async (song: typeof allSongs[0]) => {
+    if (!userId) {
+      console.error("User must be logged in to create submission");
+      return null;
+    }
+
+    // Check if submission already exists for this song (by title + artist)
+    const { data: existing } = await supabase
+      .from("submissions")
+      .select("id")
+      .eq("title", song.title)
+      .eq("artist", song.artist)
+      .maybeSingle();
+
+    if (existing) {
+      return existing.id;
+    }
+
+    // Create new submission
+    const { data, error } = await supabase
+      .from("submissions")
+      .insert({
+        title: song.title,
+        artist: song.artist,
+        spotify_url: song.spotify_url,
+        artwork_url: song.artwork_url,
+        youtube_url: null,
+        submitter_name: null,
+        round_id: null,
+        submitter_id: userId,
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("Error creating submission from rhythm game song:", error);
+      return null;
+    }
+
+    return data.id;
+  }, [userId]);
+
   // Handler: Add Spotify search result to Favorites Playlist
   const handleAddSpotifyToFavorites = useCallback(async (result: typeof spotifyResults[0]) => {
     const submissionId = await createSubmissionFromSpotifyResult(result);
@@ -177,12 +228,72 @@ export default function ResearchPanel({
     return success;
   }, [createSubmissionFromSpotifyResult, addToPlaylist]);
 
+  // Handler: Add Spotify search result to Theme Playlist
+  const handleAddSpotifyToTheme = useCallback(async (result: typeof spotifyResults[0]) => {
+    const submissionId = await createSubmissionFromSpotifyResult(result);
+    if (!submissionId) {
+      console.error("Failed to create submission for Spotify result");
+      return false;
+    }
+
+    const success = await addToThemePlaylist(submissionId);
+    return success;
+  }, [createSubmissionFromSpotifyResult, addToThemePlaylist]);
+
+  // Handler: Add rhythm game song to Theme Playlist
+  const handleAddRhythmGameSongToTheme = useCallback(async (song: typeof allSongs[0]) => {
+    const submissionId = await createSubmissionFromRhythmGameSong(song);
+    if (!submissionId) {
+      console.error("Failed to create submission for rhythm game song");
+      return false;
+    }
+
+    const success = await addToThemePlaylist(submissionId);
+    return success;
+  }, [createSubmissionFromRhythmGameSong, addToThemePlaylist]);
+
+  // Handler: Remove rhythm game song from Theme Playlist
+  const handleRemoveRhythmGameSongFromTheme = useCallback(async (song: typeof allSongs[0]) => {
+    // Find the submission for this song
+    const { data: existing } = await supabase
+      .from("submissions")
+      .select("id")
+      .eq("title", song.title)
+      .eq("artist", song.artist)
+      .maybeSingle();
+
+    if (!existing) {
+      console.error("No submission found for this song");
+      return false;
+    }
+
+    const success = await removeFromThemePlaylist(existing.id);
+    return success;
+  }, [removeFromThemePlaylist]);
+
+  // Handler: Check if rhythm game song is in Theme Playlist
+  const isRhythmGameSongInTheme = useCallback((song: typeof allSongs[0]): boolean => {
+    // Check if any theme playlist item matches this song's title and artist
+    return themePlaylist.some(item =>
+      item.submission.title === song.title &&
+      item.submission.artist === song.artist
+    );
+  }, [themePlaylist]);
+
   // Handler: Check if Spotify result is in Favorites Playlist
   const isSpotifyResultInFavorites = useCallback((): boolean => {
     // This is a simplistic check - in reality we'd need to look up the submission_id by spotify_url
     // For now, we'll just show all as not favorited and let the user add them
     return false;
   }, []);
+
+  // Handler: Check if Spotify result is in Theme Playlist
+  const isSpotifyResultInTheme = useCallback((result: typeof spotifyResults[0]): boolean => {
+    // Check if any theme playlist item matches this Spotify URL
+    return themePlaylist.some(item =>
+      item.submission.spotify_url === result.spotifyUrl
+    );
+  }, [themePlaylist]);
 
   // Generate decade pills
   const decades = useMemo(() => {
@@ -245,15 +356,27 @@ export default function ResearchPanel({
     });
   }, []);
 
-  // Get favorite songs from ALL songs (unfiltered) so favorites always show
-  // Maintain ranking order from favorites list
-  const favoriteSongs = useMemo(() => {
-    return favorites
-      .map(fav => allSongs.find(s => s.id === fav.song_id))
-      .filter((s): s is NonNullable<typeof s> => s !== undefined);
-  }, [favorites, allSongs]);
+  // Convert theme playlist items to song format for ResearchSongCard
+  const themePlaylistSongs = useMemo(() => {
+    return themePlaylist.map(item => ({
+      id: item.submission_id,
+      title: item.submission.title,
+      artist: item.submission.artist || "Unknown",
+      year: null,
+      genre: null,
+      artwork_url: item.submission.artwork_url,
+      spotify_url: item.submission.spotify_url,
+      youtube_url: item.submission.youtube_url,
+      is_dlc: false,
+      is_guitar_hero: false,
+      is_rock_band: false,
+      games: [],
+      created_at: item.created_at || new Date().toISOString(),
+      popularity: null,
+    }));
+  }, [themePlaylist]);
 
-  // Convert playlist items to song format for ResearchSongCard
+  // Convert favorites playlist items to song format for ResearchSongCard
   const playlistSongs = useMemo(() => {
     return playlist.map(item => ({
       id: item.submission_id,
@@ -264,7 +387,6 @@ export default function ResearchPanel({
       artwork_url: item.submission.artwork_url,
       spotify_url: item.submission.spotify_url,
       youtube_url: item.submission.youtube_url,
-      source_uri: null,
       is_dlc: false,
       is_guitar_hero: false,
       is_rock_band: false,
@@ -274,10 +396,18 @@ export default function ResearchPanel({
     }));
   }, [playlist]);
 
-  // Filter out favorites from the main list to avoid duplicates
-  const nonFavoriteSongs = useMemo(() => {
-    return songs.filter(s => !favoriteIds.has(s.id));
-  }, [songs, favoriteIds]);
+  // Filter out songs that are already in theme playlist from the main list
+  const nonThemeSongs = useMemo(() => {
+    const themeSubmissionIds = new Set(themePlaylist.map(item => item.submission_id));
+    return songs.filter(s => {
+      // Check if this song is in theme playlist
+      const isInTheme = themePlaylist.some(item =>
+        item.submission.title === s.title &&
+        item.submission.artist === s.artist
+      );
+      return !isInTheme;
+    });
+  }, [songs, themePlaylist]);
 
   // Swipe-to-close
   const panelRef = useRef<HTMLElement>(null);
@@ -338,9 +468,9 @@ export default function ResearchPanel({
   const [displayLimit, setDisplayLimit] = useState(100);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Limit displayed songs for performance (use non-favorites to avoid duplicates)
-  const displayedSongs = nonFavoriteSongs.slice(0, displayLimit);
-  const hasMore = nonFavoriteSongs.length > displayLimit;
+  // Limit displayed songs for performance (exclude songs already in theme playlist)
+  const displayedSongs = nonThemeSongs.slice(0, displayLimit);
+  const hasMore = nonThemeSongs.length > displayLimit;
 
   // Infinite scroll handler
   const handleScroll = useCallback(() => {
@@ -351,9 +481,9 @@ export default function ResearchPanel({
 
     // Load more when scrolled 80% down
     if (scrollPercentage > 0.8) {
-      setDisplayLimit(prev => Math.min(prev + 100, nonFavoriteSongs.length));
+      setDisplayLimit(prev => Math.min(prev + 100, nonThemeSongs.length));
     }
-  }, [hasMore, nonFavoriteSongs.length]);
+  }, [hasMore, nonThemeSongs.length]);
 
   // Attach scroll listener
   useEffect(() => {
@@ -612,7 +742,7 @@ export default function ResearchPanel({
               onClick={() => setActiveTab('favorites')}
             >
               + Theme Playlist
-              {favoriteSongs.length > 0 && <span className="tab-badge">{favoriteSongs.length}</span>}
+              {themePlaylist.length > 0 && <span className="tab-badge">{themePlaylist.length}</span>}
             </button>
             <button
               type="button"
@@ -650,17 +780,29 @@ export default function ResearchPanel({
               {/* Theme Playlist Tab */}
               {activeTab === 'favorites' && (
                 <div className="research-songs-list">
-                  {favoriteSongs.length > 0 ? (
-                    favoriteSongs.map((song, index) => (
+                  {themeLoading ? (
+                    <div className="research-loading">Loading theme playlist...</div>
+                  ) : themePlaylistSongs.length > 0 ? (
+                    themePlaylistSongs.map((song, index) => (
                       <ResearchSongCard
                         key={song.id}
                         song={song}
                         isFavorite={true}
-                        onToggleFavorite={() => toggleFavorite(song.id)}
+                        onToggleFavorite={async () => {
+                          await removeFromThemePlaylist(song.id);
+                        }}
                         rankPosition={index + 1}
-                        totalFavorites={favoriteSongs.length}
-                        onMoveUp={index > 0 ? () => moveFavoriteUp(song.id) : undefined}
-                        onMoveDown={index < favoriteSongs.length - 1 ? () => moveFavoriteDown(song.id) : undefined}
+                        totalFavorites={themePlaylistSongs.length}
+                        onMoveUp={index > 0 ? () => moveThemeUp(song.id) : undefined}
+                        onMoveDown={index < themePlaylistSongs.length - 1 ? () => moveThemeDown(song.id) : undefined}
+                        isInFavoritesPlaylist={isInPlaylist(song.id)}
+                        onToggleFavoritesPlaylist={() => {
+                          if (isInPlaylist(song.id)) {
+                            removeFromPlaylist(song.id);
+                          } else {
+                            addToPlaylist(song.id);
+                          }
+                        }}
                       />
                     ))
                   ) : (
@@ -712,8 +854,20 @@ export default function ResearchPanel({
                             created_at: new Date().toISOString(),
                             popularity: result.popularity,
                           }}
-                          isFavorite={false}
-                          onToggleFavorite={() => {}}
+                          isFavorite={isSpotifyResultInTheme(result)}
+                          onToggleFavorite={async () => {
+                            if (isSpotifyResultInTheme(result)) {
+                              // Find and remove from theme playlist
+                              const themeItem = themePlaylist.find(item =>
+                                item.submission.spotify_url === result.spotifyUrl
+                              );
+                              if (themeItem) {
+                                await removeFromThemePlaylist(themeItem.submission_id);
+                              }
+                            } else {
+                              await handleAddSpotifyToTheme(result);
+                            }
+                          }}
                           isInFavoritesPlaylist={isSpotifyResultInFavorites()}
                           onToggleFavoritesPlaylist={async () => {
                             await handleAddSpotifyToFavorites(result);
@@ -801,17 +955,21 @@ export default function ResearchPanel({
               {/* Theme Playlist Tab */}
               {activeTab === 'favorites' && (
                 <div className="research-songs-list">
-                  {favoriteSongs.length > 0 ? (
-                    favoriteSongs.map((song, index) => (
+                  {themeLoading ? (
+                    <div className="research-loading">Loading theme playlist...</div>
+                  ) : themePlaylistSongs.length > 0 ? (
+                    themePlaylistSongs.map((song, index) => (
                       <ResearchSongCard
                         key={song.id}
                         song={song}
                         isFavorite={true}
-                        onToggleFavorite={() => toggleFavorite(song.id)}
+                        onToggleFavorite={async () => {
+                          await removeFromThemePlaylist(song.id);
+                        }}
                         rankPosition={index + 1}
-                        totalFavorites={favoriteSongs.length}
-                        onMoveUp={index > 0 ? () => moveFavoriteUp(song.id) : undefined}
-                        onMoveDown={index < favoriteSongs.length - 1 ? () => moveFavoriteDown(song.id) : undefined}
+                        totalFavorites={themePlaylistSongs.length}
+                        onMoveUp={index > 0 ? () => moveThemeUp(song.id) : undefined}
+                        onMoveDown={index < themePlaylistSongs.length - 1 ? () => moveThemeDown(song.id) : undefined}
                         // Don't show star button - curated songs can't be added to favorites playlist
                       />
                     ))
@@ -830,14 +988,20 @@ export default function ResearchPanel({
                     <ResearchSongCard
                       key={song.id}
                       song={song}
-                      isFavorite={isFavorite(song.id)}
-                      onToggleFavorite={() => toggleFavorite(song.id)}
+                      isFavorite={isRhythmGameSongInTheme(song)}
+                      onToggleFavorite={async () => {
+                        if (isRhythmGameSongInTheme(song)) {
+                          await handleRemoveRhythmGameSongFromTheme(song);
+                        } else {
+                          await handleAddRhythmGameSongToTheme(song);
+                        }
+                      }}
                       // Don't show star button - curated songs can't be added to favorites playlist
                     />
                   ))}
                   {hasMore && (
                     <div className="research-more-hint">
-                      Showing {displayLimit} of {nonFavoriteSongs.length} songs. Scroll down for more...
+                      Showing {displayLimit} of {nonThemeSongs.length} songs. Scroll down for more...
                     </div>
                   )}
                   {displayedSongs.length === 0 && (
