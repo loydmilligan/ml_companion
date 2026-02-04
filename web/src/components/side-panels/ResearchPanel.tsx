@@ -106,7 +106,6 @@ export default function ResearchPanel({
   const {
     playlist: themePlaylist,
     loading: themeLoading,
-    isInPlaylist: isInThemePlaylist,
     addToPlaylist: addToThemePlaylist,
     removeFromPlaylist: removeFromThemePlaylist,
     moveUp: moveThemeUp,
@@ -398,7 +397,6 @@ export default function ResearchPanel({
 
   // Filter out songs that are already in theme playlist from the main list
   const nonThemeSongs = useMemo(() => {
-    const themeSubmissionIds = new Set(themePlaylist.map(item => item.submission_id));
     return songs.filter(s => {
       // Check if this song is in theme playlist
       const isInTheme = themePlaylist.some(item =>
