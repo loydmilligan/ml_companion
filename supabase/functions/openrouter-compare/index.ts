@@ -1,5 +1,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { verifyAuth, unauthorizedResponse } from "../_shared/auth.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { trackApiCall, OpenRouterResponse } from "../_shared/cost-tracker.ts";
 
 const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
 const OPENROUTER_MODEL = Deno.env.get("OPENROUTER_MODEL") ?? "anthropic/claude-3.5-sonnet";
@@ -61,8 +63,20 @@ Song B: ${songB}`;
     );
   }
 
-  const json = await response.json();
+  const json = await response.json() as OpenRouterResponse;
   const content = json?.choices?.[0]?.message?.content ?? "No response";
+
+  // Track API cost
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (supabaseUrl && supabaseAnonKey) {
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    await trackApiCall(supabase, json, {
+      function_name: "openrouter-compare",
+      mode: "comparison",
+      user_id: user?.id,
+    });
+  }
 
   return new Response(
     JSON.stringify({ content }),

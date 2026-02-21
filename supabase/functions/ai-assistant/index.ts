@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyAuth, unauthorizedResponse } from "../_shared/auth.ts";
+import { trackApiCall, OpenRouterResponse } from "../_shared/cost-tracker.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -142,7 +143,7 @@ const callOpenRouter = async (prompt: string, temperature = 0.7, maxTokens = 300
   }
 
   const json = await response.json();
-  return json?.choices?.[0]?.message?.content ?? "";
+  return json;
 };
 
 Deno.serve(async (req) => {
@@ -318,7 +319,17 @@ Deno.serve(async (req) => {
         }
 
         const prompt = buildExplainPrompt(round);
-        const explanation = await callOpenRouter(prompt, 0.7, 400, "TML - Explain Theme");
+        const json = await callOpenRouter(prompt, 0.7, 400, "TML - Explain Theme") as OpenRouterResponse;
+
+        // Track API cost
+        await trackApiCall(supabase, json, {
+          function_name: "ai-assistant",
+          mode: "explain_theme",
+          group_id: group_id,
+          user_id: user_id,
+        });
+
+        const explanation = json?.choices?.[0]?.message?.content ?? "";
 
         // Cache the result
         if (round.id && group_id) {
@@ -345,7 +356,17 @@ Deno.serve(async (req) => {
         }
 
         const prompt = buildValidatePrompt(round, song_info);
-        const response = await callOpenRouter(prompt, 0.3, 200, "TML - Check Song");
+        const json = await callOpenRouter(prompt, 0.3, 200, "TML - Check Song") as OpenRouterResponse;
+
+        // Track API cost
+        await trackApiCall(supabase, json, {
+          function_name: "ai-assistant",
+          mode: "validate_song",
+          group_id: group_id,
+          user_id: user_id,
+        });
+
+        const response = json?.choices?.[0]?.message?.content ?? "";
 
         // Track usage
         if (user_id && group_id) {
@@ -408,7 +429,17 @@ Deno.serve(async (req) => {
         }
 
         const prompt = buildHintPrompt(round, user_query);
-        const hint = await callOpenRouter(prompt, 0.9, 200, "TML - Get Hint");
+        const json = await callOpenRouter(prompt, 0.9, 200, "TML - Get Hint") as OpenRouterResponse;
+
+        // Track API cost
+        await trackApiCall(supabase, json, {
+          function_name: "ai-assistant",
+          mode: "generate_hint",
+          group_id: group_id,
+          user_id: user_id,
+        });
+
+        const hint = json?.choices?.[0]?.message?.content ?? "";
 
         // Cache the result
         if (round.id && group_id) {
@@ -434,7 +465,17 @@ Deno.serve(async (req) => {
           );
         }
         const prompt = buildChatPrompt(round, recent_messages ?? [], user_query);
-        const response = await callOpenRouter(prompt, 0.8, 200, "TML - AI Chat");
+        const json = await callOpenRouter(prompt, 0.8, 200, "TML - AI Chat") as OpenRouterResponse;
+
+        // Track API cost
+        await trackApiCall(supabase, json, {
+          function_name: "ai-assistant",
+          mode: "chat_response",
+          group_id: group_id,
+          user_id: user_id,
+        });
+
+        const response = json?.choices?.[0]?.message?.content ?? "";
         result = { response };
         break;
       }

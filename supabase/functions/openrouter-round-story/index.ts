@@ -1,5 +1,6 @@
 // v39 - MCP deploy to fix entrypoint path
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { trackApiCall, OpenRouterResponse } from "../_shared/cost-tracker.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -123,7 +124,13 @@ const resolveModelKey = (key?: string | null) => {
   }
 };
 
-const generateImage = async (prompt: string, modelOverride?: string | null, xTitle?: string): Promise<ImageResult> => {
+const generateImage = async (
+  prompt: string,
+  modelOverride?: string | null,
+  xTitle?: string,
+  supabase?: ReturnType<typeof createClient>,
+  trackingParams?: { group_id?: string; user_id?: string; mode: string }
+): Promise<ImageResult> => {
   const model = modelOverride ?? OPENROUTER_ROUND_IMAGE_MODEL ?? null;
   if (!OPENROUTER_API_KEY || !model) {
     return { image_url: null, image_base64: null };
@@ -155,7 +162,18 @@ const generateImage = async (prompt: string, modelOverride?: string | null, xTit
     return { image_url: null, image_base64: null };
   }
 
-  const json = await response.json();
+  const json = await response.json() as OpenRouterResponse;
+
+  // Track API cost
+  if (supabase && trackingParams) {
+    await trackApiCall(supabase, json, {
+      function_name: "openrouter-round-story",
+      mode: trackingParams.mode,
+      group_id: trackingParams.group_id,
+      user_id: trackingParams.user_id,
+    });
+  }
+
   const imageUrl = json?.choices?.[0]?.message?.images?.[0]?.image_url?.url ?? "";
   if (!imageUrl) {
     return { image_url: null, image_base64: null };
@@ -188,9 +206,15 @@ Deno.serve(async (req) => {
     );
   }
 
+  // Create Supabase client for cost tracking
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
   const body = await req.json().catch(() => ({}));
   const mode = body?.mode ?? "story";
   const round = body?.round ?? null;
+  const group_id = body?.group_id ?? null;
   const songs = body?.songs ?? [];
   const votes = body?.votes ?? [];
   const winners = (body?.winners ?? []) as WinnerInput[];
@@ -316,7 +340,16 @@ ${JSON.stringify(competitors)}`;
       );
     }
 
-    const json = await response.json();
+    const json = await response.json() as OpenRouterResponse;
+
+    // Track API cost
+    await trackApiCall(supabase, json, {
+      function_name: "openrouter-round-story",
+      mode: "preseason_special",
+      group_id: group_id,
+      user_id: user?.id,
+    });
+
     const content = json?.choices?.[0]?.message?.content ?? "";
     let parsed: Record<string, string> = {};
     try {
@@ -341,7 +374,11 @@ ${JSON.stringify(competitors)}`;
 
   if (mode === "theme") {
     const themePrompt = buildThemePrompt(round);
-    const image = await generateImage(themePrompt, imageModel, "TML - Round Banner");
+    const image = await generateImage(themePrompt, imageModel, "TML - Round Banner", supabase, {
+      group_id: group_id,
+      user_id: user?.id,
+      mode: "theme_image",
+    });
     return new Response(
       JSON.stringify({ image_url: image.image_url, image_base64: image.image_base64 }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -357,7 +394,11 @@ ${JSON.stringify(competitors)}`;
       );
     }
     const trophyModel = resolveModelKey(body?.trophy_model_key) ?? OPENROUTER_TROPHY_MODEL ?? OPENROUTER_ROUND_IMAGE_MODEL ?? null;
-    const image = await generateImage(trophyPrompt, trophyModel, "TML - Trophy Image");
+    const image = await generateImage(trophyPrompt, trophyModel, "TML - Trophy Image", supabase, {
+      group_id: group_id,
+      user_id: user?.id,
+      mode: "trophy_image",
+    });
     return new Response(
       JSON.stringify({ image_url: image.image_url, image_base64: image.image_base64 }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -410,7 +451,16 @@ ${JSON.stringify(seasonAwards)}`;
       );
     }
 
-    const json = await response.json();
+    const json = await response.json() as OpenRouterResponse;
+
+    // Track API cost
+    await trackApiCall(supabase, json, {
+      function_name: "openrouter-round-story",
+      mode: "season_awards",
+      group_id: group_id,
+      user_id: user?.id,
+    });
+
     const content = json?.choices?.[0]?.message?.content ?? "";
     let parsed: { awards?: Array<Record<string, unknown>> } = {};
     try {
@@ -469,7 +519,16 @@ Return JSON ONLY with key: narrative`;
       );
     }
 
-    const json = await response.json();
+    const json = await response.json() as OpenRouterResponse;
+
+    // Track API cost
+    await trackApiCall(supabase, json, {
+      function_name: "openrouter-round-story",
+      mode: "season_narrative",
+      group_id: group_id,
+      user_id: user?.id,
+    });
+
     const content = json?.choices?.[0]?.message?.content ?? "";
     let parsed: { narrative?: string } = {};
     try {
@@ -573,7 +632,16 @@ ${JSON.stringify(minigameSummary)}`;
       );
     }
 
-    const json = await response.json();
+    const json = await response.json() as OpenRouterResponse;
+
+    // Track API cost
+    await trackApiCall(supabase, json, {
+      function_name: "openrouter-round-story",
+      mode: "current_season_story",
+      group_id: group_id,
+      user_id: user?.id,
+    });
+
     const content = json?.choices?.[0]?.message?.content ?? "";
     let parsed: { section_one?: string; round_riff?: string; minigame_summary?: string } = {};
     try {
@@ -603,7 +671,11 @@ ${JSON.stringify(minigameSummary)}`;
       );
     }
     const imagePrompt = buildWinnersPrompt(winners, round?.title ?? null);
-    const imageResult = await generateImage(imagePrompt, imageModel, "TML - Winners Image");
+    const imageResult = await generateImage(imagePrompt, imageModel, "TML - Winners Image", supabase, {
+      group_id: group_id,
+      user_id: user?.id,
+      mode: "winners_image",
+    });
     return new Response(
       JSON.stringify({
         image_url: imageResult.image_url,
@@ -660,7 +732,16 @@ ${JSON.stringify(recentAwards)}`;
       );
     }
 
-    const json = await response.json();
+    const json = await response.json() as OpenRouterResponse;
+
+    // Track API cost
+    await trackApiCall(supabase, json, {
+      function_name: "openrouter-round-story",
+      mode: "awards",
+      group_id: group_id,
+      user_id: user?.id,
+    });
+
     const content = json?.choices?.[0]?.message?.content ?? "";
     let parsed: { awards?: Array<Record<string, unknown>> } = {};
     try {
@@ -709,7 +790,16 @@ ${JSON.stringify({ round, songs, votes })}`;
     );
   }
 
-  const json = await response.json();
+  const json = await response.json() as OpenRouterResponse;
+
+  // Track API cost
+  await trackApiCall(supabase, json, {
+    function_name: "openrouter-round-story",
+    mode: mode,
+    group_id: group_id,
+    user_id: user?.id,
+  });
+
   const content = json?.choices?.[0]?.message?.content ?? "";
   let parsed: { narrative?: string; image_prompt?: string } = {};
   try {
@@ -721,7 +811,11 @@ ${JSON.stringify({ round, songs, votes })}`;
   let imageResult: ImageResult = { image_url: null, image_base64: null };
   if (winners.length) {
     const imagePrompt = buildWinnersPrompt(winners, round?.title ?? null);
-    imageResult = await generateImage(imagePrompt, imageModel, "TML - Winners Image");
+    imageResult = await generateImage(imagePrompt, imageModel, "TML - Winners Image", supabase, {
+      group_id: group_id,
+      user_id: user?.id,
+      mode: `${mode}_image`,
+    });
   }
 
   return new Response(
