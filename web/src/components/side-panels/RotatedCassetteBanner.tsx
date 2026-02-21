@@ -38,7 +38,7 @@ export default function RotatedCassetteBanner({
 
   // Round numbers that have specific cassette images (2, 3, 4, etc.)
   // Add more numbers here as images are created
-  const availableRoundImages = [2, 3, 4, 5, 6];
+  const availableRoundImages = [2, 3, 4, 5, 6, 8];
 
   const imageSrc = useMemo(() => {
     // Use round-specific cassette spine image if available
