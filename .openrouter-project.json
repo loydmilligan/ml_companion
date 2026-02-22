@@ -1,0 +1,13 @@
+{
+  "project": "ml_companion",
+  "description": "Music League companion app with AI features",
+  "cost_tracking": "webhook",
+  "webhook_url": "http://localhost:3000/api/costs/log",
+  "functions_tracked": [
+    "openrouter-compare",
+    "openrouter-round-story",
+    "ai-assistant",
+    "round-challenge"
+  ],
+  "generated_at": "2026-02-21T02:15:00.000Z"
+}

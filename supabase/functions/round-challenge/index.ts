@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyAuth, unauthorizedResponse } from "../_shared/auth.ts";
+import { trackApiCall, OpenRouterResponse } from "../_shared/cost-tracker.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -123,7 +124,10 @@ const callOpenRouter = async (prompt: string, temperature = 0.9, maxTokens = 500
   }
 
   const json = await response.json();
-  return json?.choices?.[0]?.message?.content ?? "";
+  return {
+    content: json?.choices?.[0]?.message?.content ?? "",
+    fullResponse: json,
+  };
 };
 
 Deno.serve(async (req) => {
@@ -202,7 +206,13 @@ Deno.serve(async (req) => {
       }
 
       const prompt = buildGeneratePrompt(current_theme ?? "");
-      const response = await callOpenRouter(prompt, 0.9, 500);
+      const { content: response, fullResponse } = await callOpenRouter(prompt, 0.9, 500);
+
+      // Track the API call
+      await trackApiCall(fullResponse as OpenRouterResponse, {
+        function_name: "round-challenge",
+        mode: "get_or_generate",
+      });
 
       let songs: SongSuggestion[] = [];
       try {
@@ -283,7 +293,13 @@ Deno.serve(async (req) => {
 
       // Generate new challenge
       const prompt = buildGeneratePrompt(current_theme ?? "");
-      const response = await callOpenRouter(prompt, 0.95, 500); // Higher temp for variety
+      const { content: response, fullResponse } = await callOpenRouter(prompt, 0.95, 500); // Higher temp for variety
+
+      // Track the API call
+      await trackApiCall(fullResponse as OpenRouterResponse, {
+        function_name: "round-challenge",
+        mode: "regenerate",
+      });
 
       let songs: SongSuggestion[] = [];
       try {
