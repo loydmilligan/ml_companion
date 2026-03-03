@@ -5,6 +5,7 @@ import AIAssistant from "../pinned-peek/AIAssistant";
 import CollapsibleSection from "../pinned-peek/CollapsibleSection";
 import RotatedCassetteBanner from "./RotatedCassetteBanner";
 import { useYouTubeSidebar } from "../youtube-sidebar";
+import { decodeHtmlEntities } from "../../utils/decodeHtml";
 
 type SubmissionRow = {
   id: string;
@@ -178,7 +179,7 @@ export default function PlaylistPanel({
         {/* Round title and status */}
         {round && (
           <div className="side-panel-title-row">
-            <h2 className="side-panel-round-title">{round.theme}</h2>
+            <h2 className="side-panel-round-title">{decodeHtmlEntities(round.theme)}</h2>
             <span className={clsx("side-panel-status-badge", `status-${round.status}`)}>
               {round.status === "open" ? "Submissions" :
                round.status === "voting" ? "Voting" :

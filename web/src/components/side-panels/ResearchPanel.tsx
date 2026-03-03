@@ -14,6 +14,7 @@ import { useSpotifySearch } from "../../hooks/useSpotifySearch";
 import { supabase } from "../../lib/supabase";
 import rockBandLogo from "../../assets/rock_band_4_inst_logo.png";
 import guitarHeroLogo from "../../assets/gh_flames_logo.png";
+import { decodeHtmlEntities } from "../../utils/decodeHtml";
 
 type ResearchPanelProps = {
   isOpen: boolean;
@@ -524,7 +525,7 @@ export default function ResearchPanel({
         <div className="research-panel-header">
           <div className="research-panel-header-content">
             <h2 className="research-panel-title">
-              {round?.theme || "Song Research"}
+              {round?.theme ? decodeHtmlEntities(round.theme) : "Song Research"}
             </h2>
             {isCuratedMode && (
               <p className="research-panel-subtitle">

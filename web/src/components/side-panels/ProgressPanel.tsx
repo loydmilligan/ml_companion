@@ -4,6 +4,7 @@ import ProgressSection from "../pinned-peek/ProgressSection";
 import RoundCountdown from "../pinned-peek/RoundCountdown";
 import DualNeedleGauge from "../pinned-peek/DualNeedleGauge";
 import RotatedCassetteBanner from "./RotatedCassetteBanner";
+import { decodeHtmlEntities } from "../../utils/decodeHtml";
 
 type ActivityRecord = {
   id: string;
@@ -146,7 +147,7 @@ export default function ProgressPanel({
         {/* Round title and status */}
         {round && (
           <div className="side-panel-title-row">
-            <h2 className="side-panel-round-title">{round.theme}</h2>
+            <h2 className="side-panel-round-title">{decodeHtmlEntities(round.theme)}</h2>
             <span className={clsx("side-panel-status-badge", `status-${round.status}`)}>
               {round.status === "open" ? "Submissions" :
                round.status === "voting" ? "Voting" :
