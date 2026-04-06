@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Who Picked This? 🎵</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      color: #fff;
+      padding: 20px;
+      padding-bottom: 40px;
+    }
+
+    .container {
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .header .subtitle {
+      font-size: 14px;
+      opacity: 0.7;
+    }
+
+    .progress-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .progress-dot {
+      flex: 1;
+      height: 4px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 2px;
+      transition: background 0.3s;
+    }
+
+    .progress-dot.active {
+      background: #ff6b6b;
+    }
+
+    .progress-dot.done {
+      background: #51cf66;
+    }
+
+    .question-card {
+      background: rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(10px);
+      display: none;
+    }
+
+    .question-card.active {
+      display: block;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .song-info {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .song-info .song-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .song-info .song-artist {
+      font-size: 14px;
+      opacity: 0.7;
+    }
+
+    .question-label {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .option-btn {
+      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      padding: 16px 12px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .option-btn:hover {
+      background: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.3);
+    }
+
+    .option-btn:active,
+    .option-btn.selected {
+      background: #ff6b6b;
+      border-color: #ff6b6b;
+      transform: scale(0.98);
+    }
+
+    .option-btn.correct {
+      background: #51cf66;
+      border-color: #51cf66;
+    }
+
+    .option-btn.incorrect {
+      background: #ff6b6b;
+      border-color: #ff6b6b;
+      opacity: 0.6;
+    }
+
+    .result-screen {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .result-screen.active {
+      display: block;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .result-emoji {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .result-score {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .result-message {
+      font-size: 16px;
+      opacity: 0.8;
+      margin-bottom: 32px;
+    }
+
+    .fun-fact {
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+
+    .fun-fact-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.6;
+      margin-bottom: 8px;
+    }
+
+    .fun-fact-text {
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .fun-fact-text strong {
+      color: #ffd43b;
+    }
+
+    .close-btn {
+      background: rgba(255,255,255,0.1);
+      border: none;
+      border-radius: 12px;
+      padding: 16px 32px;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .close-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    /* Loading state */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: #ff6b6b;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      margin-top: 16px;
+      opacity: 0.7;
+    }
+
+    /* Welcome screen */
+    .welcome-screen {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .welcome-screen h2 {
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+
+    .welcome-screen p {
+      font-size: 16px;
+      opacity: 0.8;
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    .start-btn {
+      background: #ff6b6b;
+      border: none;
+      border-radius: 12px;
+      padding: 18px 48px;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .start-btn:hover {
+      background: #fa5252;
+      transform: scale(1.02);
+    }
+
+    .start-btn:active {
+      transform: scale(0.98);
+    }
+
+    .round-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Welcome Screen -->
+    <div id="welcome" class="welcome-screen">
+      <div class="round-badge">Round 5 • Guilty Pleasures</div>
+      <h2>Who Picked This? 🎵</h2>
+      <p>Guess who submitted each song.<br>3 quick questions. Takes 30 seconds.</p>
+      <button class="start-btn" onclick="startGame()">Let's Go!</button>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game" style="display: none;">
+      <div class="header">
+        <h1>Who Picked This?</h1>
+        <div class="subtitle">Round 5 • Guilty Pleasures</div>
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress-dot" id="dot-0"></div>
+        <div class="progress-dot" id="dot-1"></div>
+        <div class="progress-dot" id="dot-2"></div>
+      </div>
+
+      <!-- Question 1 -->
+      <div class="question-card" id="q0">
+        <div class="song-info">
+          <div class="song-title">🎵 "Never Gonna Give You Up"</div>
+          <div class="song-artist">Rick Astley</div>
+        </div>
+        <div class="question-label">Who submitted this?</div>
+        <div class="options">
+          <button class="option-btn" onclick="selectAnswer(0, 'matt', this)">Matt</button>
+          <button class="option-btn" onclick="selectAnswer(0, 'sarah', this)">Sarah</button>
+          <button class="option-btn" onclick="selectAnswer(0, 'ron', this)">Ron</button>
+          <button class="option-btn" onclick="selectAnswer(0, 'lisa', this)">Lisa</button>
+        </div>
+      </div>
+
+      <!-- Question 2 -->
+      <div class="question-card" id="q1">
+        <div class="song-info">
+          <div class="song-title">🎵 "MMMBop"</div>
+          <div class="song-artist">Hanson</div>
+        </div>
+        <div class="question-label">Who submitted this?</div>
+        <div class="options">
+          <button class="option-btn" onclick="selectAnswer(1, 'matt', this)">Matt</button>
+          <button class="option-btn" onclick="selectAnswer(1, 'sarah', this)">Sarah</button>
+          <button class="option-btn" onclick="selectAnswer(1, 'ron', this)">Ron</button>
+          <button class="option-btn" onclick="selectAnswer(1, 'lisa', this)">Lisa</button>
+        </div>
+      </div>
+
+      <!-- Question 3 -->
+      <div class="question-card" id="q2">
+        <div class="song-info">
+          <div class="song-title">🎵 "Barbie Girl"</div>
+          <div class="song-artist">Aqua</div>
+        </div>
+        <div class="question-label">Who submitted this?</div>
+        <div class="options">
+          <button class="option-btn" onclick="selectAnswer(2, 'matt', this)">Matt</button>
+          <button class="option-btn" onclick="selectAnswer(2, 'sarah', this)">Sarah</button>
+          <button class="option-btn" onclick="selectAnswer(2, 'ron', this)">Ron</button>
+          <button class="option-btn" onclick="selectAnswer(2, 'lisa', this)">Lisa</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="results" class="result-screen">
+      <div class="result-emoji" id="result-emoji">🎉</div>
+      <div class="result-score" id="result-score">2/3</div>
+      <div class="result-message" id="result-message">Nice guessing!</div>
+
+      <div class="fun-fact">
+        <div class="fun-fact-label">📊 Fun Fact</div>
+        <div class="fun-fact-text" id="fun-fact-text">
+          Your family has submitted <strong>127 songs</strong> across 24 rounds.
+          The most common decade? The <strong>1980s</strong> with 34 songs —
+          and <strong>Ron</strong> is responsible for 19 of them!
+        </div>
+      </div>
+
+      <button class="close-btn" onclick="window.close()">Done</button>
+    </div>
+  </div>
+
+  <script>
+    // Mock data - in real app, this comes from URL params or API
+    const correctAnswers = ['ron', 'sarah', 'matt'];
+    const familyMembers = ['Matt', 'Sarah', 'Ron', 'Lisa'];
+
+    let currentQuestion = 0;
+    let answers = [];
+    let score = 0;
+
+    function startGame() {
+      document.getElementById('welcome').style.display = 'none';
+      document.getElementById('game').style.display = 'block';
+      showQuestion(0);
+    }
+
+    function showQuestion(index) {
+      // Update progress dots
+      for (let i = 0; i < 3; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        dot.classList.remove('active', 'done');
+        if (i < index) dot.classList.add('done');
+        if (i === index) dot.classList.add('active');
+      }
+
+      // Show current question
+      for (let i = 0; i < 3; i++) {
+        const q = document.getElementById(`q${i}`);
+        q.classList.remove('active');
+        if (i === index) q.classList.add('active');
+      }
+    }
+
+    function selectAnswer(questionIndex, answer, button) {
+      // Disable all buttons in this question
+      const card = button.closest('.question-card');
+      const buttons = card.querySelectorAll('.option-btn');
+      buttons.forEach(btn => btn.style.pointerEvents = 'none');
+
+      // Mark selected
+      button.classList.add('selected');
+
+      // Store answer
+      answers[questionIndex] = answer;
+
+      // Check if correct
+      const isCorrect = answer === correctAnswers[questionIndex];
+      if (isCorrect) score++;
+
+      // Brief delay then move on
+      setTimeout(() => {
+        if (questionIndex < 2) {
+          currentQuestion++;
+          showQuestion(currentQuestion);
+        } else {
+          showResults();
+        }
+      }, 400);
+    }
+
+    function showResults() {
+      document.getElementById('game').style.display = 'none';
+      document.getElementById('results').classList.add('active');
+
+      // Update score display
+      document.getElementById('result-score').textContent = `${score}/3`;
+
+      // Update emoji and message based on score
+      const emoji = document.getElementById('result-emoji');
+      const message = document.getElementById('result-message');
+
+      if (score === 3) {
+        emoji.textContent = '🏆';
+        message.textContent = 'Perfect! You know your family!';
+      } else if (score === 2) {
+        emoji.textContent = '🎉';
+        message.textContent = 'Nice guessing!';
+      } else if (score === 1) {
+        emoji.textContent = '🤔';
+        message.textContent = 'Tricky round!';
+      } else {
+        emoji.textContent = '😅';
+        message.textContent = 'Better luck next time!';
+      }
+
+      // Randomize fun fact slightly
+      const funFacts = [
+        `Your family has submitted <strong>127 songs</strong> across 24 rounds. The most common decade? The <strong>1980s</strong> with 34 songs — and <strong>Ron</strong> is responsible for 19 of them!`,
+        `<strong>Sarah</strong> and <strong>Matt</strong> have voted for each other's songs <strong>47 times</strong>. Coincidence? We think not. 🤔`,
+        `The most divisive song ever? <strong>"My Heart Will Go On"</strong> — it got both the highest AND lowest votes in the same round!`,
+        `<strong>Lisa</strong> has never submitted a song from before 1995. Meanwhile, <strong>Ron</strong> has never submitted one from after 1995.`
+      ];
+
+      const randomFact = funFacts[Math.floor(Math.random() * funFacts.length)];
+      document.getElementById('fun-fact-text').innerHTML = randomFact;
+    }
+
+    // Parse URL params (for real implementation)
+    function getUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        token: params.get('token'),
+        round: params.get('round')
+      };
+    }
+
+    // Log for testing
+    console.log('URL params:', getUrlParams());
+  </script>
+</body>
+</html>
